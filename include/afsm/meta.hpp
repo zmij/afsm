@@ -7,8 +7,8 @@
 
 #include <type_traits>
 
-#ifndef META_HPP_
-#define META_HPP_
+#ifndef AFSM_META_HPP_
+#define AFSM_META_HPP_
 
 namespace afsm {
 namespace meta {
@@ -208,7 +208,33 @@ struct type_map<> {
     using value_type    = type_tuple<>;
 };
 
+template < template <typename> class Predicate, typename ... T >
+struct all_match;
+
+template < template <typename> class Predicate, typename T, typename ... Y >
+struct all_match< Predicate, T, Y... >
+    : ::std::conditional<
+        Predicate<T>::value,
+        all_match<Predicate, Y...>,
+        ::std::false_type
+    >::type {};
+
+template < template <typename> class Predicate, typename T >
+struct all_match< Predicate, T >
+    : ::std::conditional<
+        Predicate<T>::value,
+        ::std::true_type,
+        ::std::false_type
+    >::type {};
+
+template < template <typename> class Predicate >
+struct all_match< Predicate >
+    : ::std::false_type {};
+
+template < template <typename> class Predicate, typename ... T >
+struct all_match< Predicate, type_tuple<T...> > : all_match<Predicate, T...> {};
+
 }  /* namespace meta */
 }  /* namespace afsm */
 
-#endif /* META_HPP_ */
+#endif /* AFSM_META_HPP_ */

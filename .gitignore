@@ -30,3 +30,7 @@
 # Build trees
 build*
 
+# Eclipse files
+*.project
+*.cproject
+
