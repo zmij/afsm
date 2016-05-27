@@ -39,7 +39,7 @@ struct front_state_type
             state< T >,
             not_a_state< T >
         >::type
-    >::type {};
+    > {};
 
 template < typename Mutex, typename T >
 struct front_state_tuple;
@@ -101,7 +101,8 @@ public:
             "Internal transition table cannot have transitions between other states");
     using handled_events =
             typename def::detail::handled_events<state_definition_type>::type;
-    static_assert(def::detail::has_default_transitions< handled_events >::value,
+    static_assert(def::detail::is_state_machine<state_definition_type>::value
+                || !def::detail::has_default_transitions< handled_events >::value,
             "Internal transition cannot be a default transition");
 public:
     state() : state_definition_type{} {}
@@ -127,9 +128,6 @@ public:
     using inner_states =
             typename def::detail::inner_states< transitions >::type;
 
-    using mutex_type    = Mutex;
-    using mutex_reference_type = typename ::std::decay<mutex_type>::type&;
-
     state_machine()
         : mutex_{}, state_type{}
     {}
@@ -138,12 +136,6 @@ public:
     state_machine(Args&& ... args)
         : mutex_{}, state_type(::std::forward<Args>(args)...)
     {}
-
-    state_machine(mutex_reference_type mtx,
-            typename ::std::enable_if< ::std::is_reference<mutex_type>::value, void >::type* = nullptr)
-        : mutex_{mtx}, state_type{}
-    {
-    }
 
     ::std::size_t
     current_state() const
@@ -157,14 +149,14 @@ public:
     }
 private:
 protected:
+    using mutex_type    = Mutex;
     using lock_guard    = typename detail::lock_guard_type<mutex_type>::type;
     using size_type     = typename detail::size_type<mutex_type>::type;
-    using states_tuple  = typename detail::front_state_tuple<
-                                mutex_reference_type,
-                                inner_states >::type;
+    using states_tuple  = typename detail::front_state_tuple< none, inner_states >::type;
 
     mutex_type          mutex_;
     size_type           current_state_;
+    states_tuple        inner_states_;
 };
 
 

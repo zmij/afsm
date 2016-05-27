@@ -6,6 +6,7 @@
  */
 
 #include <type_traits>
+#include <limits>
 #include <tuple>
 
 #ifndef AFSM_META_HPP_
@@ -39,6 +40,34 @@ template < typename T, typename Y >
 struct contains< T, Y > : ::std::false_type {};
 template < typename T >
 struct contains<T> : ::std::false_type {};
+
+namespace detail {
+
+template < typename T, ::std::size_t N, typename ... Y >
+struct index_of_impl;
+
+template < typename T, ::std::size_t N, typename V, typename ... Y >
+struct index_of_impl< T, N, V, Y ... > : index_of_impl<T, N + 1, Y...> {};
+template < typename T, ::std::size_t N, typename ... Y >
+struct index_of_impl< T, N, T, Y ... > {
+    static constexpr ::std::size_t value    = N;
+    static constexpr bool found             = true;
+};
+template < typename T, ::std::size_t N, typename Y>
+struct index_of_impl<T, N, Y> {
+    static constexpr ::std::size_t value    = ::std::numeric_limits<::std::size_t>::max();
+    static constexpr bool found             = false;
+};
+template < typename T, ::std::size_t N>
+struct index_of_impl<T, N> {
+    static constexpr ::std::size_t value    = ::std::numeric_limits<::std::size_t>::max();
+    static constexpr bool found             = false;
+};
+
+}  /* namespace detail */
+
+template < typename T, typename ... Y >
+struct index_of : detail::index_of_impl<T, 0, Y...> {};
 
 template < typename ... T >
 struct type_tuple {
@@ -159,6 +188,8 @@ template < typename T, typename ... Y >
 struct contains< T, type_tuple<Y...> > : contains<T, Y...> {};
 template < typename T, typename ... Y >
 struct contains< T, type_set<Y...> > : contains<T, Y...> {};
+template < typename T, typename ... Y >
+struct index_of< T, type_tuple<Y...> > : detail::index_of_impl<T, 0, Y...> {};
 
 template < typename ... T >
 struct type_map_base;

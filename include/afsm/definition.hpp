@@ -165,6 +165,7 @@ struct transition_table {
                  ::std::true_type
             >::type::value,
             "State types must derive from afsm::def::state");
+    static_assert(transitions::size == transition_count, "Duplicate transition");
 
 };
 
@@ -182,6 +183,10 @@ struct state_machine : state< StateMachine >{
     using base_type             = state_machine< state_machine_type >;
     using initial_state         = void;
     using transitions           = void;
+
+    template <typename SourceState, typename Event, typename TargetState,
+            typename Action = none, typename Guard = none>
+    using tr = transition<SourceState, Event, TargetState, Action, Guard>;
 };
 
 namespace detail {

@@ -20,6 +20,7 @@ set(
     test_program_SRCS
     # Add your sources here
     static_tests.cpp
+    transaction_fsm.cpp
 )
 add_executable(test-afsm-base ${test_program_SRCS})
 target_link_libraries(
