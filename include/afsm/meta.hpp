@@ -6,6 +6,7 @@
  */
 
 #include <type_traits>
+#include <tuple>
 
 #ifndef AFSM_META_HPP_
 #define AFSM_META_HPP_
@@ -13,10 +14,10 @@
 namespace afsm {
 namespace meta {
 
-template < size_t N, typename ... T >
+template < ::std::size_t N, typename ... T >
 struct nth_type;
 
-template < size_t N, typename T, typename ... Y >
+template < ::std::size_t N, typename T, typename ... Y >
 struct nth_type< N, T, Y ... > : nth_type < N - 1, Y ... > {
     static_assert(N <= sizeof ...(Y), "Index type is out of range");
 };
@@ -41,9 +42,24 @@ struct contains<T> : ::std::false_type {};
 
 template < typename ... T >
 struct type_tuple {
-    static constexpr size_t size = sizeof ... (T);
-    template < size_t N >
+    static constexpr ::std::size_t size = sizeof ... (T);
+    template < ::std::size_t N >
     using type = typename nth_type<N, T ...>::type;
+};
+
+template <>
+struct type_tuple<> {
+    static constexpr ::std::size_t size = 0;
+};
+
+template < typename ... T >
+struct types_data_tuple {
+    using type = ::std::tuple< T... >;
+};
+
+template < typename ... T >
+struct types_data_tuple< type_tuple<T...> > {
+    using type = ::std::tuple< T... >;
 };
 
 template < typename T, typename Y >
@@ -140,7 +156,9 @@ struct type_set< type_set<T...>, type_set<Y...> >
     : type_set<T..., Y...> {};
 
 template < typename T, typename ... Y >
-struct contains< type_set<Y...>, T > : contains<T, Y...> {};
+struct contains< T, type_tuple<Y...> > : contains<T, Y...> {};
+template < typename T, typename ... Y >
+struct contains< T, type_set<Y...> > : contains<T, Y...> {};
 
 template < typename ... T >
 struct type_map_base;
@@ -194,9 +212,9 @@ struct type_map< type_tuple< K, T... >, type_tuple<V, Y...> > {
     static_assert(key_types::size == value_types::size,
             "Incorrect size of type_map");
 
-    static constexpr size_t size = key_types::size;
+    static constexpr ::std::size_t size = key_types::size;
 
-    template < size_t N >
+    template < ::std::size_t N >
     using type = type_pair<
             typename key_types::template type<N>,
             typename value_types::template type<N>>;
@@ -206,7 +224,12 @@ template <>
 struct type_map<> {
     using key_types     = type_tuple<>;
     using value_type    = type_tuple<>;
+
+    static constexpr ::std::size_t size = 0;
 };
+
+template <>
+struct type_map< type_tuple<>, type_tuple<> > : type_map<> {};
 
 template < template <typename> class Predicate, typename ... T >
 struct all_match;
@@ -232,7 +255,34 @@ struct all_match< Predicate >
     : ::std::false_type {};
 
 template < template <typename> class Predicate, typename ... T >
-struct all_match< Predicate, type_tuple<T...> > : all_match<Predicate, T...> {};
+struct all_match< Predicate, type_tuple<T...> >
+    : all_match<Predicate, T...> {};
+
+template < template <typename> class Predicate, typename ... T>
+struct any_match;
+
+template < template <typename> class Predicate, typename T, typename ... Y >
+struct any_match< Predicate, T, Y... >
+    : ::std::conditional<
+        Predicate<T>::value,
+        ::std::true_type,
+        any_match<Predicate, Y ...>
+    >::type {};
+
+template < template <typename> class Predicate, typename T >
+struct any_match< Predicate, T >
+    : std::conditional<
+        Predicate<T>::value,
+        ::std::true_type,
+        ::std::false_type
+    >::type {};
+
+template < template <typename> class Predicate >
+struct any_match< Predicate > : ::std::false_type {};
+
+template < template <typename> class Predicate, typename ... T >
+struct any_match< Predicate, type_tuple<T...> >
+    : any_match< Predicate, T... >{};
 
 }  /* namespace meta */
 }  /* namespace afsm */
