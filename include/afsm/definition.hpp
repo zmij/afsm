@@ -9,10 +9,9 @@
 #define AFSM_DEFINITION_HPP_
 
 #include <afsm/meta.hpp>
+#include <afsm/fsm_fwd.hpp>
 
 namespace afsm {
-
-struct none {};
 
 namespace def {
 template < typename SourceState, typename Event, typename TargetState,
@@ -132,6 +131,9 @@ struct internal_transition {
 
     using key_type              = meta::type_tuple< event_type, guard_type >;
     using value_type            = action_type;
+
+    static_assert(!::std::is_same<Event, none>::value,
+            "Internal transition must have a trigger");
 };
 
 template < typename ... T >
@@ -174,7 +176,11 @@ struct state {
     using state_type            = StateType;
     using base_type             = state<state_type>;
     using internal_transitions  = void;
+    using transitions           = void;
     using deferred_events       = void;
+
+    template < typename Event, typename Action, typename Guard >
+    using in = internal_transition< Event, Action, Guard >;
 };
 
 template < typename StateMachine >
@@ -182,7 +188,6 @@ struct state_machine : state< StateMachine >{
     using state_machine_type    = StateMachine;
     using base_type             = state_machine< state_machine_type >;
     using initial_state         = void;
-    using transitions           = void;
 
     template <typename SourceState, typename Event, typename TargetState,
             typename Action = none, typename Guard = none>

@@ -7,7 +7,7 @@
 
 #include <gtest/gtest.h>
 #include <afsm/fsm.hpp>
-
+#include <iostream>
 
 namespace afsm {
 namespace test {
@@ -56,6 +56,10 @@ struct connection_fsm_def : def::state_machine<connection_fsm_def> {
         };
 
         struct idle : def::state<idle> {
+            using internal_transitions = def::transition_table<
+                in< events::command_complete,   none,   none >,
+                in< events::ready_for_query,    none,   none >
+            >;
         };
 
         struct simple_query : def::state_machine<simple_query> {
@@ -132,11 +136,19 @@ struct connection_fsm_def : def::state_machine<connection_fsm_def> {
     >;
 };
 
-using connection_fsm = state_machine<connection_fsm_def>;
+using connection_fsm = state_machine<connection_fsm_def, ::std::mutex>;
 
 TEST(TranFSM, Transitions)
 {
+    ::std::mutex mutex;
     connection_fsm fsm;
+
+    ::std::cerr << connection_fsm::initial_state_index
+            << "/" << connection_fsm::inner_state_count << "\n";
+
+    auto idx = connection_fsm::initial_state_index;
+
+    EXPECT_EQ(connection_fsm::initial_state_index, fsm.current_state());
 }
 
 }  /* namespace test */

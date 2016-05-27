@@ -92,11 +92,6 @@ struct my_fsm : state_machine<my_fsm> {
 static_assert(detail::is_state<my_fsm>::value, "");
 static_assert(detail::is_state_machine<my_fsm>::value, "");
 
-TEST(Dummy, Dummy)
-{
-
-}
-
 }  /* namespace test */
 }  /* namespace def */
 }  /* namespace afsm */

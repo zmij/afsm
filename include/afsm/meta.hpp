@@ -41,6 +41,13 @@ struct contains< T, Y > : ::std::false_type {};
 template < typename T >
 struct contains<T> : ::std::false_type {};
 
+template < typename ... T >
+struct is_empty : ::std::false_type {};
+template <>
+struct is_empty<> : ::std::true_type {};
+template <>
+struct is_empty<void> : ::std::true_type {};
+
 namespace detail {
 
 template < typename T, ::std::size_t N, typename ... Y >
@@ -53,11 +60,19 @@ struct index_of_impl< T, N, T, Y ... > {
     static constexpr ::std::size_t value    = N;
     static constexpr bool found             = true;
 };
+
+template < typename T, ::std::size_t N >
+struct index_of_impl< T, N, T > {
+    static constexpr ::std::size_t value    = N;
+    static constexpr bool found             = true;
+};
+
 template < typename T, ::std::size_t N, typename Y>
 struct index_of_impl<T, N, Y> {
     static constexpr ::std::size_t value    = ::std::numeric_limits<::std::size_t>::max();
     static constexpr bool found             = false;
 };
+
 template < typename T, ::std::size_t N>
 struct index_of_impl<T, N> {
     static constexpr ::std::size_t value    = ::std::numeric_limits<::std::size_t>::max();
@@ -176,6 +191,8 @@ struct type_set<> {
     using type = type_tuple<>;
 };
 
+template < typename ... T >
+struct type_set< type_tuple<T...> > : type_set<T...> {};
 template < typename ... T, typename ... Y >
 struct type_set< type_tuple<T...>, type_tuple<Y...> >
     : type_set<T..., Y...> {};
@@ -190,6 +207,13 @@ template < typename T, typename ... Y >
 struct contains< T, type_set<Y...> > : contains<T, Y...> {};
 template < typename T, typename ... Y >
 struct index_of< T, type_tuple<Y...> > : detail::index_of_impl<T, 0, Y...> {};
+template < typename ... T >
+struct is_empty< type_tuple<T...> >
+    : ::std::conditional<
+        (sizeof ... (T) > 0),
+        ::std::false_type,
+        ::std::true_type
+    >::type {};
 
 template < typename ... T >
 struct type_map_base;
@@ -314,6 +338,25 @@ struct any_match< Predicate > : ::std::false_type {};
 template < template <typename> class Predicate, typename ... T >
 struct any_match< Predicate, type_tuple<T...> >
     : any_match< Predicate, T... >{};
+
+template < size_t ... Indexes >
+struct indexes_tuple {
+    static constexpr ::std::size_t size = sizeof ... (Indexes);
+};
+
+template < size_t num, typename tp = indexes_tuple <> >
+struct index_builder;
+
+template < size_t num, size_t ... Indexes >
+struct index_builder< num, indexes_tuple< Indexes ... > >
+    : index_builder< num - 1, indexes_tuple< Indexes ..., sizeof ... (Indexes) > > {
+};
+
+template <size_t ... Indexes >
+struct index_builder< 0, indexes_tuple< Indexes ... > > {
+    typedef indexes_tuple < Indexes ... > type;
+    static constexpr ::std::size_t size = sizeof ... (Indexes);
+};
 
 }  /* namespace meta */
 }  /* namespace afsm */
