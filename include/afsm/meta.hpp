@@ -9,6 +9,8 @@
 #include <limits>
 
 #include <afsm/meta/algorithm.hpp>
+#include <afsm/meta/index_tuple.hpp>
+#include <afsm/meta/callable.hpp>
 
 #ifndef AFSM_META_HPP_
 #define AFSM_META_HPP_
@@ -113,27 +115,6 @@ struct type_map<> {
 
 template <>
 struct type_map< type_tuple<>, type_tuple<> > : type_map<> {};
-
-
-
-template < size_t ... Indexes >
-struct indexes_tuple {
-    static constexpr ::std::size_t size = sizeof ... (Indexes);
-};
-
-template < size_t num, typename tp = indexes_tuple <> >
-struct index_builder;
-
-template < size_t num, size_t ... Indexes >
-struct index_builder< num, indexes_tuple< Indexes ... > >
-    : index_builder< num - 1, indexes_tuple< Indexes ..., sizeof ... (Indexes) > > {
-};
-
-template <size_t ... Indexes >
-struct index_builder< 0, indexes_tuple< Indexes ... > > {
-    typedef indexes_tuple < Indexes ... > type;
-    static constexpr ::std::size_t size = sizeof ... (Indexes);
-};
 
 }  /* namespace meta */
 }  /* namespace afsm */

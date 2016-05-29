@@ -23,13 +23,19 @@ else()
     set(PROJECT_VERSION ${_pversion})
 endif()
 
+option(BUILD_TESTS "Build test programs" ON)
+
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
+
 add_definitions("-std=c++11")
 
 set(${LIB_NAME}_LIB ${lib_name})
 
 # Add subdirectories here
-add_subdirectory(test)
+if (BUILD_TESTS)
+    enable_testing()
+    add_subdirectory(test)
+endif()
 
 get_directory_property(has_parent PARENT_DIRECTORY)
 if (has_parent)

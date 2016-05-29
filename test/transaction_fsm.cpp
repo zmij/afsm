@@ -35,6 +35,15 @@ struct command_complete {};
 
 }  /* namespace events */
 
+struct dummy_action {
+    template < typename Event, typename FSM, typename SourceState, typename TargetState >
+    void
+    operator()(Event&& evt, FSM& fsm, SourceState& source, TargetState& target) const
+    {
+        ::std::cerr << "Dummy action triggered\n";
+    }
+};
+
 struct connection_fsm_def : def::state_machine<connection_fsm_def> {
     struct closed : def::state<closed> {
     };
@@ -57,8 +66,8 @@ struct connection_fsm_def : def::state_machine<connection_fsm_def> {
 
         struct idle : def::state<idle> {
             using internal_transitions = def::transition_table<
-                in< events::command_complete,   none,   none >,
-                in< events::ready_for_query,    none,   none >
+                in< events::command_complete,   dummy_action,   none >,
+                in< events::ready_for_query,    dummy_action,   none >
             >;
         };
 
@@ -95,7 +104,7 @@ struct connection_fsm_def : def::state_machine<connection_fsm_def> {
 
         using initial_state = starting;
         using transitions = def::transition_table<
-            tr< starting,   events::ready_for_query,    idle                >,
+            tr< starting,       events::ready_for_query,    idle            >,
 
             tr< idle,           events::commit,             exiting         >,
             tr< idle,           events::rollback,           exiting         >,
@@ -136,7 +145,19 @@ struct connection_fsm_def : def::state_machine<connection_fsm_def> {
     >;
 };
 
+using tran_idle_state = state<none, connection_fsm_def::transaction::idle>;
+
 using connection_fsm = state_machine<connection_fsm_def, ::std::mutex>;
+
+TEST(TranFSM, TranIdleState)
+{
+    none n;
+    tran_idle_state state(n);
+    EXPECT_EQ(detail::event_process_result::process,
+            state.process_event(events::command_complete{}));
+    EXPECT_EQ(detail::event_process_result::refuse,
+            state.process_event(events::begin{}));
+}
 
 TEST(TranFSM, Transitions)
 {

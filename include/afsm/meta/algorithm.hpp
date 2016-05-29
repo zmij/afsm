@@ -268,6 +268,26 @@ struct find_if< Predicate, T >
         combine<>
     >::type {};
 
+template < template <typename> class Predicate, typename ... T>
+struct find_if< Predicate, type_tuple<T...> > : find_if< Predicate, T... > {};
+template < template<typename> class Predicate, typename ... T >
+struct transform {
+    using type = type_tuple< typename Predicate<T>::type ... >;
+};
+
+template < template<typename> class Predicate, typename ... T >
+struct transform < Predicate, type_tuple<T...> >
+    : transform< Predicate, T... > {};
+
+template < template<typename> class Predicate >
+struct transform<Predicate> {
+    using type = type_tuple<>;
+};
+
+template < template<typename> class Predicate, typename T >
+struct invert {
+    static constexpr bool value = !Predicate<T>::value;
+};
 
 }  /* namespace meta */
 }  /* namespace afsm */

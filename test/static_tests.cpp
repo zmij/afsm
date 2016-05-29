@@ -41,6 +41,19 @@ static_assert(
 using type_set_1 = type_set< int, float, int, double, long, float, double, bool >::type;
 //static_assert( contains )
 
+struct test_callable {
+    template < typename A, typename B >
+    void
+    operator() (A&, B&&);
+
+    void
+    operator() (int, int) const;
+};
+
+static_assert(is_callable<test_callable, int, double>::value, "");
+static_assert(is_callable<test_callable, int, int>::value, "");
+static_assert(!is_callable<test_callable, int>::value, "");
+
 }  /* namespace test */
 
 }  /* namespace meta */

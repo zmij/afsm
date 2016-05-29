@@ -9,6 +9,7 @@
 #define AFSM_FSM_HPP_
 
 #include <afsm/detail/base_states.hpp>
+#include <afsm/detail/actions.hpp>
 
 namespace afsm {
 
@@ -37,7 +38,7 @@ private:
     process_event_impl(Event&& evt,
         detail::process_type<detail::event_process_result::process> const&)
     {
-        // TODO Trigger actions
+        actions::handle_in_state_event(::std::forward<Event>(evt), fsm_, *this);
         return detail::event_process_result::process;
     }
     template < typename Event >

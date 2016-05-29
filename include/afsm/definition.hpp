@@ -82,12 +82,8 @@ struct is_transition< internal_transition< Event, Action, Guard > >
     : ::std::true_type {};
 
 template < typename T >
-struct is_internal_transition;
+struct is_internal_transition : ::std::false_type {};
 
-template < typename SourceState, typename Event, typename TargetState,
-    typename Action, typename Guard>
-struct is_internal_transition<transition<SourceState, Event, TargetState, Action, Guard>>
-    : ::std::false_type{};
 template < typename Event, typename Action, typename Guard >
 struct is_internal_transition< internal_transition< Event, Action, Guard > >
     : ::std::true_type {};
@@ -117,10 +113,16 @@ struct transition {
     using action_type           = Action;
     using guard_type            = Guard;
 
-    using key_type              = meta::type_tuple<
-                                    source_state_type, event_type, guard_type>;
-    using value_type            = meta::type_tuple<
-                                    action_type, target_state_type >;
+    struct key_type    {
+        using transition_type   = transition;
+        using event_type        = transition::event_type;
+        using guard_type        = transition::guard_type;
+        using source_state_type = transition::source_state_type;
+    };
+    struct value_type    {
+        using action_type       = transition::action_type;
+        using target_state_type = transition::target_state_type;
+    };
 };
 
 template < typename Event, typename Action, typename Guard >
@@ -129,8 +131,14 @@ struct internal_transition {
     using action_type           = Action;
     using guard_type            = Guard;
 
-    using key_type              = meta::type_tuple< event_type, guard_type >;
-    using value_type            = action_type;
+    struct key_type    {
+        using transition_type   = internal_transition;
+        using event_type        = internal_transition::event_type;
+        using guard_type        = internal_transition::guard_type;
+    };
+    struct value_type    {
+        using action_type       = internal_transition::action_type;
+    };
 
     static_assert(!::std::is_same<Event, none>::value,
             "Internal transition must have a trigger");
@@ -156,6 +164,7 @@ struct transition_table {
     using handled_events = typename meta::type_set<
             typename T::event_type ... >::type;
 
+    static constexpr ::std::size_t size                 = transition_map::size;
     static constexpr ::std::size_t transition_count     = transition_map::size;
     static constexpr ::std::size_t inner_state_count    = inner_states::size;
     static constexpr ::std::size_t event_count          = handled_events::size;
