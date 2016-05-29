@@ -144,6 +144,16 @@ struct internal_transition {
             "Internal transition must have a trigger");
 };
 
+template < typename Event >
+struct handles_event {
+    template < typename Transition >
+    struct type : ::std::conditional<
+        ::std::is_same< typename Transition::event_type, Event >::value,
+        ::std::true_type,
+        ::std::false_type
+    >::type {};
+};
+
 template < typename ... T >
 struct transition_table {
     static_assert(

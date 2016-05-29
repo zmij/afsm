@@ -23,7 +23,7 @@ public:
     {}
 
     template < typename Event >
-    detail::event_process_result
+    actions::event_process_result
     process_event( Event&& evt )
     {
         return process_event_impl(::std::forward<Event>(evt),
@@ -34,26 +34,26 @@ public:
     }
 private:
     template < typename Event >
-    detail::event_process_result
+    actions::event_process_result
     process_event_impl(Event&& evt,
-        detail::process_type<detail::event_process_result::process> const&)
+        detail::process_type<actions::event_process_result::process> const&)
     {
         actions::handle_in_state_event(::std::forward<Event>(evt), fsm_, *this);
-        return detail::event_process_result::process;
+        return actions::event_process_result::process;
     }
     template < typename Event >
-    detail::event_process_result
+    actions::event_process_result
     process_event_impl(Event&& evt,
-        detail::process_type<detail::event_process_result::defer> const&)
+        detail::process_type<actions::event_process_result::defer> const&)
     {
-        return detail::event_process_result::defer;
+        return actions::event_process_result::defer;
     }
     template < typename Event >
-    detail::event_process_result
+    actions::event_process_result
     process_event_impl(Event&& evt,
-        detail::process_type<detail::event_process_result::refuse> const&)
+        detail::process_type<actions::event_process_result::refuse> const&)
     {
-        return detail::event_process_result::refuse;
+        return actions::event_process_result::refuse;
     }
 private:
     enclosing_fsm_type&    fsm_;
@@ -87,7 +87,7 @@ public:
     {}
 
     template < typename Event >
-    detail::event_process_result
+    actions::event_process_result
     process_event( Event&& evt )
     {
         return process_event_impl(::std::forward<Event>(evt),
@@ -97,26 +97,26 @@ public:
     }
 private:
     template < typename Event >
-    detail::event_process_result
+    actions::event_process_result
     process_event_impl(Event&& evt,
-        detail::process_type<detail::event_process_result::process> const&)
+        detail::process_type<actions::event_process_result::process> const&)
     {
         lock_guard lock{mutex_};
         // TODO Dispatch event
-        return detail::event_process_result::process;
+        return actions::event_process_result::process;
     }
     template < typename Event >
-    detail::event_process_result
+    actions::event_process_result
     process_event_impl(Event&& evt,
-        detail::process_type<detail::event_process_result::refuse> const&)
+        detail::process_type<actions::event_process_result::refuse> const&)
     {
         static_assert( detail::event_process_selector<
                 Event,
                 typename state_machine::handled_events,
                 typename state_machine::deferred_events>::value
-            != detail::event_process_result::refuse,
+            != actions::event_process_result::refuse,
             "Event type is not handled by this state machine" );
-        return detail::event_process_result::refuse;
+        return actions::event_process_result::refuse;
     }
 private:
     using mutex_type        = Mutex;

@@ -9,12 +9,39 @@
 #define AFSM_DETAIL_ACTIONS_HPP_
 
 #include <afsm/definition.hpp>
-#include <afsm/detail/base_states.hpp>
+#include <array>
 
 namespace afsm {
 namespace actions {
 
+enum class event_process_result {
+    refuse,
+    process,
+    defer,
+};
+
+
 namespace detail {
+
+template <typename Action, typename Event, typename FSM,
+        typename SourceState, typename TargetState>
+struct action_is_callable {
+private:
+    static FSM&         fsm;
+    static Event&       event;
+    static SourceState& source;
+    static TargetState& target;
+
+    template < typename U >
+    static ::std::true_type
+    test( decltype( ::std::declval<U>()(::std::move(event), fsm, source, target) ) const* );
+
+    template < typename U >
+    static ::std::false_type
+    test(...);
+public:
+    static constexpr bool value = decltype( test<Action>(nullptr) )::value;
+};
 
 template <typename TransitionKey >
 struct is_internal_transition : ::std::false_type {};
@@ -33,7 +60,7 @@ struct handles_event
 
 template < typename FSM, typename State, typename Guard >
 struct guard_check {
-    static_assert(meta::is_callable< Guard, FSM, State >::value,
+    static_assert(meta::is_callable< Guard, FSM const&, State const& >::value,
             "Guard object is not callable with needed parameters");
 
     bool
@@ -51,8 +78,8 @@ struct guard_check< FSM, State, none > {
 template < typename Action, typename FSM, typename Event,
     typename SourceState, typename TargetState >
 struct action_invokation {
-    static_assert(meta::is_callable< Action, Event&&,
-                FSM&, SourceState&, TargetState& >::value,
+    static_assert(action_is_callable< Action, Event,
+                FSM, SourceState, TargetState >::value,
             "Action is not callable for this transition");
 
     void
@@ -150,6 +177,59 @@ struct conditional_in_state_invokation {
     }
 };
 
+template < typename State >
+struct process_event_handler {
+    State& state;
+    template < typename Event >
+    event_process_result
+    operator()(Event&& event) const
+    {
+        return state.process_event(::std::forward<Event>(event));
+    }
+};
+
+template < typename T >
+class inner_dispatch_table;
+
+template < typename ... T >
+class inner_dispatch_table< ::std::tuple<T...> > {
+public:
+    static constexpr ::std::size_t size = sizeof ... (T);
+    using states_tuple      = ::std::tuple<T...>;
+    using dispatch_tuple    = ::std::tuple< process_event_handler<T>... >;
+    using indexes_tuple     = typename meta::index_builder< size >::type;
+    template < typename Event >
+    using invokation_table  = ::std::array<
+            ::std::function< event_process_result(Event&&) >, size >;
+public:
+    explicit
+    inner_dispatch_table( states_tuple& states )
+        : inner_dispatch_table( states, indexes_tuple{} ) {}
+
+    template < typename Event >
+    event_process_result
+    process_event(::std::size_t current_state, Event&& event)
+    {
+        if (current_state >= size)
+            throw ::std::logic_error{ "Invalid current state index" };
+        auto inv_table = state_table< Event >(indexes_tuple{});
+        return inv_table[current_state](::std::forward<Event>(event));
+    }
+private:
+    template < ::std::size_t ... Indexes >
+    inner_dispatch_table( states_tuple& states,
+            meta::indexes_tuple< Indexes... > const& )
+        : states_( process_event_handler<T>{::std::get<Indexes>(states)} ... )
+    {}
+    template < typename Event, ::std::size_t ... Indexes >
+    invokation_table<Event>
+    state_table( meta::indexes_tuple< Indexes... > const& )
+    {
+        return invokation_table<Event> { ::std::get<Indexes>(states_)... };
+    };
+    dispatch_tuple states_;
+};
+
 }  /* namespace detail */
 
 template < typename FSM, typename State, typename Event >
@@ -162,10 +242,9 @@ struct in_state_action_invokation {
     static_assert( !::std::is_same<transitions, void>::value,
             "State doesn't have internal transitions table" );
 
-    template < typename Transition >
-    using handles_event     = detail::handles_event< event_type, Transition >;
     using event_handlers    = typename meta::find_if<
-        handles_event, typename transitions::transitions >::type;
+        def::handles_event<event_type>::template type,
+        typename transitions::transitions >::type;
     static_assert( event_handlers::size > 0, "State doesn't handle event" );
     using handler_type      = typename ::std::conditional<
                 event_handlers::size == 1,
@@ -189,6 +268,18 @@ handle_in_state_event(Event&& event, FSM& fsm, State& state)
 {
     in_state_action_invokation< FSM, State, Event >{}
         (::std::forward<Event>(event), fsm, state);
+}
+
+template < typename FSM, typename Event >
+::std::function< event_process_result() >
+create_deferred_invokation(FSM& fsm, Event&& event)
+{
+    auto fsm_ref = ::std::ref(fsm);
+    Event evt = ::std::forward<Event>(event);
+
+    return [fsm_ref, evt]() {
+        return fsm_ref.process_event(evt);
+    };
 }
 
 }  /* namespace actions */

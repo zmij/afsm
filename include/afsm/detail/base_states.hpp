@@ -9,105 +9,27 @@
 #define AFSM_DETAIL_BASE_STATES_HPP_
 
 #include <afsm/definition.hpp>
+#include <afsm/detail/helpers.hpp>
+#include <afsm/detail/transitions.hpp>
 #include <mutex>
 #include <atomic>
 
 namespace afsm {
 namespace detail {
 
-template <typename ... T>
-struct not_a_state;
-
-template < typename T >
-struct not_a_state<T> {
-    static_assert( def::detail::is_state<T>::value, "Type is not a state" );
-};
-
-template < typename FSM, typename T >
-struct front_state_type
-    : ::std::conditional<
-        def::detail::is_state_machine< T >::value,
-        inner_state_machine< FSM, T >,
-        typename ::std::conditional<
-            def::detail::is_state< T >::value,
-            state< FSM, T >,
-            not_a_state< T >
-        >::type
-    > {};
-
-template < typename FSM, typename T >
-struct front_state_tuple;
-
-template < typename FSM >
-struct front_state_tuple< FSM, void> {
-    using type = ::std::tuple<>;
-
-    static type
-    construct(FSM&)
-    { return type{}; }
-};
-
-template < typename FSM, typename ... T>
-struct front_state_tuple< FSM, meta::type_tuple<T...> > {
-    using type = ::std::tuple<
-            typename front_state_type<FSM, T>::type ... >;
-
-    static type
-    construct(FSM& fsm)
-    { return type( typename front_state_type<FSM, T>::type{fsm}... ); }
-};
-
-struct no_lock {
-    no_lock(none&);
-};
-
-template < typename Mutex >
-struct lock_guard_type {
-    using type = ::std::lock_guard<Mutex>;
-};
-
-template <>
-struct lock_guard_type<none> {
-    using type = no_lock;
-};
-template <>
-struct lock_guard_type<none&> {
-    using type = no_lock;
-};
-
-template <typename Mutex>
-struct size_type {
-    using type = ::std::atomic<::std::size_t>;
-};
-
-template <>
-struct size_type<none> {
-    using type = ::std::size_t;
-};
-template <>
-struct size_type<none&> {
-    using type = ::std::size_t;
-};
-
-enum class event_process_result {
-    process,
-    defer,
-    refuse
-};
-
-template < event_process_result R >
-using process_type = ::std::integral_constant< event_process_result, R >;
+template < actions::event_process_result R >
+using process_type = ::std::integral_constant< actions::event_process_result, R >;
 
 template <typename Event, typename HandledEvents,
         typename DeferredEvents = meta::type_tuple<>>
 struct event_process_selector
     : ::std::conditional<
         meta::contains<Event, HandledEvents>::value,
-        process_type<event_process_result::process>,
+        process_type<actions::event_process_result::process>,
         typename ::std::conditional<
             meta::contains<Event, DeferredEvents>::value,
-            process_type<event_process_result::defer>,
-            process_type<event_process_result::refuse>
+            process_type<actions::event_process_result::defer>,
+            process_type<actions::event_process_result::refuse>
         >::type
     >::type{};
 
@@ -167,12 +89,13 @@ public:
             meta::index_of<initial_state, inner_states_def>::value;
     static constexpr ::std::size_t inner_state_count = inner_states_def::size;
 
-    using type_indexes = typename meta::index_builder<inner_state_count>::type;
+    using state_indexes     = typename meta::index_builder<inner_state_count>::type;
 
     state_machine_base()
         : state_type{},
           current_state_{initial_state_index},
-          inner_states_{ inner_states_constructor::construct(*this) }
+          inner_states_{ inner_states_constructor::construct(*this) },
+          dispatch_{ inner_states_ }
     {}
 
     state_machine_base(state_machine_base const&) = delete;
@@ -195,6 +118,17 @@ public:
     ::std::size_t
     current_state() const
     { return (::std::size_t)current_state_; }
+
+    template < typename Event >
+    actions::event_process_result
+    process_event( Event&& evt )
+    {
+        return process_event_impl(::std::forward<Event>(evt),
+                detail::event_process_selector<
+                    Event,
+                    typename machine_type::handled_events,
+                    typename machine_type::deferred_events>{} );
+    }
 protected:
     template<typename ... Args>
     explicit
@@ -202,12 +136,40 @@ protected:
         : state_type(::std::forward<Args>(args)...),
           current_state_{initial_state_index}
     {}
+
+    template < typename Event >
+    actions::event_process_result
+    process_event_impl(Event&& event,
+        detail::process_type<actions::event_process_result::process> const&)
+    {
+        auto res = dispatch_.process_event(current_state(), ::std::forward< Event >(event));
+        if (res == actions::event_process_result::refuse) {
+
+        }
+        return res;
+    }
+    template < typename Event >
+    actions::event_process_result
+    process_event_impl(Event&&,
+        detail::process_type<actions::event_process_result::defer> const&)
+    {
+        return actions::event_process_result::defer;
+    }
+    template < typename Event >
+    actions::event_process_result
+    process_event_impl(Event&&,
+        detail::process_type<actions::event_process_result::refuse> const&)
+    {
+        return actions::event_process_result::refuse;
+    }
 protected:
     using mutex_type        = Mutex;
     using size_type         = typename detail::size_type<mutex_type>::type;
+    using dispatch_tuple    = actions::detail::inner_dispatch_table< inner_states_tuple >;
 
     size_type               current_state_;
     inner_states_tuple      inner_states_;
+    dispatch_tuple          dispatch_;
 };
 
 template < typename T, typename Mutex >
