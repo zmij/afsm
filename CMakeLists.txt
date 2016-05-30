@@ -28,6 +28,7 @@ option(BUILD_TESTS "Build test programs" ON)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 add_definitions("-std=c++11")
+add_definitions(-Wall -Werror -Wextra -pedantic -Weffc++)
 
 set(${LIB_NAME}_LIB ${lib_name})
 

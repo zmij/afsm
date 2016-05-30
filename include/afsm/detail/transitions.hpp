@@ -140,8 +140,7 @@ struct state_exit_impl {
 template < typename FSM, typename State, typename Event >
 struct state_exit_impl< FSM, State, Event, false > {
     void
-    operator()(State& state, Event const& event, FSM& fsm) const
-    {}
+    operator()(State&, Event const&, FSM&) const {}
 };
 
 template < typename FSM, typename State, typename Event >
@@ -158,8 +157,7 @@ struct state_enter_impl {
 template < typename FSM, typename State, typename Event >
 struct state_enter_impl< FSM, State, Event, false > {
     void
-    operator()(State& state, Event&& event, FSM& fsm) const
-    {}
+    operator()(State&, Event&&, FSM&) const {}
 };
 
 template < typename FSM, typename State, typename Event >
@@ -187,10 +185,11 @@ struct state_clear : state_clear_impl< FSM, State, State::has_history > {};
 
 template < typename FSM, typename StateTable, typename Event >
 struct no_transition {
+    explicit
+    no_transition(StateTable&) {}
 
-    no_transition(FSM&, StateTable&) {}
     actions::event_process_result
-    operator()(Event&& event) const
+    operator()(Event&&) const
     {
         return actions::event_process_result::refuse;
     }
@@ -225,13 +224,11 @@ struct single_transition<FSM, StateTable,
     static_assert(source_index::found, "Failed to find source state index");
     static_assert(target_index::found, "Failed to find target state index");
 
-    fsm_type&       fsm;
     state_table&    states;
 
-    single_transition(fsm_type& fsm_, state_table& states_)
-        : fsm{fsm_}, states{states_}
-    {
-    }
+    explicit
+    single_transition(state_table& states_)
+        : states{states_} {}
 
     actions::event_process_result
     operator()(Event&& event) const
@@ -251,14 +248,15 @@ struct nth_transition {
     using transition_invokation = single_transition<FSM, StateTable, meta::type_tuple<transition>>;
 
     transition_invokation action;
-    nth_transition(FSM& fsm, StateTable& states)
-        : action{fsm, states}
-    {}
+
+    explicit
+    nth_transition(StateTable& states)
+        : action{states} {}
 
     actions::event_process_result
     operator()(event_type&& event) const
     {
-        auto res = previous_transition{ action.fsm, action.states }
+        auto res = previous_transition{ action.states }
                     (::std::forward<event_type>(event));
         if (res == actions::event_process_result::refuse) {
             return action(::std::forward<event_type>(event));
@@ -275,9 +273,10 @@ struct nth_transition< 0, FSM, StateTable, Transitions > {
     using transition_invokation = single_transition<FSM, StateTable, meta::type_tuple<transition>>;
 
     transition_invokation action;
-    nth_transition(FSM& fsm, StateTable& states)
-        : action{fsm, states}
-    {}
+
+    explicit
+    nth_transition(StateTable& states)
+        : action{states} {}
 
     actions::event_process_result
     operator()(event_type&& event) const
@@ -292,16 +291,17 @@ struct conditional_transition {
     static_assert(Transitions::size > 0, "Transition list is too small");
 
     using last_transition = nth_transition<size - 1, FSM, StateTable, Transitions>;
-    FSM&            fsm;
+
     StateTable&     states;
-    conditional_transition(FSM& fsm_, StateTable& states_)
-        : fsm{fsm_}, states{states_}
-        {}
+
+    explicit
+    conditional_transition(StateTable& states_)
+        : states{states_} {}
 
     actions::event_process_result
     operator()(Event&& event) const
     {
-        return last_transition{fsm, states}(::std::forward<Event>(event));
+        return last_transition{states}(::std::forward<Event>(event));
     }
 };
 
@@ -427,15 +427,15 @@ private:
     {
         using event_transitions = typename meta::find_if<
                 def::handles_event<Event>::template type, transitions_tuple >::type;
-        return invokation_table< Event > {
+        return invokation_table< Event > {{
             typename detail::transition_action_selector< fsm_type, this_type, Event,
                 typename meta::find_if<
                     def::originates_from<
                         typename inner_states_def::template type< Indexes >
                     >::template type,
                     event_transitions
-                >::type >::type( fsm_, *this ) ...
-        };
+                >::type >::type( *this ) ...
+        }};
     }
 private:
     fsm_type&           fsm_;

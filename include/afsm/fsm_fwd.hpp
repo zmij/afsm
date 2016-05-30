@@ -13,11 +13,11 @@ namespace afsm {
 struct none {};
 
 template < typename FSM, typename T >
-struct state;
+class state;
 template < typename FSM, typename T >
-struct inner_state_machine;
+class inner_state_machine;
 template < typename T, typename Mutex = none >
-struct state_machine;
+class state_machine;
 
 }  /* namespace afsm */
 

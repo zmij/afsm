@@ -20,21 +20,21 @@ struct event_c {};
 struct dummy_action {
     template < typename FSM, typename SourceState, typename TargetState >
     void
-    operator()(event_a&& evt, FSM& fsm, SourceState& source, TargetState& target) const
+    operator()(event_a&&, FSM&, SourceState& source, TargetState&) const
     {
         ::std::cerr << "Dummy action triggered (a)\n";
         source.value = "a";
     }
     template < typename FSM, typename SourceState, typename TargetState >
     void
-    operator()(event_b&& evt, FSM& fsm, SourceState& source, TargetState& target) const
+    operator()(event_b&&, FSM&, SourceState& source, TargetState&) const
     {
         ::std::cerr << "Dummy action triggered (b)\n";
         source.value = "b";
     }
     template < typename FSM, typename SourceState, typename TargetState >
     void
-    operator()(event_c&& evt, FSM& fsm, SourceState& source, TargetState& target) const
+    operator()(event_c&&, FSM&, SourceState& source, TargetState&) const
     {
         ::std::cerr << "Dummy action triggered (c)\n";
         source.value = "c";
@@ -44,7 +44,7 @@ struct dummy_action {
 struct dummy_action_a {
     template < typename FSM, typename SourceState, typename TargetState >
     void
-    operator()(event_a const& evt, FSM& fsm, SourceState& source, TargetState& target) const
+    operator()(event_a const&, FSM&, SourceState& source, TargetState&) const
     {
         ::std::cerr << "Dummy action 2 triggered (a)\n";
         source.value = "dummy";
@@ -95,7 +95,7 @@ struct inner_event {};
 struct is_none {
     template < typename FSM, typename State >
     bool
-    operator()(FSM const& fsm, State const& state)
+    operator()(FSM const& fsm, State const&)
     {
         return fsm.value == "none";
     }
@@ -109,21 +109,21 @@ struct inner_dispatch_test : def::state_machine< inner_dispatch_test > {
     struct inner_action {
         template < typename FSM >
         void
-        operator()(inner_event const& evt, FSM& fsm, state_a& source, state_a& target) const
+        operator()(inner_event const&, FSM& fsm, state_a&, state_a&) const
         {
             ::std::cerr << "Dummy action triggered (inner_event - a)\n";
             fsm.value = "in_a";
         }
         template < typename FSM >
         void
-        operator()(inner_event const& evt, FSM& fsm, state_b& source, state_b& target) const
+        operator()(inner_event const&, FSM& fsm, state_b&, state_b&) const
         {
             ::std::cerr << "Dummy action triggered (inner_event - b)\n";
             fsm.value = "in_b";
         }
         template < typename FSM >
         void
-        operator()(inner_event const& evt, FSM& fsm, state_c& source, state_c& target) const
+        operator()(inner_event const&, FSM& fsm, state_c&, state_c&) const
         {
             ::std::cerr << "Dummy action triggered (inner_event - c)\n";
             fsm.value = "in_c";

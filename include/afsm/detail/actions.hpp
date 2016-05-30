@@ -66,7 +66,7 @@ struct guard_check {
 template < typename FSM, typename State >
 struct guard_check< FSM, State, none > {
     bool
-    operator()(FSM const& fsm, State const& state) const
+    operator()(FSM const&, State const&) const
     { return true; }
 };
 
@@ -88,7 +88,7 @@ template < typename FSM, typename Event,
     typename SourceState, typename TargetState >
 struct action_invokation< none, FSM, Event, SourceState, TargetState > {
     void
-    operator()(Event&& event, FSM& fsm, SourceState& source, TargetState& target) const
+    operator()(Event&&, FSM&, SourceState&, TargetState&) const
     {}
 };
 
@@ -223,7 +223,7 @@ struct in_state_action_invokation<false, FSM, State, Event> {
     using event_type        = Event;
 
     event_process_result
-    operator()(event_type&& event, fsm_type& fsm, state_type& state) const
+    operator()(event_type&&, fsm_type&, state_type&) const
     {
        return event_process_result::refuse;
     }
@@ -298,7 +298,7 @@ private:
     state_table( meta::indexes_tuple< Indexes... > const& )
     {
         // TODO Cache it
-        return invokation_table<Event> { ::std::get<Indexes>(states_)... };
+        return invokation_table<Event> {{ ::std::get<Indexes>(states_)... }};
     };
     dispatch_tuple states_;
 };

@@ -38,7 +38,7 @@ struct command_complete {};
 struct dummy_action {
     template < typename Event, typename FSM, typename SourceState, typename TargetState >
     void
-    operator()(Event&& evt, FSM& fsm, SourceState& source, TargetState& target) const
+    operator()(Event&&, FSM&, SourceState&, TargetState&) const
     {
         ::std::cerr << "Dummy action triggered\n";
     }
@@ -166,8 +166,6 @@ TEST(TranFSM, Transitions)
 
     ::std::cerr << connection_fsm::initial_state_index
             << "/" << connection_fsm::inner_state_count << "\n";
-
-    auto idx = connection_fsm::initial_state_index;
 
     EXPECT_EQ(connection_fsm::initial_state_index, fsm.current_state());
 }

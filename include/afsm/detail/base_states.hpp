@@ -44,7 +44,7 @@ struct state_base_impl : T {
     using handled_events =
             typename def::detail::handled_events<state_definition_type>::type;
     using internal_events =
-            typename def::detail::handled_events<state_definition_type>::type;;
+            typename def::detail::handled_events<state_definition_type>::type;
     static_assert(def::detail::is_state_machine<state_definition_type>::value
                 || !def::detail::has_default_transitions< handled_events >::value,
             "Internal transition cannot be a default transition");

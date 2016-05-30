@@ -41,14 +41,14 @@ private:
     }
     template < typename Event >
     actions::event_process_result
-    process_event_impl(Event&& evt,
+    process_event_impl(Event&&,
         detail::process_type<actions::event_process_result::defer> const&)
     {
         return actions::event_process_result::defer;
     }
     template < typename Event >
     actions::event_process_result
-    process_event_impl(Event&& evt,
+    process_event_impl(Event&&,
         detail::process_type<actions::event_process_result::refuse> const&)
     {
         return actions::event_process_result::refuse;
@@ -111,7 +111,7 @@ public:
 private:
     template < typename Event >
     actions::event_process_result
-    process_event_impl(Event&& evt,
+    process_event_impl(Event&&,
         detail::process_type<actions::event_process_result::process> const&)
     {
         // TODO Dispatch event
@@ -119,7 +119,7 @@ private:
     }
     template < typename Event >
     actions::event_process_result
-    process_event_impl(Event&& evt,
+    process_event_impl(Event&&,
         detail::process_type<actions::event_process_result::refuse> const&)
     {
         static_assert( detail::event_process_selector<
