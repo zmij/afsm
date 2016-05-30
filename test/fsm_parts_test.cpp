@@ -76,11 +76,11 @@ TEST(FSM, InnerStateTransitions)
     none n;
     test_state ts{n};
     EXPECT_EQ("none", ts.value);
-    EXPECT_EQ(actions::event_process_result::process, ts.process_event(event_a{}));
+    EXPECT_EQ(actions::event_process_result::process_in_state, ts.process_event(event_a{}));
     EXPECT_EQ("a", ts.value);
-    EXPECT_EQ(actions::event_process_result::process, ts.process_event(event_b{}));
+    EXPECT_EQ(actions::event_process_result::process_in_state, ts.process_event(event_b{}));
     EXPECT_EQ("b", ts.value);
-    EXPECT_EQ(actions::event_process_result::process, ts.process_event(event_c{}));
+    EXPECT_EQ(actions::event_process_result::process_in_state, ts.process_event(event_c{}));
     EXPECT_EQ("c", ts.value);
 }
 
@@ -89,11 +89,23 @@ TEST(FSM, InnerStateTransitions)
 namespace b {
 
 struct event_ab {};
+struct event_bca {};
 struct inner_event {};
+
+struct is_none {
+    template < typename FSM, typename State >
+    bool
+    operator()(FSM const& fsm, State const& state)
+    {
+        return fsm.value == "none";
+    }
+};
 
 struct inner_dispatch_test : def::state_machine< inner_dispatch_test > {
     struct state_a;
     struct state_b;
+    struct state_c;
+
     struct inner_action {
         template < typename FSM >
         void
@@ -109,6 +121,13 @@ struct inner_dispatch_test : def::state_machine< inner_dispatch_test > {
             ::std::cerr << "Dummy action triggered (inner_event - b)\n";
             fsm.value = "in_b";
         }
+        template < typename FSM >
+        void
+        operator()(inner_event const& evt, FSM& fsm, state_c& source, state_c& target) const
+        {
+            ::std::cerr << "Dummy action triggered (inner_event - c)\n";
+            fsm.value = "in_c";
+        }
     };
 
     struct state_a : state< state_a > {
@@ -123,8 +142,16 @@ struct inner_dispatch_test : def::state_machine< inner_dispatch_test > {
         >;
     };
 
+    struct state_c : state< state_c > {
+        using internal_transitions = def::transition_table <
+            in< inner_event, inner_action, none >
+        >;
+    };
+
     using transitions = transition_table <
-        tr< state_a, event_ab, state_b >
+        tr< state_a,    event_ab,   state_b,    none,   none            >,
+        tr< state_b,    event_bca,  state_c,    none,   is_none         >,
+        tr< state_b,    event_bca,  state_a,    none,   not_<is_none>   >
     >;
     using initial_state = state_a;
 
@@ -139,9 +166,14 @@ TEST(FSM, InnerEventDispatch)
     test_sm tsm{n};
     EXPECT_EQ("none", tsm.value);
     EXPECT_EQ(test_sm::initial_state_index, tsm.current_state());
-    EXPECT_EQ(actions::event_process_result::process, tsm.process_event(inner_event{}));
+    EXPECT_EQ(actions::event_process_result::process_in_state, tsm.process_event(inner_event{}));
     EXPECT_EQ("in_a", tsm.value);
-    EXPECT_EQ(actions::event_process_result::refuse, tsm.process_event(event_ab{}));
+    EXPECT_EQ(actions::event_process_result::process, tsm.process_event(event_ab{}));
+    EXPECT_NE(test_sm::initial_state_index, tsm.current_state());
+    EXPECT_EQ(actions::event_process_result::process_in_state, tsm.process_event(inner_event{}));
+    EXPECT_EQ("in_b", tsm.value);
+    EXPECT_EQ(actions::event_process_result::process, tsm.process_event(event_bca{}));
+    EXPECT_EQ(actions::event_process_result::process_in_state, tsm.process_event(inner_event{}));
 }
 
 }  /* namespace b */

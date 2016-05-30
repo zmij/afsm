@@ -43,6 +43,8 @@ struct state_base_impl : T {
             "Internal transition table cannot have transitions between other states");
     using handled_events =
             typename def::detail::handled_events<state_definition_type>::type;
+    using internal_events =
+            typename def::detail::handled_events<state_definition_type>::type;;
     static_assert(def::detail::is_state_machine<state_definition_type>::value
                 || !def::detail::has_default_transitions< handled_events >::value,
             "Internal transition cannot be a default transition");
@@ -125,11 +127,16 @@ public:
 
     using state_indexes     = typename meta::index_builder<inner_state_count>::type;
 
+    using mutex_type        = Mutex;
+    using size_type         = typename detail::size_type<mutex_type>::type;
+    using dispatch_tuple    = actions::detail::inner_dispatch_table< inner_states_tuple >;
+    using transition_tuple  = afsm::transitions::state_transition_table<
+            machine_type, state_machine_definition_type, size_type >;
+
     state_machine_base()
         : state_type{},
-          current_state_{initial_state_index},
-          inner_states_{ inner_states_constructor::construct(*this) },
-          dispatch_{ inner_states_ }
+          transitions_{*this},
+          dispatch_{ transitions_.states() }
     {}
 
     state_machine_base(state_machine_base const&) = delete;
@@ -143,66 +150,57 @@ public:
     template < ::std::size_t N>
     ::std::tuple_element< N, inner_states_tuple >&
     get_state()
-    { return ::std::get<N>(inner_states_); }
+    { return transitions_.template get_state<N>(); }
     template < ::std::size_t N>
     ::std::tuple_element< N, inner_states_tuple > const&
     get_state() const
-    { return ::std::get<N>(inner_states_); }
+    { return transitions_.template get_state<N>(); }
 
     ::std::size_t
     current_state() const
-    { return (::std::size_t)current_state_; }
+    { return transitions_.current_state(); }
 
-    template < typename Event >
-    actions::event_process_result
-    process_event( Event&& evt )
-    {
-        return process_event_impl(::std::forward<Event>(evt),
-                detail::event_process_selector<
-                    Event,
-                    typename machine_type::handled_events,
-                    typename machine_type::deferred_events>{} );
-    }
 protected:
     template<typename ... Args>
     explicit
     state_machine_base(Args&& ... args)
         : state_type(::std::forward<Args>(args)...),
-          current_state_{initial_state_index}
+          transitions_{*this},
+          dispatch_{ transitions_.states() }
     {}
 
-    template < typename Event >
+    template < typename FSM, typename Event >
     actions::event_process_result
-    process_event_impl(Event&& event,
+    process_event_impl(FSM& enclosing_fsm, Event&& event,
         detail::process_type<actions::event_process_result::process> const&)
     {
-        auto res = dispatch_.process_event(current_state(), ::std::forward< Event >(event));
+        auto res = actions::handle_in_state_event(::std::forward<Event>(event), enclosing_fsm, *this);
         if (res == actions::event_process_result::refuse) {
-
+            // Transitions
+            res = transitions_.process_event(::std::forward<Event>(event));
+        }
+        if (res == actions::event_process_result::refuse) {
+            // Dispatch event to inner states
+            res = dispatch_.process_event(current_state(), ::std::forward< Event >(event));
         }
         return res;
     }
-    template < typename Event >
+    template < typename FSM, typename Event >
     actions::event_process_result
-    process_event_impl(Event&&,
+    process_event_impl(FSM&, Event&&,
         detail::process_type<actions::event_process_result::defer> const&)
     {
         return actions::event_process_result::defer;
     }
-    template < typename Event >
+    template < typename FSM, typename Event >
     actions::event_process_result
-    process_event_impl(Event&&,
+    process_event_impl(FSM&, Event&&,
         detail::process_type<actions::event_process_result::refuse> const&)
     {
         return actions::event_process_result::refuse;
     }
 protected:
-    using mutex_type        = Mutex;
-    using size_type         = typename detail::size_type<mutex_type>::type;
-    using dispatch_tuple    = actions::detail::inner_dispatch_table< inner_states_tuple >;
-
-    size_type               current_state_;
-    inner_states_tuple      inner_states_;
+    transition_tuple        transitions_;
     dispatch_tuple          dispatch_;
 };
 

@@ -18,6 +18,7 @@ namespace actions {
 enum class event_process_result {
     refuse,
     process,
+    process_in_state,    /**< Process with in-state transition */
     defer,
 };
 
@@ -97,14 +98,14 @@ struct guarded_action_invokation {
     using guard_type        = guard_check< FSM, SourceState, Guard >;
     using invokation_type   = action_invokation< Action, FSM, Event, SourceState, TargetState >;
 
-    bool
+    event_process_result
     operator()(Event&& event, FSM& fsm, SourceState& source, TargetState& target) const
     {
         if (guard_type{}(fsm, source)) {
             invokation_type{}(::std::forward<Event>(event), fsm, source, target);
-            return true;
+            return event_process_result::process;
         }
-        return false;
+        return event_process_result::refuse;
     }
 };
 
@@ -119,12 +120,13 @@ struct nth_inner_invokation {
                 action_type, guard_type, FSM, Event, State, State >;
     using previous_action    = nth_inner_invokation<N - 1, FSM, State, Event, Transitions>;
 
-    bool
+    event_process_result
     operator()(Event&& event, FSM& fsm, State& state) const
     {
-        if (!previous_action{}(::std::forward<Event>(event), fsm, state))
+        auto res = previous_action{}(::std::forward<Event>(event), fsm, state);
+        if (res == event_process_result::refuse)
             return invokation_type{}(::std::forward<Event>(event), fsm, state, state);
-        return true;
+        return res;
     }
 };
 
@@ -137,10 +139,19 @@ struct nth_inner_invokation<0, FSM, State, Event, Transitions> {
     using invokation_type   = guarded_action_invokation<
                 action_type, guard_type, FSM, Event, State, State >;
 
-    bool
+    event_process_result
     operator()(Event&& event, FSM& fsm, State& state) const
     {
         return invokation_type{}(::std::forward<Event>(event), fsm, state, state);
+    }
+};
+
+struct no_in_state_invokation {
+    template < typename FSM, typename State, typename Event >
+    event_process_result
+    operator()(Event&&, FSM&, State&) const
+    {
+        return event_process_result::refuse;
     }
 };
 
@@ -151,10 +162,10 @@ struct unconditional_in_state_invokation {
     using invokation_type = guarded_action_invokation<
                 action_type, guard_type, FSM, Event, State, State >;
 
-    void
+    event_process_result
     operator()(Event&& event, FSM& fsm, State& state) const
     {
-        invokation_type{}(::std::forward<Event>(event), fsm, state, state);
+        return invokation_type{}(::std::forward<Event>(event), fsm, state, state);
     }
 };
 
@@ -164,12 +175,79 @@ struct conditional_in_state_invokation {
     static constexpr ::std::size_t size = Transitions::size;
     using invokation_type = nth_inner_invokation< size - 1, FSM, State, Event, Transitions>;
 
-    void
+    event_process_result
     operator()(Event&& event, FSM& fsm, State& state) const
     {
-        invokation_type{}(::std::forward<Event>(event), fsm, state);
+        return invokation_type{}(::std::forward<Event>(event), fsm, state);
     }
 };
+
+template < bool hasActions, typename FSM, typename State, typename Event >
+struct in_state_action_invokation {
+    using fsm_type          = FSM;
+    using state_type        = State;
+    using event_type        = Event;
+
+    using transitions       = typename state_type::internal_transitions;
+    static_assert( !::std::is_same<transitions, void>::value,
+            "State doesn't have internal transitions table" );
+
+    using event_handlers    = typename meta::find_if<
+        def::handles_event<event_type>::template type,
+        typename transitions::transitions >::type;
+    static_assert( event_handlers::size > 0, "State doesn't handle event" );
+    using handler_type      = typename ::std::conditional<
+                event_handlers::size == 1,
+                detail::unconditional_in_state_invokation<
+                    fsm_type, state_type, event_type,
+                    typename event_handlers::template type<0>>,
+                detail::conditional_in_state_invokation<
+                    fsm_type, state_type, event_type, event_handlers>
+            >::type;
+
+    event_process_result
+    operator()(event_type&& event, fsm_type& fsm, state_type& state) const
+    {
+       auto res = handler_type{}(::std::forward<event_type>(event), fsm, state);
+       if (res == event_process_result::process) {
+           return event_process_result::process_in_state;
+       }
+       return res;
+    }
+};
+
+template < typename FSM, typename State, typename Event >
+struct in_state_action_invokation<false, FSM, State, Event> {
+    using fsm_type          = FSM;
+    using state_type        = State;
+    using event_type        = Event;
+
+    event_process_result
+    operator()(event_type&& event, fsm_type& fsm, state_type& state) const
+    {
+       return event_process_result::refuse;
+    }
+};
+
+}  /* namespace detail */
+
+template < typename FSM, typename State, typename Event >
+struct in_state_action_invokation :
+        detail::in_state_action_invokation<
+            !::std::is_same<typename State::internal_transitions, void>::value &&
+            meta::contains<Event, typename State::internal_events>::value,
+            FSM, State, Event > {
+};
+
+template < typename FSM, typename State, typename Event >
+event_process_result
+handle_in_state_event(Event&& event, FSM& fsm, State& state)
+{
+    return in_state_action_invokation< FSM, State, Event >{}
+        (::std::forward<Event>(event), fsm, state);
+}
+
+namespace detail {
 
 template < typename State >
 struct process_event_handler {
@@ -219,50 +297,13 @@ private:
     invokation_table<Event>
     state_table( meta::indexes_tuple< Indexes... > const& )
     {
+        // TODO Cache it
         return invokation_table<Event> { ::std::get<Indexes>(states_)... };
     };
     dispatch_tuple states_;
 };
 
 }  /* namespace detail */
-
-template < typename FSM, typename State, typename Event >
-struct in_state_action_invokation {
-    using fsm_type          = FSM;
-    using state_type        = State;
-    using event_type        = Event;
-
-    using transitions       = typename state_type::internal_transitions;
-    static_assert( !::std::is_same<transitions, void>::value,
-            "State doesn't have internal transitions table" );
-
-    using event_handlers    = typename meta::find_if<
-        def::handles_event<event_type>::template type,
-        typename transitions::transitions >::type;
-    static_assert( event_handlers::size > 0, "State doesn't handle event" );
-    using handler_type      = typename ::std::conditional<
-                event_handlers::size == 1,
-                detail::unconditional_in_state_invokation<
-                    fsm_type, state_type, event_type,
-                    typename event_handlers::template type<0>>,
-                detail::conditional_in_state_invokation<
-                    fsm_type, state_type, event_type, event_handlers>
-            >::type;
-
-    void
-    operator()(event_type&& event, fsm_type& fsm, state_type& state) const
-    {
-       handler_type{}(::std::forward<event_type>(event), fsm, state);
-    }
-};
-
-template < typename FSM, typename State, typename Event >
-void
-handle_in_state_event(Event&& event, FSM& fsm, State& state)
-{
-    in_state_action_invokation< FSM, State, Event >{}
-        (::std::forward<Event>(event), fsm, state);
-}
 
 template < typename FSM, typename Event >
 ::std::function< event_process_result() >

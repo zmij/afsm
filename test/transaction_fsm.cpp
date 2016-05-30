@@ -153,7 +153,7 @@ TEST(TranFSM, TranIdleState)
 {
     none n;
     tran_idle_state state(n);
-    EXPECT_EQ(actions::event_process_result::process,
+    EXPECT_EQ(actions::event_process_result::process_in_state,
             state.process_event(events::command_complete{}));
     EXPECT_EQ(actions::event_process_result::refuse,
             state.process_event(events::begin{}));

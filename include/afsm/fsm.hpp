@@ -37,8 +37,7 @@ private:
     process_event_impl(Event&& evt,
         detail::process_type<actions::event_process_result::process> const&)
     {
-        actions::handle_in_state_event(::std::forward<Event>(evt), fsm_, *this);
-        return actions::event_process_result::process;
+        return actions::handle_in_state_event(::std::forward<Event>(evt), fsm_, *this);
     }
     template < typename Event >
     actions::event_process_result
@@ -62,9 +61,23 @@ template < typename FSM, typename T >
 class inner_state_machine : public detail::state_machine_base< T, none > {
 public:
     using enclosing_fsm_type    = FSM;
+    using base_machine_type     = detail::state_machine_base< T, none >;
 public:
     inner_state_machine(enclosing_fsm_type& fsm)
         : inner_state_machine::machine_type{}, fsm_{fsm} {}
+
+    template < typename Event >
+    actions::event_process_result
+    process_event( Event&& evt )
+    {
+        return process_event_impl(fsm_, ::std::forward<Event>(evt),
+                detail::event_process_selector<
+                    Event,
+                    typename inner_state_machine::handled_events,
+                    typename inner_state_machine::deferred_events>{} );
+    }
+private:
+    using base_machine_type::process_event_impl;
 private:
     enclosing_fsm_type&    fsm_;
 };
@@ -89,6 +102,7 @@ public:
     actions::event_process_result
     process_event( Event&& evt )
     {
+        lock_guard lock{mutex_};
         return process_event_impl(::std::forward<Event>(evt),
                 detail::event_process_selector<
                     Event,
@@ -100,7 +114,6 @@ private:
     process_event_impl(Event&& evt,
         detail::process_type<actions::event_process_result::process> const&)
     {
-        lock_guard lock{mutex_};
         // TODO Dispatch event
         return actions::event_process_result::process;
     }

@@ -167,6 +167,16 @@ struct handles_event {
     >::type {};
 };
 
+template < typename State >
+struct originates_from {
+    template < typename Transition >
+    struct type : ::std::conditional<
+        ::std::is_same< typename Transition::source_state_type, State >::value,
+        ::std::true_type,
+        ::std::false_type
+    >::type {};
+};
+
 template < typename ... T >
 struct transition_table {
     static_assert(
@@ -200,7 +210,7 @@ struct transition_table {
             >::type::value,
             "State types must derive from afsm::def::state");
     static_assert(transitions::size == transition_count, "Duplicate transition");
-
+    // TODO Check for different guards for transitions from one state on one event
 };
 
 template < typename StateType, bool HasHistory >
@@ -259,6 +269,10 @@ struct state_machine : state< StateMachine, HasHistory, CommonBase >{
 
     template < typename T, typename Base = CommonBase >
     using terminal_state = def::terminal_state<T, Base>;
+
+    using none = afsm::none;
+    template < typename Predicate >
+    using not_ = meta::not_<Predicate>;
 };
 
 namespace detail {
