@@ -85,7 +85,7 @@ private:
 template < typename T, typename Mutex >
 class state_machine : public detail::state_machine_base< T, Mutex > {
 public:
-    static_assert( meta::is_empty< typename state_machine::deferred_events >::value,
+    static_assert( meta::is_empty< typename T::deferred_events >::value,
             "Outer state machine cannot defer events" );
 public:
     state_machine()
@@ -102,11 +102,21 @@ public:
     actions::event_process_result
     process_event( Event&& evt )
     {
-        lock_guard lock{mutex_};
-        return process_event_impl(::std::forward<Event>(evt),
-                detail::event_process_selector<
-                    Event,
-                    typename state_machine::handled_events>{} );
+        if (!stack_size_++) {
+            auto res = process_event_impl(::std::forward<Event>(evt),
+                        detail::event_process_selector<
+                            Event,
+                            typename state_machine::handled_events>{} );
+            lock_guard lock{mutex_};
+            // Process enqueued events
+            --stack_size_;
+            return res;
+        } else {
+            lock_guard lock{mutex_};
+            // Enqueue event
+            --stack_size_;
+            return actions::event_process_result::defer;
+        }
     }
 private:
     template < typename Event >
@@ -133,8 +143,10 @@ private:
 private:
     using mutex_type        = Mutex;
     using lock_guard        = typename detail::lock_guard_type<mutex_type>::type;
+    using atomic_counter    = ::std::atomic< ::std::size_t >;
 
     mutex_type              mutex_;
+    atomic_counter          stack_size_;
 };
 
 }  /* namespace afsm */

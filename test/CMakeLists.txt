@@ -22,6 +22,7 @@ set(
     static_tests.cpp
     fsm_parts_test.cpp
     transaction_fsm.cpp
+    common_base_test.cpp
 )
 add_executable(test-afsm-base ${test_program_SRCS})
 target_link_libraries(

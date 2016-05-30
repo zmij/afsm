@@ -58,7 +58,7 @@ struct front_state_tuple< FSM, meta::type_tuple<T...> > {
 };
 
 struct no_lock {
-    no_lock(none&);
+    no_lock(none&) {}
 };
 
 template < typename Mutex >
