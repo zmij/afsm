@@ -45,65 +45,65 @@ struct dummy_action {
 };
 
 struct connection_fsm_def : def::state_machine<connection_fsm_def> {
-    struct closed : def::state<closed> {
+    struct closed : state<closed> {
     };
 
-    struct connecting : def::state<connecting> {
+    struct connecting : state<connecting> {
     };
 
-    struct authorizing : def::state<authorizing> {
+    struct authorizing : state<authorizing> {
     };
 
-    struct idle : def::state<idle> {
+    struct idle : state<idle> {
     };
 
-    struct terminated : def::state<terminated> {
+    struct terminated : terminal_state<terminated> {
     };
 
-    struct transaction : def::state_machine<transaction> {
-        struct starting : def::state<starting> {
+    struct transaction : state_machine<transaction> {
+        struct starting : state<starting> {
         };
 
-        struct idle : def::state<idle> {
-            using internal_transitions = def::transition_table<
+        struct idle : state<idle> {
+            using internal_transitions = transition_table<
                 in< events::command_complete,   dummy_action,   none >,
                 in< events::ready_for_query,    dummy_action,   none >
             >;
         };
 
-        struct simple_query : def::state_machine<simple_query> {
-            struct waiting : def::state<waiting> {};
-            struct fetch_data : def::state<fetch_data>{};
+        struct simple_query : state_machine<simple_query> {
+            struct waiting : state<waiting> {};
+            struct fetch_data : state<fetch_data>{};
 
             using initial_state = waiting;
-            using transitions = def::transition_table<
+            using transitions = transition_table<
                 tr< waiting,    events::row_description,    fetch_data      >,
                 tr< fetch_data, events::command_complete,   waiting         >
             >;
         };
 
-        struct extended_query : def::state_machine<extended_query> {
-            struct prepare  : def::state<prepare> {};
-            struct parse    : def::state<parse> {};
-            struct bind     : def::state<bind> {};
-            struct exec     : def::state<exec> {};
+        struct extended_query : state_machine<extended_query> {
+            struct prepare  : state<prepare> {};
+            struct parse    : state<parse> {};
+            struct bind     : state<bind> {};
+            struct exec     : state<exec> {};
 
             using initial_state = prepare;
-            using transitions = def::transition_table<
+            using transitions = transition_table<
                 tr< prepare,    none,                       parse           >,
                 tr< parse,      events::ready_for_query,    bind            >,
                 tr< bind,       events::ready_for_query,    exec            >
             >;
         };
 
-        struct tran_error : def::state<tran_error> {
+        struct tran_error : state<tran_error> {
         };
 
-        struct exiting : def::state<exiting> {
+        struct exiting : state<exiting> {
         };
 
         using initial_state = starting;
-        using transitions = def::transition_table<
+        using transitions = transition_table<
             tr< starting,       events::ready_for_query,    idle            >,
 
             tr< idle,           events::commit,             exiting         >,
@@ -126,7 +126,7 @@ struct connection_fsm_def : def::state_machine<connection_fsm_def> {
     };
 
     using initial_state = closed;
-    using transitions = def::transition_table<
+    using transitions = transition_table<
         tr< closed,             events::connect,            connecting      >,
         tr< closed,             events::terminate,          terminated      >,
 

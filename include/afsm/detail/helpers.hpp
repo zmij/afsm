@@ -8,6 +8,10 @@
 #ifndef AFSM_DETAIL_HELPERS_HPP_
 #define AFSM_DETAIL_HELPERS_HPP_
 
+#include <type_traits>
+#include <mutex>
+#include <atomic>
+
 namespace afsm {
 namespace detail {
 
@@ -87,7 +91,5 @@ struct size_type<none&> {
 
 }  /* namespace detail */
 }  /* namespace afsm */
-
-
 
 #endif /* AFSM_DETAIL_HELPERS_HPP_ */

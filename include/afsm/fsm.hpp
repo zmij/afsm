@@ -9,7 +9,6 @@
 #define AFSM_FSM_HPP_
 
 #include <afsm/detail/base_states.hpp>
-#include <afsm/detail/actions.hpp>
 
 namespace afsm {
 

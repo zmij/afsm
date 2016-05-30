@@ -11,8 +11,6 @@
 #include <afsm/definition.hpp>
 #include <afsm/detail/helpers.hpp>
 #include <afsm/detail/transitions.hpp>
-#include <mutex>
-#include <atomic>
 
 namespace afsm {
 namespace detail {
@@ -33,11 +31,10 @@ struct event_process_selector
         >::type
     >::type{};
 
-template < typename T >
-class state_base : public T {
-public:
+template < typename T, bool isTerminal >
+struct state_base_impl : T {
     using state_definition_type = T;
-    using state_type            = state_base<T>;
+    using state_type            = state_base_impl<T, isTerminal>;
     using internal_transitions = typename state_definition_type::internal_transitions;
 
     static_assert(def::detail::is_state<T>::value,
@@ -55,12 +52,49 @@ public:
                 meta::type_tuple<>,
                 typename meta::type_set< typename T::deferred_events >::type
             >::type;
+
+    state_base_impl() : state_definition_type{} {}
+protected:
+    template< typename ... Args >
+    state_base_impl(Args&& ... args)
+        : state_definition_type(::std::forward<Args>(args)...) {}
+};
+
+template < typename T >
+struct state_base_impl<T, true> : T {
+    using state_definition_type = T;
+    using state_type            = state_base_impl<T, false>;
+    using internal_transitions = typename state_definition_type::internal_transitions;
+
+    static_assert(def::detail::is_state<T>::value,
+            "Front state can be created only with a descendant of afsm::def::state");
+    static_assert(::std::is_same<
+            typename state_definition_type::internal_transitions, void >::value,
+            "Terminal state must not define transitions");
+    static_assert(::std::is_same<
+            typename state_definition_type::deferred_events, void >::value,
+            "Terminal state must not define deferred events");
+
+    state_base_impl() : state_definition_type{} {}
+protected:
+    template< typename ... Args >
+    state_base_impl(Args&& ... args)
+        : state_definition_type(::std::forward<Args>(args)...) {}
+};
+
+template < typename T >
+class state_base : public state_base_impl<T, def::detail::is_terminal_state<T>::value> {
 public:
-    state_base() : state_definition_type{} {}
+    using state_definition_type = T;
+    using state_type            = state_base<T>;
+    using internal_transitions  = typename state_definition_type::internal_transitions;
+    using base_impl_type        = state_base_impl<T, def::detail::is_terminal_state<T>::value>;
+public:
+    state_base() : base_impl_type{} {}
 protected:
     template< typename ... Args >
     state_base(Args&& ... args)
-        : state_definition_type(::std::forward<Args>(args)...) {}
+        : base_impl_type(::std::forward<Args>(args)...) {}
 };
 
 template < typename T, typename Mutex >

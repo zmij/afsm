@@ -60,6 +60,9 @@ static_assert(!is_callable<test_callable, int>::value, "");
 namespace def {
 namespace test {
 
+struct state_interface {
+};
+
 struct eventAB{};
 struct eventBC{};
 struct eventAC{};
@@ -70,6 +73,15 @@ struct stateC : state< stateC > {};
 
 static_assert( detail::is_state<stateA>::value, "" );
 static_assert( detail::is_state<stateB>::value, "" );
+static_assert( detail::is_state<stateC>::value, "" );
+
+struct stateD : state< stateD, true > {};
+static_assert( detail::is_state<stateD>::value, "" );
+
+struct stateE : state< stateE, false, state_interface > {};
+static_assert( detail::is_state<stateC>::value, "" );
+
+struct stateF : state< stateF, true, state_interface > {};
 static_assert( detail::is_state<stateC>::value, "" );
 
 static_assert(::std::is_same<

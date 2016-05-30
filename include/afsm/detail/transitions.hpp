@@ -44,7 +44,7 @@ struct event_handle_selector
 template <typename SourceState, typename Event, typename Transition>
 struct transits_on_event
     : ::std::conditional<
-        !actions::detail::is_internal_transition<Transition>::value &&
+        !def::detail::is_internal_transition<Transition>::value &&
         ::std::is_same< typename Transition::source_state_type, SourceState >::value &&
         ::std::is_same< typename Transition::event_type, Event >::value,
         ::std::true_type,
@@ -83,6 +83,51 @@ private:
     test(...);
 public:
     static constexpr bool value = decltype( test<State>(nullptr) )::value;
+};
+
+template < typename Activity, typename FSM, typename State >
+struct activity_has_start {
+private:
+    static FSM&         fsm;
+    static State&       state;
+
+    template < typename U >
+    static ::std::true_type
+    test( decltype( ::std::declval<U>().start(fsm, state) ) const* );
+
+    template < typename U >
+    static ::std::false_type
+    test(...);
+public:
+    static constexpr bool value = decltype( test<Activity>(nullptr) )::value;
+};
+
+template < typename Activity, typename FSM, typename State >
+struct activity_has_stop {
+private:
+    static FSM&         fsm;
+    static State&       state;
+
+    template < typename U >
+    static ::std::true_type
+    test( decltype( ::std::declval<U>().stop(fsm, state) ) const* );
+
+    template < typename U >
+    static ::std::false_type
+    test(...);
+public:
+    static constexpr bool value = decltype( test<Activity>(nullptr) )::value;
+};
+
+template < typename Activity, typename FSM, typename State >
+struct is_valid_activity {
+    static constexpr bool value = activity_has_start<Activity, FSM, State>::value
+            && activity_has_stop<Activity, FSM, State>::value;
+};
+
+template < typename FSM, typename State >
+struct is_valid_activity < void, FSM, State >{
+    static constexpr bool value = true;
 };
 
 template < typename FSM, typename State, typename Event >

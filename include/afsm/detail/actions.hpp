@@ -9,6 +9,7 @@
 #define AFSM_DETAIL_ACTIONS_HPP_
 
 #include <afsm/definition.hpp>
+#include <functional>
 #include <array>
 
 namespace afsm {
@@ -42,13 +43,6 @@ private:
 public:
     static constexpr bool value = decltype( test<Action>(nullptr) )::value;
 };
-
-template <typename TransitionKey >
-struct is_internal_transition : ::std::false_type {};
-
-template < typename Event, typename Action, typename Guard >
-struct is_internal_transition<
-    typename def::internal_transition<Event, Action, Guard> > : ::std::true_type {};
 
 template <typename Event, typename Transition>
 struct handles_event

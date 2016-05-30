@@ -61,7 +61,7 @@ struct a_guard {
 struct internal_transitions_test : def::state< internal_transitions_test > {
     ::std::string value = "none";
 
-    using internal_transitions = def::transition_table <
+    using internal_transitions = transition_table <
         in< event_a,    dummy_action,   a_guard >,
         in< event_a,    dummy_action_a, meta::not_< a_guard > >,
         in< event_b,    dummy_action,   none >,
@@ -111,19 +111,19 @@ struct inner_dispatch_test : def::state_machine< inner_dispatch_test > {
         }
     };
 
-    struct state_a : def::state< state_a > {
+    struct state_a : state< state_a > {
         using internal_transitions = def::transition_table <
             in< inner_event, inner_action, none >
         >;
     };
 
-    struct state_b : def::state< state_b > {
+    struct state_b : state< state_b > {
         using internal_transitions = def::transition_table <
             in< inner_event, inner_action, none >
         >;
     };
 
-    using transitions = def::transition_table <
+    using transitions = transition_table <
         tr< state_a, event_ab, state_b >
     >;
     using initial_state = state_a;

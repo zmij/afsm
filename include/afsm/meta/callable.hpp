@@ -10,6 +10,7 @@
 
 #include <afsm/meta/index_tuple.hpp>
 #include <tuple>
+#include <type_traits>
 
 namespace afsm {
 namespace meta {
