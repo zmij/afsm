@@ -65,6 +65,7 @@ struct internal_transitions_test : def::state< internal_transitions_test > {
         in< event_a,    dummy_action,   a_guard >,
         in< event_a,    dummy_action_a, not_< a_guard > >,
         in< event_b,    dummy_action,   none >,
+        in< event_c,    dummy_action,   none >,
         in< event_c,    dummy_action,   none >
     >;
 };

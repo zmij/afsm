@@ -117,6 +117,13 @@ struct is_state_machine : ::std::conditional<
         ::std::false_type
     >::type {};
 
+template < typename SourceState, typename Event, typename Guard >
+struct transition_key {
+    using source_state_type     = SourceState;
+    using event_type            = Event;
+    using guard_type            = Guard;
+};
+
 }  /* namespace detail */
 
 template < typename SourceState, typename Event, typename TargetState,
@@ -128,12 +135,8 @@ struct transition {
     using action_type           = Action;
     using guard_type            = Guard;
 
-    struct key_type    {
-        using transition_type   = transition;
-        using event_type        = transition::event_type;
-        using guard_type        = transition::guard_type;
-        using source_state_type = transition::source_state_type;
-    };
+    using key_type  = detail::transition_key<SourceState, Event, Guard>;
+
     struct value_type    {
         using action_type       = transition::action_type;
         using target_state_type = transition::target_state_type;
@@ -146,11 +149,8 @@ struct internal_transition {
     using action_type           = Action;
     using guard_type            = Guard;
 
-    struct key_type    {
-        using transition_type   = internal_transition;
-        using event_type        = internal_transition::event_type;
-        using guard_type        = internal_transition::guard_type;
-    };
+    using key_type  = detail::transition_key<void, Event, Guard>;
+
     struct value_type    {
         using action_type       = internal_transition::action_type;
     };
@@ -192,11 +192,11 @@ struct transition_table {
     using transition_map = ::psst::meta::type_map<
             ::psst::meta::type_tuple<typename T::key_type ...>,
             ::psst::meta::type_tuple<typename T::value_type...>>;
-    using inner_states  = typename ::psst::meta::type_set<
+    using inner_states  = typename ::psst::meta::unique<
                 typename detail::source_state<T>::type ...,
                 typename detail::target_state<T>::type ...
             >::type;
-    using handled_events = typename ::psst::meta::type_set<
+    using handled_events = typename ::psst::meta::unique<
             typename T::event_type ... >::type;
 
     static constexpr ::std::size_t size                 = transition_map::size;
@@ -345,7 +345,7 @@ struct handled_events< state<T> > {
 
 template < typename T >
 struct handled_events< state_machine<T> > {
-    using type = typename ::psst::meta::type_set<
+    using type = typename ::psst::meta::unique<
                 typename handled_events< typename T::internal_transitions >::type,
                 typename handled_events< typename T::transitions >::type
             >::type;
@@ -356,7 +356,7 @@ struct handled_events< state_machine<T> > {
  */
 template < typename ... T >
 struct handled_events< ::psst::meta::type_tuple<T...> > {
-    using type = typename ::psst::meta::type_set<
+    using type = typename ::psst::meta::unique<
                 typename handled_events<T>::type ...
             >::type;
 };
@@ -371,7 +371,7 @@ struct recursive_handled_events
 
 template < typename ... T >
 struct recursive_handled_events< transition_table<T...> > {
-    using type = typename ::psst::meta::type_set<
+    using type = typename ::psst::meta::unique<
             typename transition_table<T...>::handled_events,
             typename recursive_handled_events<
                 typename transition_table<T...>::inner_states >::type
@@ -385,7 +385,7 @@ struct recursive_handled_events<void> {
 
 template < typename T >
 struct recursive_handled_events< state_machine<T> > {
-    using type = typename ::psst::meta::type_set<
+    using type = typename ::psst::meta::unique<
                 typename handled_events< typename T::internal_transitions >::type,
                 typename recursive_handled_events< typename T::transitions >::type
             >::type;
@@ -393,7 +393,7 @@ struct recursive_handled_events< state_machine<T> > {
 
 template < typename T, typename ... Y >
 struct recursive_handled_events< ::psst::meta::type_tuple<T, Y...> > {
-    using type = typename ::psst::meta::type_set<
+    using type = typename ::psst::meta::unique<
                 typename recursive_handled_events<T>::type,
                 typename recursive_handled_events< ::psst::meta::type_tuple<Y...>>::type
             >::type;

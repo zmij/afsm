@@ -52,7 +52,7 @@ struct state_base_impl : T {
             typename ::std::conditional<
                 ::std::is_same<typename T::deferred_events, void>::value,
                 ::psst::meta::type_tuple<>,
-                typename ::psst::meta::type_set< typename T::deferred_events >::type
+                typename ::psst::meta::unique< typename T::deferred_events >::type
             >::type;
 
     state_base_impl() : state_definition_type{} {}
