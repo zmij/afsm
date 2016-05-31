@@ -397,10 +397,11 @@ private:
     static invokation_table< Event >
     state_table( ::psst::meta::indexes_tuple< Indexes... > const& )
     {
+        using event_type = typename ::std::decay<Event>::type;
         using event_transitions = typename ::psst::meta::find_if<
-                def::handles_event<Event>::template type, transitions_tuple >::type;
+                def::handles_event< event_type >::template type, transitions_tuple >::type;
         static invokation_table< Event > _table {{
-            typename detail::transition_action_selector< fsm_type, this_type, Event,
+            typename detail::transition_action_selector< fsm_type, this_type, event_type,
                 typename ::psst::meta::find_if<
                     def::originates_from<
                         typename inner_states_def::template type< Indexes >

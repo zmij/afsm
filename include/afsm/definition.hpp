@@ -234,6 +234,8 @@ struct state< StateType, HasHistory, void > {
     using none = afsm::none;
     template < typename Predicate >
     using not_ = ::psst::meta::not_<Predicate>;
+    template < typename ... T >
+    using type_tuple = ::psst::meta::type_tuple<T...>;
 };
 
 template < typename StateType, bool HasHistory, typename CommonBase >
@@ -288,6 +290,8 @@ struct state_machine : state< StateMachine, HasHistory, CommonBase >,
     using none = afsm::none;
     template < typename Predicate >
     using not_ = ::psst::meta::not_<Predicate>;
+    template < typename ... T >
+    using type_tuple = ::psst::meta::type_tuple<T...>;
 };
 
 namespace detail {

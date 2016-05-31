@@ -305,18 +305,6 @@ private:
 
 }  /* namespace detail */
 
-template < typename FSM, typename Event >
-::std::function< event_process_result() >
-create_deferred_invokation(FSM& fsm, Event&& event)
-{
-    auto fsm_ref = ::std::ref(fsm);
-    Event evt = ::std::forward<Event>(event);
-
-    return [fsm_ref, evt]() {
-        return fsm_ref.process_event(evt);
-    };
-}
-
 }  /* namespace actions */
 }  /* namespace afsm */
 

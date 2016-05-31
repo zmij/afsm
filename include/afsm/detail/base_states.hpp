@@ -22,10 +22,10 @@ template <typename Event, typename HandledEvents,
         typename DeferredEvents = ::psst::meta::type_tuple<>>
 struct event_process_selector
     : ::std::conditional<
-        ::psst::meta::contains<Event, HandledEvents>::value,
+        ::psst::meta::contains<typename ::std::decay<Event>::type, HandledEvents>::value,
         process_type<actions::event_process_result::process>,
         typename ::std::conditional<
-            ::psst::meta::contains<Event, DeferredEvents>::value,
+            ::psst::meta::contains<typename ::std::decay<Event>::type, DeferredEvents>::value,
             process_type<actions::event_process_result::defer>,
             process_type<actions::event_process_result::refuse>
         >::type
@@ -139,9 +139,9 @@ public:
           dispatch_{ transitions_.states() }
     {}
 
-    state_machine_base(state_machine_base const&) = delete;
+    state_machine_base(state_machine_base const&) = default;
     state_machine_base&
-    operator = (state_machine_base const&) = delete;
+    operator = (state_machine_base const&) = default;
 
     state_machine_base(state_machine_base&&) = default;
     state_machine_base&

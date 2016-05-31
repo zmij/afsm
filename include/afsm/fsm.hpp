@@ -9,6 +9,7 @@
 #define AFSM_FSM_HPP_
 
 #include <afsm/detail/base_states.hpp>
+#include <deque>
 
 namespace afsm {
 
@@ -31,6 +32,13 @@ public:
                     typename state::handled_events,
                     typename state::deferred_events>{} );
     }
+
+    enclosing_fsm_type&
+    enclosing_fsm()
+    { return fsm_; }
+    enclosing_fsm_type const&
+    enclosing_fsm() const
+    { return fsm_; }
 private:
     template < typename Event >
     actions::event_process_result
@@ -68,14 +76,21 @@ public:
 
     template < typename Event >
     actions::event_process_result
-    process_event( Event&& evt )
+    process_event( Event&& event )
     {
-        return process_event_impl(fsm_, ::std::forward<Event>(evt),
+        return process_event_impl(fsm_, ::std::forward<Event>(event),
                 detail::event_process_selector<
                     Event,
                     typename inner_state_machine::handled_events,
                     typename inner_state_machine::deferred_events>{} );
     }
+
+    enclosing_fsm_type&
+    enclosing_fsm()
+    { return fsm_; }
+    enclosing_fsm_type const&
+    enclosing_fsm() const
+    { return fsm_; }
 private:
     using base_machine_type::process_event_impl;
 private:
@@ -87,46 +102,79 @@ class state_machine : public detail::state_machine_base< T, Mutex > {
 public:
     static_assert( ::psst::meta::is_empty< typename T::deferred_events >::value,
             "Outer state machine cannot defer events" );
+    using this_type         = state_machine<T, Mutex>;
+    using base_machine_type = detail::state_machine_base< T, Mutex >;
 public:
     state_machine()
-        : state_machine::machine_type{},
+        : base_machine_type{},
+          stack_size_{0},
           mutex_{},
-          stack_size_{0} {}
+          queued_events_{},
+          deferred_mutex_{},
+          deferred_events_{}
+      {}
     template<typename ... Args>
     explicit
     state_machine(Args&& ... args)
-        : state_machine::machine_type(::std::forward<Args>(args)...),
-          mutex_{}
+        : base_machine_type(::std::forward<Args>(args)...),
+          stack_size_{0},
+          mutex_{},
+          queued_events_{},
+          deferred_mutex_{},
+          deferred_events_{}
     {}
 
     template < typename Event >
     actions::event_process_result
-    process_event( Event&& evt )
+    process_event( Event&& event )
     {
         if (!stack_size_++) {
-            auto res = process_event_impl(::std::forward<Event>(evt),
-                        detail::event_process_selector<
-                            Event,
-                            typename state_machine::handled_events>{} );
+            auto res = process_event_dispatch(::std::forward<Event>(event));
             lock_guard lock{mutex_};
             // Process enqueued events
             --stack_size_;
             return res;
         } else {
-            lock_guard lock{mutex_};
-            // Enqueue event
             --stack_size_;
+            // Enqueue event
+            enqueue_event(::std::forward<Event>(event));
             return actions::event_process_result::defer;
         }
     }
 private:
     template < typename Event >
     actions::event_process_result
-    process_event_impl(Event&&,
-        detail::process_type<actions::event_process_result::process> const&)
+    process_event_dispatch( Event&& event )
     {
-        // TODO Dispatch event
-        return actions::event_process_result::process;
+        return process_event_impl(::std::forward<Event>(event),
+                    detail::event_process_selector<
+                        Event,
+                        typename state_machine::handled_events>{} );
+    }
+
+    template < typename Event >
+    actions::event_process_result
+    process_event_impl(Event&& event,
+        detail::process_type<actions::event_process_result::process> const& sel)
+    {
+        using actions::event_process_result;
+        auto res = base_machine_type::process_event_impl(*this, ::std::forward<Event>(event), sel );
+        switch (res) {
+            case event_process_result::process:
+                // Changed state. Process deferred events
+                process_deferred_queue();
+                break;
+            case event_process_result::defer:
+                // Add event to deferred queue
+                defer_event(::std::forward<Event>(event));
+                break;
+            case event_process_result::refuse:
+                // The event cannot be processed in current state
+                break;
+            default:
+                break;
+        }
+        return res;
     }
     template < typename Event >
     actions::event_process_result
@@ -141,13 +189,72 @@ private:
             "Event type is not handled by this state machine" );
         return actions::event_process_result::refuse;
     }
+
+    template < typename Event >
+    void
+    enqueue_event(Event&& event)
+    {
+        lock_guard lock{mutex_};
+        Event evt = event;
+        queued_events_.emplace_back([&, evt]() mutable {
+            return process_event_dispatch(::std::move(evt));
+        });
+    }
+
+    void
+    process_event_queue()
+    {
+
+    }
+
+    template < typename Event >
+    void
+    defer_event(Event&& event)
+    {
+        lock_guard lock{deferred_mutex_};
+        Event evt = event;
+        deferred_events_.emplace_back([&, evt]() mutable {
+            return process_event_dispatch(::std::move(evt));
+        });
+    }
+    void
+    process_deferred_queue()
+    {
+        if (stack_size_ <= 1) {
+            event_queue deferred;
+            {
+                lock_guard lock{deferred_mutex_};
+                ::std::swap(deferred_events_, deferred);
+            }
+            while (!deferred.empty()) {
+                bool next_state = false;
+                while (!next_state && !deferred.empty()) {
+                    auto event = deferred.front();
+                    deferred.pop_front();
+                    next_state = event() == actions::event_process_result::process;
+                }
+                if (next_state) {
+                    lock_guard lock{deferred_mutex_};
+                    deferred_events_.insert(deferred_events_.end(), deferred.begin(), deferred.end());
+                    ::std::swap(deferred_events_, deferred);
+                }
+            }
+        }
+    }
 private:
     using mutex_type        = Mutex;
     using lock_guard        = typename detail::lock_guard_type<mutex_type>::type;
     using atomic_counter    = ::std::atomic< ::std::size_t >;
+    using event_invokation  = ::std::function< actions::event_process_result() >;
+    using event_queue       = ::std::deque< event_invokation >;
+
+    atomic_counter          stack_size_;
 
     mutex_type              mutex_;
-    atomic_counter          stack_size_;
+    event_queue             queued_events_;
+
+    mutex_type              deferred_mutex_;
+    event_queue             deferred_events_;
 };
 
 }  /* namespace afsm */
