@@ -61,8 +61,7 @@ struct work_action {
     void
     operator()(do_work const&, FSM& fsm, SourceState&, TargetState&) const
     {
-        ::std::cerr << "Getting tired! " << ++fsm.fatigue
-                << " " << &fsm << "\n";
+        ::std::cerr << "Getting tired! " << ++fsm.fatigue << "\n";
     }
 };
 
@@ -128,9 +127,8 @@ struct human_def : ::afsm::def::state_machine< human_def, false, human_interface
             bool
             operator()(FSM const& fsm, State const&) const
             {
-                ::std::cerr << "Check tired " << fsm.fatigue
-                        << " " << &fsm << "\n";
-                return fsm.fatigue >= 10;
+                ::std::cerr << "Check tired " << fsm.fatigue << "\n";
+                return fsm.fatigue >= 5;
             }
         };
 
@@ -181,11 +179,10 @@ TEST(FSM, CommonBase)
     EXPECT_EQ(event_process_result::defer, hfsm.process_event(do_work{}));
     EXPECT_EQ(event_process_result::defer, hfsm.process_event(do_work{}));
     EXPECT_EQ(event_process_result::defer, hfsm.process_event(do_work{}));
-    EXPECT_EQ(event_process_result::defer, hfsm.process_event(do_work{}));
-    EXPECT_EQ(event_process_result::defer, hfsm.process_event(do_work{}));
     EXPECT_EQ(event_process_result::process, hfsm.process_event(wash{}));
     EXPECT_EQ(event_process_result::process_in_state, hfsm.process_event(do_work{}));
     EXPECT_EQ(event_process_result::process_in_state, hfsm.process_event(do_work{}));
+    EXPECT_EQ(event_process_result::process, hfsm.process_event(do_work{}));
 }
 
 } // namespace test

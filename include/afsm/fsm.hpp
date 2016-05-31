@@ -21,6 +21,9 @@ public:
     state(enclosing_fsm_type& fsm)
         : state::state_type{}, fsm_{fsm}
     {}
+    state(enclosing_fsm_type& fsm, state const& rhs)
+        : state::state_type{rhs}, fsm_{fsm}
+    {}
 
     template < typename Event >
     actions::event_process_result
@@ -73,6 +76,8 @@ public:
 public:
     inner_state_machine(enclosing_fsm_type& fsm)
         : inner_state_machine::machine_type{}, fsm_{fsm} {}
+    inner_state_machine(enclosing_fsm_type& fsm, inner_state_machine const& rhs)
+        : inner_state_machine::machine_type{rhs}, fsm_{fsm} {}
 
     template < typename Event >
     actions::event_process_result

@@ -51,10 +51,36 @@ template < typename FSM, typename ... T>
 struct front_state_tuple< FSM, ::psst::meta::type_tuple<T...> > {
     using type = ::std::tuple<
             typename front_state_type<FSM, T>::type ... >;
+    using index_tuple = typename ::psst::meta::index_builder< sizeof ... (T) >::type;
 
     static type
     construct(FSM& fsm)
     { return type( typename front_state_type<FSM, T>::type{fsm}... ); }
+    static type
+    copy_construct(FSM& fsm, type const& rhs)
+    {
+        return copy_construct(fsm, rhs, index_tuple{});
+    }
+    static type
+    move_construct(FSM& fsm, type&& rhs)
+    {
+        return move_construct(fsm, ::std::forward<type>(rhs), index_tuple{});
+    }
+private:
+    template < ::std::size_t ... Indexes >
+    static type
+    copy_construct(FSM& fsm, type const& rhs, ::psst::meta::indexes_tuple<Indexes...> const&)
+    {
+        return type( typename front_state_type<FSM, T>::type{
+            fsm, ::std::get< Indexes >(rhs)}...);
+    }
+    template < ::std::size_t ... Indexes >
+    static type
+    move_construct(FSM& fsm, type&& rhs, ::psst::meta::indexes_tuple<Indexes...> const&)
+    {
+        return type( typename front_state_type<FSM, T>::type{
+            fsm, ::std::move(::std::get< Indexes >(rhs))}...);
+    }
 };
 
 struct no_lock {

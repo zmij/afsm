@@ -330,6 +330,24 @@ public:
           states_{ inner_states_constructor::construct(fsm) }
     {}
 
+    state_transition_table(fsm_type& fsm, state_transition_table const& rhs)
+        : fsm_{fsm},
+          current_state_{ (::std::size_t)rhs.current_state_ },
+          states_{ inner_states_constructor::copy_construct(fsm, rhs.states_) }
+      {}
+    state_transition_table(fsm_type& fsm, state_transition_table&& rhs)
+        : fsm_{fsm},
+          current_state_{ (::std::size_t)rhs.current_state_ },
+          states_{ inner_states_constructor::move_construct(fsm, ::std::move(rhs.states_)) }
+      {}
+
+    state_transition_table(state_transition_table const&) = delete;
+    state_transition_table(state_transition_table&&) = delete;
+    state_transition_table&
+    operator = (state_transition_table const&) = delete;
+    state_transition_table&
+    operator = (state_transition_table&&) = delete;
+
     inner_states_tuple&
     states()
     { return states_; }

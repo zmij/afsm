@@ -139,11 +139,17 @@ public:
           dispatch_{ transitions_.states() }
     {}
 
-    state_machine_base(state_machine_base const&) = default;
-    state_machine_base&
-    operator = (state_machine_base const&) = default;
+    state_machine_base(state_machine_base const& rhs)
+        : state_type{rhs},
+          transitions_{*this, rhs.transitions_},
+          dispatch_{ transitions_.states() }
+    {}
+    state_machine_base(state_machine_base&& rhs)
+        : state_type{rhs},
+          transitions_{*this, ::std::move(rhs.transitions_)},
+          dispatch_{ transitions_.states() }
+    {}
 
-    state_machine_base(state_machine_base&&) = default;
     state_machine_base&
     operator = (state_machine_base&&) = default;
 
