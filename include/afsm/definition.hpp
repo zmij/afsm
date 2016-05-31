@@ -184,19 +184,19 @@ struct transition_table {
     static_assert(
             ::std::conditional<
                 (sizeof ... (T) > 0),
-                ::pus::meta::all_match< detail::is_transition, T ... >,
+                ::psst::meta::all_match< detail::is_transition, T ... >,
                 ::std::true_type
             >::type::value,
             "Transition table can contain only transition or internal_transition template instantiations" );
-    using transitions = ::pus::meta::type_tuple<T...>;
-    using transition_map = ::pus::meta::type_map<
-            ::pus::meta::type_tuple<typename T::key_type ...>,
-            ::pus::meta::type_tuple<typename T::value_type...>>;
-    using inner_states  = typename ::pus::meta::type_set<
+    using transitions = ::psst::meta::type_tuple<T...>;
+    using transition_map = ::psst::meta::type_map<
+            ::psst::meta::type_tuple<typename T::key_type ...>,
+            ::psst::meta::type_tuple<typename T::value_type...>>;
+    using inner_states  = typename ::psst::meta::type_set<
                 typename detail::source_state<T>::type ...,
                 typename detail::target_state<T>::type ...
             >::type;
-    using handled_events = typename ::pus::meta::type_set<
+    using handled_events = typename ::psst::meta::type_set<
             typename T::event_type ... >::type;
 
     static constexpr ::std::size_t size                 = transition_map::size;
@@ -207,7 +207,7 @@ struct transition_table {
     static_assert(
             ::std::conditional<
                  (inner_state_count > 0),
-                 ::pus::meta::all_match< detail::is_state, inner_states >,
+                 ::psst::meta::all_match< detail::is_state, inner_states >,
                  ::std::true_type
             >::type::value,
             "State types must derive from afsm::def::state");
@@ -233,7 +233,7 @@ struct state< StateType, HasHistory, void > {
 
     using none = afsm::none;
     template < typename Predicate >
-    using not_ = ::pus::meta::not_<Predicate>;
+    using not_ = ::psst::meta::not_<Predicate>;
 };
 
 template < typename StateType, bool HasHistory, typename CommonBase >
@@ -287,7 +287,7 @@ struct state_machine : state< StateMachine, HasHistory, CommonBase >,
 
     using none = afsm::none;
     template < typename Predicate >
-    using not_ = ::pus::meta::not_<Predicate>;
+    using not_ = ::psst::meta::not_<Predicate>;
 };
 
 namespace detail {
@@ -301,7 +301,7 @@ struct has_inner_states< transition_table<T...> >
 
 template < typename T >
 struct inner_states {
-    using type = ::pus::meta::type_tuple<>;
+    using type = ::psst::meta::type_tuple<>;
 };
 
 template < typename ... T >
@@ -334,7 +334,7 @@ struct handled_events< transition_table<T...> > {
 
 template <>
 struct handled_events<void> {
-    using type = ::pus::meta::type_tuple<>;
+    using type = ::psst::meta::type_tuple<>;
 };
 
 template < typename T >
@@ -345,7 +345,7 @@ struct handled_events< state<T> > {
 
 template < typename T >
 struct handled_events< state_machine<T> > {
-    using type = typename ::pus::meta::type_set<
+    using type = typename ::psst::meta::type_set<
                 typename handled_events< typename T::internal_transitions >::type,
                 typename handled_events< typename T::transitions >::type
             >::type;
@@ -355,8 +355,8 @@ struct handled_events< state_machine<T> > {
  * Events handled by a set of states
  */
 template < typename ... T >
-struct handled_events< ::pus::meta::type_tuple<T...> > {
-    using type = typename ::pus::meta::type_set<
+struct handled_events< ::psst::meta::type_tuple<T...> > {
+    using type = typename ::psst::meta::type_set<
                 typename handled_events<T>::type ...
             >::type;
 };
@@ -371,7 +371,7 @@ struct recursive_handled_events
 
 template < typename ... T >
 struct recursive_handled_events< transition_table<T...> > {
-    using type = typename ::pus::meta::type_set<
+    using type = typename ::psst::meta::type_set<
             typename transition_table<T...>::handled_events,
             typename recursive_handled_events<
                 typename transition_table<T...>::inner_states >::type
@@ -380,40 +380,40 @@ struct recursive_handled_events< transition_table<T...> > {
 
 template <>
 struct recursive_handled_events<void> {
-    using type = ::pus::meta::type_tuple<>;
+    using type = ::psst::meta::type_tuple<>;
 };
 
 template < typename T >
 struct recursive_handled_events< state_machine<T> > {
-    using type = typename ::pus::meta::type_set<
+    using type = typename ::psst::meta::type_set<
                 typename handled_events< typename T::internal_transitions >::type,
                 typename recursive_handled_events< typename T::transitions >::type
             >::type;
 };
 
 template < typename T, typename ... Y >
-struct recursive_handled_events< ::pus::meta::type_tuple<T, Y...> > {
-    using type = typename ::pus::meta::type_set<
+struct recursive_handled_events< ::psst::meta::type_tuple<T, Y...> > {
+    using type = typename ::psst::meta::type_set<
                 typename recursive_handled_events<T>::type,
-                typename recursive_handled_events< ::pus::meta::type_tuple<Y...>>::type
+                typename recursive_handled_events< ::psst::meta::type_tuple<Y...>>::type
             >::type;
 };
 
 template < typename T >
-struct recursive_handled_events< ::pus::meta::type_tuple<T> >
+struct recursive_handled_events< ::psst::meta::type_tuple<T> >
     : recursive_handled_events<T> {};
 
 template <>
-struct recursive_handled_events< ::pus::meta::type_tuple<> > {
-    using type = ::pus::meta::type_tuple<>;
+struct recursive_handled_events< ::psst::meta::type_tuple<> > {
+    using type = ::psst::meta::type_tuple<>;
 };
 
 template < typename T >
 struct has_default_transitions;
 
 template < typename ... T >
-struct has_default_transitions< ::pus::meta::type_tuple<T...> >
-    : ::pus::meta::contains< none, ::pus::meta::type_tuple<T...> > {};
+struct has_default_transitions< ::psst::meta::type_tuple<T...> >
+    : ::psst::meta::contains< none, ::psst::meta::type_tuple<T...> > {};
 
 template < typename T >
 struct is_default_transition

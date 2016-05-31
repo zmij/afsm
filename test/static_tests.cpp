@@ -46,11 +46,11 @@ static_assert(::std::is_same<
 static_assert(::std::is_same<
          detail::target_state< transition<stateA, eventAB, stateB> >::type,
          stateB>::value, "");
-using state_set_1 = ::pus::meta::type_set<stateA, stateA, stateB, stateB, stateC, stateC>::type;
+using state_set_1 = ::psst::meta::type_set<stateA, stateA, stateB, stateB, stateC, stateC>::type;
 static_assert(state_set_1::size == 3, "");
-static_assert(::pus::meta::contains< stateA, state_set_1 >::value, "");
-static_assert(::pus::meta::contains< stateB, state_set_1 >::value, "");
-static_assert(::pus::meta::all_match< detail::is_state, state_set_1 >::value, "");
+static_assert(::psst::meta::contains< stateA, state_set_1 >::value, "");
+static_assert(::psst::meta::contains< stateB, state_set_1 >::value, "");
+static_assert(::psst::meta::all_match< detail::is_state, state_set_1 >::value, "");
 
 using transition_table_1 = transition_table<
             transition<stateA, eventAB, stateB>,
@@ -60,10 +60,10 @@ using transition_table_1 = transition_table<
 using empty_transition_table = transition_table<>;
 
 static_assert(transition_table_1::inner_states::size == 3, "");
-static_assert(::pus::meta::contains<stateA, transition_table_1::inner_states>::value, "");
-static_assert(::pus::meta::contains<stateB, transition_table_1::inner_states>::value, "");
-static_assert(::pus::meta::contains<stateC, transition_table_1::inner_states>::value, "");
-static_assert(::pus::meta::all_match< detail::is_state, transition_table_1::inner_states >::value, "");
+static_assert(::psst::meta::contains<stateA, transition_table_1::inner_states>::value, "");
+static_assert(::psst::meta::contains<stateB, transition_table_1::inner_states>::value, "");
+static_assert(::psst::meta::contains<stateC, transition_table_1::inner_states>::value, "");
+static_assert(::psst::meta::all_match< detail::is_state, transition_table_1::inner_states >::value, "");
 static_assert(transition_table_1::handled_events::size == 3, "");
 
 static_assert(detail::has_transitions<transition_table_1>::value, "");

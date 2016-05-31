@@ -55,7 +55,7 @@ struct handles_event
 
 template < typename FSM, typename State, typename Guard >
 struct guard_check {
-    static_assert(::pus::meta::is_callable< Guard, FSM const&, State const& >::value,
+    static_assert(::psst::meta::is_callable< Guard, FSM const&, State const& >::value,
             "Guard object is not callable with needed parameters");
 
     bool
@@ -192,7 +192,7 @@ struct in_state_action_invokation {
     static_assert( !::std::is_same<transitions, void>::value,
             "State doesn't have internal transitions table" );
 
-    using event_handlers    = typename ::pus::meta::find_if<
+    using event_handlers    = typename ::psst::meta::find_if<
         def::handles_event<event_type>::template type,
         typename transitions::transitions >::type;
     static_assert( event_handlers::size > 0, "State doesn't handle event" );
@@ -235,7 +235,7 @@ template < typename FSM, typename State, typename Event >
 struct in_state_action_invokation :
         detail::in_state_action_invokation<
             !::std::is_same<typename State::internal_transitions, void>::value &&
-            ::pus::meta::contains<Event, typename State::internal_events>::value,
+            ::psst::meta::contains<Event, typename State::internal_events>::value,
             FSM, State, Event > {
 };
 
@@ -269,7 +269,7 @@ public:
     static constexpr ::std::size_t size = sizeof ... (T);
     using states_tuple      = ::std::tuple<T...>;
     using dispatch_tuple    = ::std::tuple< process_event_handler<T>... >;
-    using indexes_tuple     = typename ::pus::meta::index_builder< size >::type;
+    using indexes_tuple     = typename ::psst::meta::index_builder< size >::type;
     template < typename Event >
     using invokation_table  = ::std::array<
             ::std::function< event_process_result(Event&&) >, size >;
@@ -290,12 +290,12 @@ public:
 private:
     template < ::std::size_t ... Indexes >
     inner_dispatch_table( states_tuple& states,
-            ::pus::meta::indexes_tuple< Indexes... > const& )
+            ::psst::meta::indexes_tuple< Indexes... > const& )
         : states_( process_event_handler<T>{::std::get<Indexes>(states)} ... )
     {}
     template < typename Event, ::std::size_t ... Indexes >
     invokation_table<Event>
-    state_table( ::pus::meta::indexes_tuple< Indexes... > const& )
+    state_table( ::psst::meta::indexes_tuple< Indexes... > const& )
     {
         // TODO Cache it
         return invokation_table<Event> {{ ::std::get<Indexes>(states_)... }};

@@ -19,13 +19,13 @@ template < actions::event_process_result R >
 using process_type = ::std::integral_constant< actions::event_process_result, R >;
 
 template <typename Event, typename HandledEvents,
-        typename DeferredEvents = ::pus::meta::type_tuple<>>
+        typename DeferredEvents = ::psst::meta::type_tuple<>>
 struct event_process_selector
     : ::std::conditional<
-        ::pus::meta::contains<Event, HandledEvents>::value,
+        ::psst::meta::contains<Event, HandledEvents>::value,
         process_type<actions::event_process_result::process>,
         typename ::std::conditional<
-            ::pus::meta::contains<Event, DeferredEvents>::value,
+            ::psst::meta::contains<Event, DeferredEvents>::value,
             process_type<actions::event_process_result::defer>,
             process_type<actions::event_process_result::refuse>
         >::type
@@ -51,8 +51,8 @@ struct state_base_impl : T {
     using deferred_events =
             typename ::std::conditional<
                 ::std::is_same<typename T::deferred_events, void>::value,
-                ::pus::meta::type_tuple<>,
-                typename ::pus::meta::type_set< typename T::deferred_events >::type
+                ::psst::meta::type_tuple<>,
+                typename ::psst::meta::type_set< typename T::deferred_events >::type
             >::type;
 
     state_base_impl() : state_definition_type{} {}
@@ -122,10 +122,10 @@ public:
             typename inner_states_constructor::type;
 
     static constexpr ::std::size_t initial_state_index =
-            ::pus::meta::index_of<initial_state, inner_states_def>::value;
+            ::psst::meta::index_of<initial_state, inner_states_def>::value;
     static constexpr ::std::size_t inner_state_count = inner_states_def::size;
 
-    using state_indexes     = typename ::pus::meta::index_builder<inner_state_count>::type;
+    using state_indexes     = typename ::psst::meta::index_builder<inner_state_count>::type;
 
     using mutex_type        = Mutex;
     using size_type         = typename detail::size_type<mutex_type>::type;

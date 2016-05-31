@@ -48,7 +48,7 @@ struct front_state_tuple< FSM, void> {
 };
 
 template < typename FSM, typename ... T>
-struct front_state_tuple< FSM, ::pus::meta::type_tuple<T...> > {
+struct front_state_tuple< FSM, ::psst::meta::type_tuple<T...> > {
     using type = ::std::tuple<
             typename front_state_type<FSM, T>::type ... >;
 
