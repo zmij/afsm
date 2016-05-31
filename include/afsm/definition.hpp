@@ -117,6 +117,16 @@ struct is_state_machine : ::std::conditional<
         ::std::false_type
     >::type {};
 
+template <typename T>
+struct common_base_trait {};
+
+template < typename T >
+struct has_common_base : ::std::conditional<
+        ::std::is_base_of< common_base_trait<T>, T >::value,
+        ::std::true_type,
+        ::std::false_type
+    >::type {};
+
 template < typename SourceState, typename Event, typename Guard >
 struct transition_key {
     using source_state_type     = SourceState;
@@ -239,7 +249,8 @@ struct state< StateType, HasHistory, void > {
 };
 
 template < typename StateType, bool HasHistory, typename CommonBase >
-struct state : state<StateType, HasHistory, void>, CommonBase {
+struct state : state<StateType, HasHistory, void>, CommonBase,
+        detail::common_base_trait<StateType> {
     static constexpr bool has_history = HasHistory;
     using state_type            = StateType;
     using base_state_type       = state<state_type, has_history, CommonBase>;
@@ -247,6 +258,7 @@ struct state : state<StateType, HasHistory, void>, CommonBase {
     using transitions           = void;
     using deferred_events       = void;
     using activity              = void;
+    using common_base           = CommonBase;
 };
 
 template < typename StateType >

@@ -100,11 +100,11 @@ protected:
 };
 
 template < typename T, typename Mutex >
-class state_machine_base : public state_base<T> {
+class state_machine_base_impl : public state_base<T> {
 public:
     using state_machine_definition_type = T;
     using state_type                    = state_base<T>;
-    using machine_type                  = state_machine_base<T, Mutex>;
+    using machine_type                  = state_machine_base_impl<T, Mutex>;
     static_assert(def::detail::is_state_machine<T>::value,
             "Front state machine can be created only with a descendant of afsm::def::state_machine");
     using transitions = typename state_machine_definition_type::transitions;
@@ -133,25 +133,25 @@ public:
     using transition_tuple  = afsm::transitions::state_transition_table<
             machine_type, state_machine_definition_type, size_type >;
 
-    state_machine_base()
+    state_machine_base_impl()
         : state_type{},
           transitions_{*this},
           dispatch_{ transitions_.states() }
     {}
 
-    state_machine_base(state_machine_base const& rhs)
+    state_machine_base_impl(state_machine_base_impl const& rhs)
         : state_type{rhs},
           transitions_{*this, rhs.transitions_},
           dispatch_{ transitions_.states() }
     {}
-    state_machine_base(state_machine_base&& rhs)
+    state_machine_base_impl(state_machine_base_impl&& rhs)
         : state_type{rhs},
           transitions_{*this, ::std::move(rhs.transitions_)},
           dispatch_{ transitions_.states() }
     {}
 
-    state_machine_base&
-    operator = (state_machine_base&&) = default;
+    state_machine_base_impl&
+    operator = (state_machine_base_impl&&) = default;
 
     template < ::std::size_t N>
     ::std::tuple_element< N, inner_states_tuple >&
@@ -169,7 +169,7 @@ public:
 protected:
     template<typename ... Args>
     explicit
-    state_machine_base(Args&& ... args)
+    state_machine_base_impl(Args&& ... args)
         : state_type(::std::forward<Args>(args)...),
           transitions_{*this},
           dispatch_{ transitions_.states() }
@@ -211,9 +211,28 @@ protected:
 };
 
 template < typename T, typename Mutex >
-constexpr ::std::size_t state_machine_base<T, Mutex>::initial_state_index;
+constexpr ::std::size_t state_machine_base_impl<T, Mutex>::initial_state_index;
 template < typename T, typename Mutex >
-constexpr ::std::size_t state_machine_base<T, Mutex>::inner_state_count;
+constexpr ::std::size_t state_machine_base_impl<T, Mutex>::inner_state_count;
+
+template < typename T, typename Mutex >
+struct state_machine_base_with_base : state_machine_base_impl<T, Mutex> {
+    using base_type = state_machine_base_impl<T, Mutex>;
+    using common_base = typename T::common_base;
+
+    common_base&
+    current_state_base()
+    {
+        return base_type::transitions_.template cast_current_state<common_base>();
+    }
+};
+
+template < typename T, typename Mutex >
+struct state_machine_base : ::std::conditional<
+        def::detail::has_common_base<T>::value,
+        state_machine_base_with_base< T, Mutex >,
+        state_machine_base_impl< T, Mutex >
+    >::type {};
 
 }  /* namespace detail */
 }  /* namespace afsm */

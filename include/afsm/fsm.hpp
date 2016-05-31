@@ -75,9 +75,9 @@ public:
     using base_machine_type     = detail::state_machine_base< T, none >;
 public:
     inner_state_machine(enclosing_fsm_type& fsm)
-        : inner_state_machine::machine_type{}, fsm_{fsm} {}
+        : base_machine_type{}, fsm_{fsm} {}
     inner_state_machine(enclosing_fsm_type& fsm, inner_state_machine const& rhs)
-        : inner_state_machine::machine_type{rhs}, fsm_{fsm} {}
+        : base_machine_type{rhs}, fsm_{fsm} {}
 
     template < typename Event >
     actions::event_process_result

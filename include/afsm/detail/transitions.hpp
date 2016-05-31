@@ -323,6 +323,8 @@ public:
     template < typename Event >
     using invokation_table = ::std::array<
             ::std::function< actions::event_process_result(this_type&, Event&&) >, size >;
+    template < typename CommonBase >
+    using cast_table = ::std::array< ::std::function< CommonBase&() >, size >;
 public:
     state_transition_table(fsm_type& fsm)
         : fsm_{fsm},
@@ -410,6 +412,13 @@ public:
         }
         return actions::event_process_result::refuse;
     }
+    template < typename T >
+    T&
+    cast_current_state()
+    {
+        auto ct = get_cast_table<T>();
+        return ct[current_state_]();
+    }
 private:
     template < typename Event, ::std::size_t ... Indexes >
     static invokation_table< Event >
@@ -428,6 +437,16 @@ private:
                 >::type >::type{} ...
         }};
         return _table;
+    }
+    template < typename T, ::std::size_t ... Indexes >
+    cast_table<T>
+    get_cast_table()
+    {
+        return cast_table<T>{{
+            [this](){
+                return dynamic_cast<T&>(::std::get<Indexes>(states_));
+            }...
+        }};
     }
 private:
     fsm_type&           fsm_;
