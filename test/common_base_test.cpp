@@ -61,7 +61,8 @@ struct work_action {
     void
     operator()(do_work const&, FSM& fsm, SourceState&, TargetState&) const
     {
-        ::std::cerr << "Getting tired! " << ++fsm.fatigue << "\n";
+        ::std::cerr << "Getting tired! " << ++fsm.fatigue
+                << " " << &fsm << "\n";
     }
 };
 
@@ -127,6 +128,8 @@ struct human_def : ::afsm::def::state_machine< human_def, false, human_interface
             bool
             operator()(FSM const& fsm, State const&) const
             {
+                ::std::cerr << "Check tired " << fsm.fatigue
+                        << " " << &fsm << "\n";
                 return fsm.fatigue >= 10;
             }
         };
@@ -140,7 +143,9 @@ struct human_def : ::afsm::def::state_machine< human_def, false, human_interface
 
         awake()
             : fatigue{0}
-              {}
+        {
+            ::std::cerr << "Construct awake\n";
+        }
         void
         work() override
         { ::std::cerr << "TODO Access common base of current state\n"; }
