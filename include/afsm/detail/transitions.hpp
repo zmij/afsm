@@ -28,12 +28,12 @@ using handle_event = ::std::integral_constant<event_handle_type, V>;
 template < typename FSM, typename Event >
 struct event_handle_selector
     : ::std::conditional<
-        (meta::find_if<
+        (::pus::meta::find_if<
             def::handles_event<Event>::template type,
             typename FSM::transitions >::type::size > 0),
         handle_event< event_handle_type::transition >,
         typename ::std::conditional<
-              (meta::find_if<
+              (::pus::meta::find_if<
                       def::handles_event<Event>::template type,
                       typename FSM::internal_transitions >::type::size > 0),
               handle_event< event_handle_type::internal_transition >,
@@ -202,7 +202,7 @@ template < typename FSM, typename StateTable,
         typename SourceState, typename Event, typename TargetState,
         typename Action, typename Guard >
 struct single_transition<FSM, StateTable,
-        meta::type_tuple< def::transition<SourceState, Event, TargetState, Action, Guard> > > {
+    ::pus::meta::type_tuple< def::transition<SourceState, Event, TargetState, Action, Guard> > > {
 
     using fsm_type          = FSM;
     using state_table       = StateTable;
@@ -218,8 +218,8 @@ struct single_transition<FSM, StateTable,
             Event, SourceState, TargetState>;
     using state_clear_type  = state_clear<FSM, SourceState>;
 
-    using source_index = meta::index_of<source_state_type, states_def>;
-    using target_index = meta::index_of<target_state_type, states_def>;
+    using source_index = ::pus::meta::index_of<source_state_type, states_def>;
+    using target_index = ::pus::meta::index_of<target_state_type, states_def>;
 
     static_assert(source_index::found, "Failed to find source state index");
     static_assert(target_index::found, "Failed to find target state index");
@@ -245,7 +245,7 @@ struct nth_transition {
     using transition            = typename Transitions::template type<N>;
     using event_type            = typename transition::event_type;
     using previous_transition   = nth_transition<N - 1, FSM, StateTable, Transitions>;
-    using transition_invokation = single_transition<FSM, StateTable, meta::type_tuple<transition>>;
+    using transition_invokation = single_transition<FSM, StateTable, ::pus::meta::type_tuple<transition>>;
 
     transition_invokation action;
 
@@ -270,7 +270,7 @@ struct nth_transition< 0, FSM, StateTable, Transitions > {
     static_assert(Transitions::size > 0, "Transition list is too small");
     using transition            = typename Transitions::template type<0>;
     using event_type            = typename transition::event_type;
-    using transition_invokation = single_transition<FSM, StateTable, meta::type_tuple<transition>>;
+    using transition_invokation = single_transition<FSM, StateTable, ::pus::meta::type_tuple<transition>>;
 
     transition_invokation action;
 
@@ -343,10 +343,10 @@ public:
             typename inner_states_constructor::type;
 
     static constexpr ::std::size_t initial_state_index =
-            meta::index_of<initial_state, inner_states_def>::value;
+            ::pus::meta::index_of<initial_state, inner_states_def>::value;
     static constexpr ::std::size_t size = inner_states_def::size;
 
-    using state_indexes     = typename meta::index_builder<size>::type;
+    using state_indexes     = typename ::pus::meta::index_builder<size>::type;
 
     template < typename Event >
     using invokation_table = ::std::array<
@@ -397,8 +397,8 @@ public:
     transit_state(Event&& event, Guard guard, Action action, SourceExit exit,
             TargetEnter enter, SourceClear clear)
     {
-        using source_index = meta::index_of<SourceState, inner_states_def>;
-        using target_index = meta::index_of<TargetState, inner_states_def>;
+        using source_index = ::pus::meta::index_of<SourceState, inner_states_def>;
+        using target_index = ::pus::meta::index_of<TargetState, inner_states_def>;
 
         static_assert(source_index::found, "Failed to find source state index");
         static_assert(target_index::found, "Failed to find target state index");
@@ -423,13 +423,13 @@ public:
 private:
     template < typename Event, ::std::size_t ... Indexes >
     invokation_table< Event >
-    state_table( meta::indexes_tuple< Indexes... > const& )
+    state_table( ::pus::meta::indexes_tuple< Indexes... > const& )
     {
-        using event_transitions = typename meta::find_if<
+        using event_transitions = typename ::pus::meta::find_if<
                 def::handles_event<Event>::template type, transitions_tuple >::type;
         return invokation_table< Event > {{
             typename detail::transition_action_selector< fsm_type, this_type, Event,
-                typename meta::find_if<
+                typename ::pus::meta::find_if<
                     def::originates_from<
                         typename inner_states_def::template type< Indexes >
                     >::template type,

@@ -85,12 +85,13 @@ private:
 template < typename T, typename Mutex >
 class state_machine : public detail::state_machine_base< T, Mutex > {
 public:
-    static_assert( meta::is_empty< typename T::deferred_events >::value,
+    static_assert( ::pus::meta::is_empty< typename T::deferred_events >::value,
             "Outer state machine cannot defer events" );
 public:
     state_machine()
         : state_machine::machine_type{},
-          mutex_{} {}
+          mutex_{},
+          stack_size_{0} {}
     template<typename ... Args>
     explicit
     state_machine(Args&& ... args)

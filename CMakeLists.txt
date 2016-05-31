@@ -28,11 +28,21 @@ option(BUILD_TESTS "Build test programs" ON)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 add_definitions("-std=c++11")
-add_definitions(-Wall -Werror -Wextra -pedantic -Weffc++)
+add_definitions(-Wall -Werror -Wextra -pedantic -Weffc++
+    -Wno-non-virtual-dtor # I really know what I am exactly doing
+)
 
 set(${LIB_NAME}_LIB ${lib_name})
 
 # Add subdirectories here
+
+if (NOT METAPUSHKIN_INCLUDE_DIR)
+    add_subdirectory(lib/meta)
+endif()
+
+message(STATUS "Metapushkin include dir ${METAPUSHKIN_INCLUDE_DIR}")
+include_directories(${METAPUSHKIN_INCLUDE_DIR})
+
 if (BUILD_TESTS)
     enable_testing()
     add_subdirectory(test)
@@ -41,5 +51,5 @@ endif()
 get_directory_property(has_parent PARENT_DIRECTORY)
 if (has_parent)
     set(${LIB_NAME}_LIB ${lib_name} CACHE INTERNAL "Name of afsm library target")
-    set(${LIB_NAME}_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include CACHE INTERNAL "Path to afsm libaray includes" )
+    set(${LIB_NAME}_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include CACHE INTERNAL "Path to afsm libaray includes" )
 endif()
