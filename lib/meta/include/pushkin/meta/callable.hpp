@@ -5,19 +5,15 @@
  *      Author: sergey.fedorov
  */
 
-#ifndef AFSM_META_CALLABLE_HPP_
-#define AFSM_META_CALLABLE_HPP_
+#ifndef PUSHKIN_META_CALLABLE_HPP_
+#define PUSHKIN_META_CALLABLE_HPP_
 
-#include <afsm/meta/index_tuple.hpp>
+#include <pushkin/meta/index_tuple.hpp>
 #include <tuple>
 #include <type_traits>
 
-namespace afsm {
+namespace pus {
 namespace meta {
-
-namespace detail {
-
-}  /* namespace detail */
 
 template <typename Functor, typename ... Args>
 struct is_callable {
@@ -48,8 +44,8 @@ struct not_ {
 };
 
 }  /* namespace meta */
-}  /* namespace afsm */
+}  /* namespace pus */
 
 
 
-#endif /* AFSM_META_CALLABLE_HPP_ */
+#endif /* PUSHKIN_META_CALLABLE_HPP_ */

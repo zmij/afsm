@@ -5,12 +5,12 @@
  *      Author: sergey.fedorov
  */
 
-#ifndef AFSM_META_INDEX_TUPLE_HPP_
-#define AFSM_META_INDEX_TUPLE_HPP_
+#ifndef PUSHKIN_META_INDEX_TUPLE_HPP_
+#define PUSHKIN_META_INDEX_TUPLE_HPP_
 
 #include <cstdint>
 
-namespace afsm {
+namespace pus {
 namespace meta {
 
 template < ::std::size_t ... Indexes >
@@ -33,6 +33,6 @@ struct index_builder< 0, indexes_tuple< Indexes ... > > {
 };
 
 }  /* namespace meta */
-}  /* namespace afsm */
+}  /* namespace pus */
 
-#endif /* AFSM_META_INDEX_TUPLE_HPP_ */
+#endif /* PUSHKIN_META_INDEX_TUPLE_HPP_ */

@@ -5,12 +5,12 @@
  *      Author: sergey.fedorov
  */
 
-#ifndef AFSM_META_TYPE_TUPLE_HPP_
-#define AFSM_META_TYPE_TUPLE_HPP_
+#ifndef PUSHKIN_META_TYPE_TUPLE_HPP_
+#define PUSHKIN_META_TYPE_TUPLE_HPP_
 
-#include <afsm/meta/nth_type.hpp>
+#include <pushkin/meta/nth_type.hpp>
 
-namespace afsm {
+namespace pus {
 namespace meta {
 
 template < typename ... T >
@@ -26,8 +26,8 @@ struct type_tuple<> {
 };
 
 }  /* namespace meta */
-}  /* namespace afsm */
+}  /* namespace pus */
 
 
 
-#endif /* AFSM_META_TYPE_TUPLE_HPP_ */
+#endif /* PUSHKIN_META_TYPE_TUPLE_HPP_ */

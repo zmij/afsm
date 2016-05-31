@@ -8,14 +8,14 @@
 #include <type_traits>
 #include <limits>
 
-#include <afsm/meta/algorithm.hpp>
-#include <afsm/meta/index_tuple.hpp>
-#include <afsm/meta/callable.hpp>
+#include <pushkin/meta/algorithm.hpp>
+#include <pushkin/meta/index_tuple.hpp>
+#include <pushkin/meta/callable.hpp>
 
-#ifndef AFSM_META_HPP_
-#define AFSM_META_HPP_
+#ifndef PUSHKIN_META_HPP_
+#define PUSHKIN_META_HPP_
 
-namespace afsm {
+namespace pus {
 namespace meta {
 
 template < typename ... T >
@@ -117,6 +117,6 @@ template <>
 struct type_map< type_tuple<>, type_tuple<> > : type_map<> {};
 
 }  /* namespace meta */
-}  /* namespace afsm */
+}  /* namespace pus */
 
-#endif /* AFSM_META_HPP_ */
+#endif /* PUSHKIN_META_HPP_ */

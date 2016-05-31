@@ -5,12 +5,12 @@
  *      Author: sergey.fedorov
  */
 
-#ifndef AFSM_META_NTH_TYPE_HPP_
-#define AFSM_META_NTH_TYPE_HPP_
+#ifndef PUSHKIN_META_NTH_TYPE_HPP_
+#define PUSHKIN_META_NTH_TYPE_HPP_
 
 #include <cstdint>
 
-namespace afsm {
+namespace pus {
 namespace meta {
 
 template < ::std::size_t N, typename ... T >
@@ -27,7 +27,7 @@ struct nth_type < 0, T, Y ... > {
 };
 
 }  /* namespace meta */
-}  /* namespace afsm */
+}  /* namespace pus */
 
 
-#endif /* AFSM_META_NTH_TYPE_HPP_ */
+#endif /* PUSHKIN_META_NTH_TYPE_HPP_ */

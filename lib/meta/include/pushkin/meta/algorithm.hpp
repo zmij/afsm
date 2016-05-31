@@ -9,15 +9,15 @@
  * @page Metaprogramming algorithms
  *
  */
-#ifndef AFSM_META_ALGORITHM_HPP_
-#define AFSM_META_ALGORITHM_HPP_
+#ifndef PUSHKIN_META_ALGORITHM_HPP_
+#define PUSHKIN_META_ALGORITHM_HPP_
 
 #include <type_traits>
 #include <limits>
 
-#include <afsm/meta/type_tuple.hpp>
+#include <pushkin/meta/type_tuple.hpp>
 
-namespace afsm {
+namespace pus {
 namespace meta {
 
 /**
@@ -290,6 +290,6 @@ struct invert {
 };
 
 }  /* namespace meta */
-}  /* namespace afsm */
+}  /* namespace pus */
 
-#endif /* AFSM_META_ALGORITHM_HPP_ */
+#endif /* PUSHKIN_META_ALGORITHM_HPP_ */
