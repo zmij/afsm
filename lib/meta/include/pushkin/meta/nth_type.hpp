@@ -10,7 +10,7 @@
 
 #include <cstdint>
 
-namespace pus {
+namespace psst {
 namespace meta {
 
 template < ::std::size_t N, typename ... T >

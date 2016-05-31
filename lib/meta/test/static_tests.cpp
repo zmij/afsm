@@ -8,7 +8,7 @@
 #include <gtest/gtest.h>
 #include <pushkin/meta.hpp>
 
-namespace pus {
+namespace psst {
 namespace meta {
 namespace test {
 

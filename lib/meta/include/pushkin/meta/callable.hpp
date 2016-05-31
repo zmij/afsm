@@ -12,7 +12,7 @@
 #include <tuple>
 #include <type_traits>
 
-namespace pus {
+namespace psst {
 namespace meta {
 
 template <typename Functor, typename ... Args>

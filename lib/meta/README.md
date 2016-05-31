@@ -1,2 +1,2 @@
 # metapushkin
-Bunch of utilities for metaprogramming
+Psst! Wanna some variadic template metaprogramming?

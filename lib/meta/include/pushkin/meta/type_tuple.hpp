@@ -10,7 +10,7 @@
 
 #include <pushkin/meta/nth_type.hpp>
 
-namespace pus {
+namespace psst {
 namespace meta {
 
 template < typename ... T >

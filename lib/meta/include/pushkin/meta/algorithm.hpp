@@ -17,7 +17,7 @@
 
 #include <pushkin/meta/type_tuple.hpp>
 
-namespace pus {
+namespace psst {
 namespace meta {
 
 /**

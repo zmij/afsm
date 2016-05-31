@@ -15,7 +15,7 @@
 #ifndef PUSHKIN_META_HPP_
 #define PUSHKIN_META_HPP_
 
-namespace pus {
+namespace psst {
 namespace meta {
 
 template < typename ... T >
