@@ -65,7 +65,7 @@ struct work_action {
     }
 };
 
-struct human_def : ::afsm::def::state_machine< human_def, false, human_interface > {
+struct human_def : ::afsm::def::state_machine< human_def, human_interface > {
     using fsm_type = ::afsm::state_machine<human_def>;
 
     struct sleeping : state<sleeping> {
@@ -81,7 +81,7 @@ struct human_def : ::afsm::def::state_machine< human_def, false, human_interface
         >;
     };
 
-    struct awake : state_machine<awake, false, human_interface> {
+    struct awake : state_machine<awake, human_interface> {
         using fsm_type = ::afsm::inner_state_machine< human_def, awake >;
 
         struct woken_up : state<woken_up> {

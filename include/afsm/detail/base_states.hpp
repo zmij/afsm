@@ -211,11 +211,19 @@ struct state_machine_base_with_base : state_machine_base_impl<T, Mutex> {
     using base_type = state_machine_base_impl<T, Mutex>;
     using common_base = typename T::common_base;
 
+    state_machine_base_with_base() = default;
+
     common_base&
     current_state_base()
     {
         return base_type::transitions_.template cast_current_state<common_base>();
     }
+protected:
+    template<typename ... Args>
+    explicit
+    state_machine_base_with_base(Args&& ... args)
+        : state_machine_base_with_base::machine_type(::std::forward<Args>(args)...)
+    {}
 };
 
 template < typename T, typename Mutex >
@@ -223,7 +231,21 @@ struct state_machine_base : ::std::conditional<
         def::detail::has_common_base<T>::value,
         state_machine_base_with_base< T, Mutex >,
         state_machine_base_impl< T, Mutex >
-    >::type {};
+    >::type {
+public:
+    using state_machine_impl_type = typename ::std::conditional<
+            def::detail::has_common_base<T>::value,
+            state_machine_base_with_base< T, Mutex >,
+            state_machine_base_impl< T, Mutex >
+        >::type;
+    state_machine_base() = default;
+protected:
+    template<typename ... Args>
+    explicit
+    state_machine_base(Args&& ... args)
+        : state_machine_impl_type(::std::forward<Args>(args)...)
+    {}
+};
 
 }  /* namespace detail */
 }  /* namespace afsm */

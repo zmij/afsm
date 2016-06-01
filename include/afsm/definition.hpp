@@ -21,12 +21,13 @@ template < typename Event, typename Action = none, typename Guard = none >
 struct internal_transition;
 template < typename ... T >
 struct transition_table;
-template < typename T, bool History = false, typename CommonBase = void >
+
+template < typename T, typename CommonBase = void, bool History = false >
 struct state;
 template < typename T, typename CommonBase = void  >
 struct terminal_state;
 
-template < typename T, bool History = false, typename CommonBase = void >
+template < typename T, typename CommonBase = void, bool History = false >
 struct state_machine;
 
 namespace detail {
@@ -92,10 +93,11 @@ struct is_internal_transition< internal_transition< Event, Action, Guard > >
     : ::std::true_type {};
 
 template < typename T >
+struct state_tag {};
+
+template < typename T >
 struct is_state : ::std::conditional<
-        ::std::is_base_of< state<T, true>, T >::value
-         || ::std::is_base_of< state<T, false>, T >::value
-         || ::std::is_base_of< terminal_state<T>, T >::value,
+        ::std::is_base_of< state_tag<T>, T >::value,
         ::std::true_type,
         ::std::false_type
     >::type {};
@@ -226,11 +228,11 @@ struct transition_table {
 };
 
 template < typename StateType, bool HasHistory >
-struct state< StateType, HasHistory, void > {
+struct state< StateType, void, HasHistory > : detail::state_tag< StateType > {
     static constexpr bool has_history = HasHistory;
 
     using state_type            = StateType;
-    using base_state_type       = state<state_type, has_history, void>;
+    using base_state_type       = state<state_type, void, has_history>;
     using internal_transitions  = void;
     using transitions           = void;
     using deferred_events       = void;
@@ -248,12 +250,12 @@ struct state< StateType, HasHistory, void > {
     using type_tuple = ::psst::meta::type_tuple<T...>;
 };
 
-template < typename StateType, bool HasHistory, typename CommonBase >
-struct state : state<StateType, HasHistory, void>, CommonBase,
+template < typename StateType, typename CommonBase, bool HasHistory >
+struct state : state<StateType, void, HasHistory>, CommonBase,
         detail::common_base_trait<StateType> {
     static constexpr bool has_history = HasHistory;
     using state_type            = StateType;
-    using base_state_type       = state<state_type, has_history, CommonBase>;
+    using base_state_type       = state<state_type, CommonBase, has_history>;
     using internal_transitions  = void;
     using transitions           = void;
     using deferred_events       = void;
@@ -262,7 +264,7 @@ struct state : state<StateType, HasHistory, void>, CommonBase,
 };
 
 template < typename StateType >
-struct terminal_state< StateType, void > {
+struct terminal_state< StateType, void > : detail::state_tag< StateType > {
     using state_type            = StateType;
     using base_state_type       = terminal_state<state_type, void>;
     using internal_transitions  = void;
@@ -277,12 +279,12 @@ struct terminal_state : terminal_state<StateType, void>, CommonBase {
     using base_state_type       = terminal_state<state_type, void>;
 };
 
-template < typename StateMachine, bool HasHistory, typename CommonBase >
-struct state_machine : state< StateMachine, HasHistory, CommonBase >,
+template < typename StateMachine, typename CommonBase, bool HasHistory >
+struct state_machine : state< StateMachine, CommonBase, HasHistory >,
         detail::state_machine_trait<StateMachine> {
     static constexpr bool has_history = HasHistory;
     using state_machine_type    = StateMachine;
-    using base_state_type       = state_machine< state_machine_type, has_history, CommonBase >;
+    using base_state_type       = state_machine< state_machine_type, CommonBase, has_history >;
     using initial_state         = void;
     using internal_transitions  = void;
     using transitions           = void;
@@ -293,8 +295,8 @@ struct state_machine : state< StateMachine, HasHistory, CommonBase >,
             typename Action = none, typename Guard = none>
     using tr = transition<SourceState, Event, TargetState, Action, Guard>;
 
-    template < typename T, bool History = false, typename Base = CommonBase >
-    using state = def::state<T, History, Base>;
+    template < typename T, typename Base = CommonBase, bool History = false >
+    using state = def::state<T, Base, History>;
 
     template < typename T, typename Base = CommonBase >
     using terminal_state = def::terminal_state<T, Base>;

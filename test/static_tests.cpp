@@ -28,15 +28,15 @@ static_assert( detail::is_state<stateB>::value, "" );
 static_assert( detail::is_state<stateC>::value, "" );
 static_assert( !stateA::has_history, "" );
 
-struct stateD : state< stateD, true > {};
+struct stateD : state< stateD, void, true > {};
 static_assert( detail::is_state<stateD>::value, "" );
 static_assert( stateD::has_history, "" );
 
-struct stateE : state< stateE, false, state_interface > {};
+struct stateE : state< stateE, state_interface > {};
 static_assert( detail::is_state<stateC>::value, "" );
 static_assert( !stateE::has_history, "" );
 
-struct stateF : state< stateF, true, state_interface > {};
+struct stateF : state< stateF, state_interface, true > {};
 static_assert( detail::is_state<stateC>::value, "" );
 static_assert( stateF::has_history, "" );
 
