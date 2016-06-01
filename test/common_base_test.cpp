@@ -84,6 +84,20 @@ struct human_def : ::afsm::def::state_machine< human_def, human_interface > {
     struct awake : state_machine<awake, human_interface> {
         using fsm_type = ::afsm::inner_state_machine< human_def, awake >;
 
+        template < typename Event >
+        void
+        on_enter(Event&&, human_def::fsm_type& )
+        {
+            ::std::cerr << "Woken up!\n";
+        }
+
+        template < typename Event >
+        void
+        on_exit(Event&&, human_def::fsm_type&)
+        {
+            ::std::cerr << "Going to sleep\n";
+        }
+
         struct woken_up : state<woken_up> {
             using deferred_events = type_tuple< do_work >;
             void

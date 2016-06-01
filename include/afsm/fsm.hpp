@@ -69,10 +69,11 @@ private:
 };
 
 template < typename FSM, typename T >
-class inner_state_machine : public detail::state_machine_base< T, none > {
+class inner_state_machine : public detail::state_machine_base< T, none, inner_state_machine<FSM, T> > {
 public:
     using enclosing_fsm_type    = FSM;
-    using base_machine_type     = detail::state_machine_base< T, none >;
+    using this_type = inner_state_machine<FSM, T>;
+    using base_machine_type     = detail::state_machine_base< T, none, this_type >;
 public:
     inner_state_machine(enclosing_fsm_type& fsm)
         : base_machine_type{}, fsm_{fsm} {}
@@ -103,12 +104,12 @@ private:
 };
 
 template < typename T, typename Mutex >
-class state_machine : public detail::state_machine_base< T, Mutex > {
+class state_machine : public detail::state_machine_base< T, Mutex, state_machine<T, Mutex> > {
 public:
     static_assert( ::psst::meta::is_empty< typename T::deferred_events >::value,
             "Outer state machine cannot defer events" );
     using this_type         = state_machine<T, Mutex>;
-    using base_machine_type = detail::state_machine_base< T, Mutex >;
+    using base_machine_type = detail::state_machine_base< T, Mutex, this_type >;
 public:
     state_machine()
         : base_machine_type{},

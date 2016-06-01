@@ -99,12 +99,13 @@ protected:
         : base_impl_type(::std::forward<Args>(args)...) {}
 };
 
-template < typename T, typename Mutex >
+template < typename T, typename Mutex, typename FrontMachine >
 class state_machine_base_impl : public state_base<T> {
 public:
     using state_machine_definition_type = T;
     using state_type                    = state_base<T>;
-    using machine_type                  = state_machine_base_impl<T, Mutex>;
+    using machine_type                  = state_machine_base_impl<T, Mutex, FrontMachine>;
+    using front_machine_type            = FrontMachine;
     static_assert(def::detail::is_state_machine<T>::value,
             "Front state machine can be created only with a descendant of afsm::def::state_machine");
     using transitions = typename state_machine_definition_type::transitions;
@@ -130,20 +131,20 @@ public:
     using mutex_type        = Mutex;
     using size_type         = typename detail::size_type<mutex_type>::type;
     using transition_tuple  = afsm::transitions::state_transition_table<
-            machine_type, state_machine_definition_type, size_type >;
+            front_machine_type, state_machine_definition_type, size_type >;
 
     state_machine_base_impl()
         : state_type{},
-          transitions_{*this}
+          transitions_{front_machine()}
     {}
 
     state_machine_base_impl(state_machine_base_impl const& rhs)
         : state_type{rhs},
-          transitions_{*this, rhs.transitions_}
+          transitions_{front_machine(), rhs.transitions_}
     {}
     state_machine_base_impl(state_machine_base_impl&& rhs)
         : state_type{rhs},
-          transitions_{*this, ::std::move(rhs.transitions_)}
+          transitions_{front_machine(), ::std::move(rhs.transitions_)}
     {}
 
     state_machine_base_impl&
@@ -162,12 +163,17 @@ public:
     current_state() const
     { return transitions_.current_state(); }
 
+    front_machine_type&
+    front_machine()
+    {
+        return static_cast<front_machine_type&>(*this);
+    }
 protected:
     template<typename ... Args>
     explicit
     state_machine_base_impl(Args&& ... args)
         : state_type(::std::forward<Args>(args)...),
-          transitions_{*this}
+          transitions_{front_machine()}
     {}
 
     template < typename FSM, typename Event >
@@ -201,14 +207,14 @@ protected:
     transition_tuple        transitions_;
 };
 
-template < typename T, typename Mutex >
-constexpr ::std::size_t state_machine_base_impl<T, Mutex>::initial_state_index;
-template < typename T, typename Mutex >
-constexpr ::std::size_t state_machine_base_impl<T, Mutex>::inner_state_count;
+template < typename T, typename Mutex, typename FrontMachine >
+constexpr ::std::size_t state_machine_base_impl<T, Mutex, FrontMachine>::initial_state_index;
+template < typename T, typename Mutex, typename FrontMachine >
+constexpr ::std::size_t state_machine_base_impl<T, Mutex, FrontMachine>::inner_state_count;
 
-template < typename T, typename Mutex >
-struct state_machine_base_with_base : state_machine_base_impl<T, Mutex> {
-    using base_type = state_machine_base_impl<T, Mutex>;
+template < typename T, typename Mutex, typename FrontMachine >
+struct state_machine_base_with_base : state_machine_base_impl<T, Mutex, FrontMachine> {
+    using base_type = state_machine_base_impl<T, Mutex, FrontMachine>;
     using common_base = typename T::common_base;
 
     state_machine_base_with_base() = default;
@@ -226,17 +232,17 @@ protected:
     {}
 };
 
-template < typename T, typename Mutex >
+template < typename T, typename Mutex, typename FrontMachine >
 struct state_machine_base : ::std::conditional<
         def::detail::has_common_base<T>::value,
-        state_machine_base_with_base< T, Mutex >,
-        state_machine_base_impl< T, Mutex >
+        state_machine_base_with_base< T, Mutex, FrontMachine >,
+        state_machine_base_impl< T, Mutex, FrontMachine >
     >::type {
 public:
     using state_machine_impl_type = typename ::std::conditional<
             def::detail::has_common_base<T>::value,
-            state_machine_base_with_base< T, Mutex >,
-            state_machine_base_impl< T, Mutex >
+            state_machine_base_with_base< T, Mutex, FrontMachine >,
+            state_machine_base_impl< T, Mutex, FrontMachine >
         >::type;
     state_machine_base() = default;
 protected:
