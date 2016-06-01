@@ -49,10 +49,13 @@ template < typename T >
 struct has_common_base
     : ::std::is_base_of< tags::has_common_base, T > {};
 
-
 template < typename T >
 struct has_history
     : ::std::is_base_of< tags::has_history, T > {};
+
+template < typename T >
+struct allow_empty_transition_functions
+    : ::std::is_base_of< tags::allow_empty_enter_exit, T > {};
 
 }  /* namespace traits */
 }  /* namespace def */

@@ -42,6 +42,13 @@ public:
     enclosing_fsm_type const&
     enclosing_fsm() const
     { return fsm_; }
+
+    template < typename Event >
+    void
+    state_enter(Event&&) {}
+    template < typename Event >
+    void
+    state_exit(Event&&) {}
 private:
     template < typename Event >
     actions::event_process_result

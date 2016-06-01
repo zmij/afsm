@@ -172,6 +172,19 @@ public:
     {
         return static_cast<front_machine_type&>(*this);
     }
+
+    template < typename Event >
+    void
+    state_enter(Event&& event)
+    {
+        transitions_.enter( ::std::forward<Event>(event) );
+    }
+    template < typename Event >
+    void
+    state_exit(Event&& event)
+    {
+        transitions_.exit( ::std::forward<Event>(event) );
+    }
 protected:
     template<typename ... Args>
     explicit
