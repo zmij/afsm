@@ -290,6 +290,25 @@ struct transition_action_selector {
         >::type;
 };
 
+template < typename T, ::std::size_t StateIndex >
+struct common_base_cast_func {
+    static constexpr ::std::size_t state_index = StateIndex;
+    using type  = typename ::std::decay<T>::type;
+
+    template < typename StateTuple >
+    type&
+    operator()(StateTuple& states) const
+    {
+        return static_cast< type& >(::std::get< state_index >(states));
+    }
+    template < typename StateTuple >
+    type const&
+    operator()(StateTuple const& states) const
+    {
+        return static_cast< type const& >(::std::get< state_index >(states));
+    }
+};
+
 }  /* namespace detail */
 
 template < typename FSM, typename FSM_DEF, typename Size >
@@ -313,6 +332,8 @@ public:
             afsm::detail::front_state_tuple< fsm_type, inner_states_def >;
     using inner_states_tuple =
             typename inner_states_constructor::type;
+    using dispatch_table    =
+            actions::detail::inner_dispatch_table< inner_states_tuple >;
 
     static constexpr ::std::size_t initial_state_index =
             ::psst::meta::index_of<initial_state, inner_states_def>::value;
@@ -323,8 +344,10 @@ public:
     template < typename Event >
     using invokation_table = ::std::array<
             ::std::function< actions::event_process_result(this_type&, Event&&) >, size >;
+
     template < typename CommonBase >
-    using cast_table = ::std::array< ::std::function< CommonBase&() >, size >;
+    using cast_table = ::std::array< ::std::function<
+            typename ::std::decay<CommonBase>::type&( inner_states_tuple& ) >, size >;
 public:
     state_transition_table(fsm_type& fsm)
         : fsm_{fsm},
@@ -378,8 +401,13 @@ public:
     actions::event_process_result
     process_event(Event&& event)
     {
-        auto inv_table = state_table<Event>( state_indexes{} );
-        return inv_table[current_state()](*this, ::std::forward<Event>(event));
+        auto const& inv_table = state_table<Event>( state_indexes{} );
+        auto res = inv_table[current_state()](*this, ::std::forward<Event>(event));
+        if (res == actions::event_process_result::refuse) {
+            res = dispatch_table::process_event(states_, current_state(),
+                    ::std::forward<Event>(event));
+        }
+        return res;
     }
 
     template < typename SourceState, typename TargetState,
@@ -416,12 +444,13 @@ public:
     T&
     cast_current_state()
     {
-        auto ct = get_cast_table<T>();
-        return ct[current_state_]();
+        using decayed_type = typename ::std::decay<T>::type;
+        auto const& ct = get_cast_table<decayed_type>( state_indexes{} );
+        return ct[current_state_]( states_ );
     }
 private:
     template < typename Event, ::std::size_t ... Indexes >
-    static invokation_table< Event >
+    static invokation_table< Event > const&
     state_table( ::psst::meta::indexes_tuple< Indexes... > const& )
     {
         using event_type = typename ::std::decay<Event>::type;
@@ -439,14 +468,13 @@ private:
         return _table;
     }
     template < typename T, ::std::size_t ... Indexes >
-    cast_table<T>
-    get_cast_table()
+    static cast_table<T> const&
+    get_cast_table( ::psst::meta::indexes_tuple< Indexes... > const& )
     {
-        return cast_table<T>{{
-            [this](){
-                return dynamic_cast<T&>(::std::get<Indexes>(states_));
-            }...
-        }};
+        static cast_table<T> _table {
+            detail::common_base_cast_func<T, Indexes>{}...
+        };
+        return _table;
     }
 private:
     fsm_type&           fsm_;

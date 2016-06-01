@@ -66,6 +66,8 @@ struct work_action {
 };
 
 struct human_def : ::afsm::def::state_machine< human_def, false, human_interface > {
+    using fsm_type = ::afsm::state_machine<human_def>;
+
     struct sleeping : state<sleeping> {
         void
         work() override
@@ -80,6 +82,8 @@ struct human_def : ::afsm::def::state_machine< human_def, false, human_interface
     };
 
     struct awake : state_machine<awake, false, human_interface> {
+        using fsm_type = ::afsm::inner_state_machine< human_def, awake >;
+
         struct woken_up : state<woken_up> {
             using deferred_events = type_tuple< do_work >;
             void
@@ -144,12 +148,21 @@ struct human_def : ::afsm::def::state_machine< human_def, false, human_interface
         {
             ::std::cerr << "Construct awake\n";
         }
+        fsm_type&
+        fsm()
+        {
+            return static_cast<fsm_type&>(*this);
+        }
         void
         work() override
-        { ::std::cerr << "TODO Access common base of current state\n"; }
+        {
+            fsm().current_state_base().work();
+        }
         void
         sleep() override
-        { ::std::cerr << "TODO Access common base of current state\n"; }
+        {
+            fsm().current_state_base().sleep();
+        }
 
         int fatigue = 0;
     };
@@ -159,12 +172,23 @@ struct human_def : ::afsm::def::state_machine< human_def, false, human_interface
         tr< sleeping,   alarm,      awake    >,
         tr< awake,      pillow,     sleeping >
     >;
+
+    fsm_type&
+    fsm()
+    {
+        return static_cast<fsm_type&>(*this);
+    }
+
     void
     work() override
-    { ::std::cerr << "TODO Access common base of current state\n"; }
+    {
+        fsm().current_state_base().work();
+    }
     void
     sleep() override
-    { ::std::cerr << "TODO Access common base of current state\n"; }
+    {
+        fsm().current_state_base().sleep();
+    }
 
     int fatigue = 0;
 };
@@ -175,14 +199,24 @@ TEST(FSM, CommonBase)
 {
     using afsm::actions::event_process_result;
     human_fsm hfsm;
+
+    hfsm.work();
+    hfsm.sleep();
+
     EXPECT_EQ(event_process_result::process, hfsm.process_event(alarm{}));
+    hfsm.work();
+    hfsm.sleep();
     EXPECT_EQ(event_process_result::defer, hfsm.process_event(do_work{}));
     EXPECT_EQ(event_process_result::defer, hfsm.process_event(do_work{}));
     EXPECT_EQ(event_process_result::defer, hfsm.process_event(do_work{}));
     EXPECT_EQ(event_process_result::process, hfsm.process_event(wash{}));
+    hfsm.work();
+    hfsm.sleep();
     EXPECT_EQ(event_process_result::process_in_state, hfsm.process_event(do_work{}));
     EXPECT_EQ(event_process_result::process_in_state, hfsm.process_event(do_work{}));
     EXPECT_EQ(event_process_result::process, hfsm.process_event(do_work{}));
+    hfsm.work();
+    hfsm.sleep();
 }
 
 } // namespace test

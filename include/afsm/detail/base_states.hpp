@@ -129,25 +129,21 @@ public:
 
     using mutex_type        = Mutex;
     using size_type         = typename detail::size_type<mutex_type>::type;
-    using dispatch_tuple    = actions::detail::inner_dispatch_table< inner_states_tuple >;
     using transition_tuple  = afsm::transitions::state_transition_table<
             machine_type, state_machine_definition_type, size_type >;
 
     state_machine_base_impl()
         : state_type{},
-          transitions_{*this},
-          dispatch_{ transitions_.states() }
+          transitions_{*this}
     {}
 
     state_machine_base_impl(state_machine_base_impl const& rhs)
         : state_type{rhs},
-          transitions_{*this, rhs.transitions_},
-          dispatch_{ transitions_.states() }
+          transitions_{*this, rhs.transitions_}
     {}
     state_machine_base_impl(state_machine_base_impl&& rhs)
         : state_type{rhs},
-          transitions_{*this, ::std::move(rhs.transitions_)},
-          dispatch_{ transitions_.states() }
+          transitions_{*this, ::std::move(rhs.transitions_)}
     {}
 
     state_machine_base_impl&
@@ -171,8 +167,7 @@ protected:
     explicit
     state_machine_base_impl(Args&& ... args)
         : state_type(::std::forward<Args>(args)...),
-          transitions_{*this},
-          dispatch_{ transitions_.states() }
+          transitions_{*this}
     {}
 
     template < typename FSM, typename Event >
@@ -180,14 +175,11 @@ protected:
     process_event_impl(FSM& enclosing_fsm, Event&& event,
         detail::process_type<actions::event_process_result::process> const&)
     {
+        // Internal transitions
         auto res = actions::handle_in_state_event(::std::forward<Event>(event), enclosing_fsm, *this);
         if (res == actions::event_process_result::refuse) {
-            // Transitions
+            // Transitions and event dispatch
             res = transitions_.process_event(::std::forward<Event>(event));
-        }
-        if (res == actions::event_process_result::refuse) {
-            // Dispatch event to inner states
-            res = dispatch_.process_event(current_state(), ::std::forward< Event >(event));
         }
         return res;
     }
@@ -207,7 +199,6 @@ protected:
     }
 protected:
     transition_tuple        transitions_;
-    dispatch_tuple          dispatch_;
 };
 
 template < typename T, typename Mutex >

@@ -249,15 +249,24 @@ handle_in_state_event(Event&& event, FSM& fsm, State& state)
 
 namespace detail {
 
-template < typename State >
+template < ::std::size_t StateIndex >
 struct process_event_handler {
-    State& state;
-    template < typename Event >
+    static constexpr ::std::size_t state_index = StateIndex;
+    template < typename StateTuple, typename Event >
     event_process_result
-    operator()(Event&& event) const
+    operator()(StateTuple& states, Event&& event) const
     {
-        return state.process_event(::std::forward<Event>(event));
+        return ::std::get<state_index>(states).process_event(::std::forward<Event>(event));
     }
+};
+
+template < typename Indexes >
+struct handlers_tuple;
+
+template < ::std::size_t ... Indexes >
+struct handlers_tuple < ::psst::meta::indexes_tuple<Indexes...> > {
+    using type = ::std::tuple< process_event_handler<Indexes>... >;
+    static constexpr ::std::size_t size = sizeof ... (Indexes);
 };
 
 template < typename T >
@@ -268,39 +277,32 @@ class inner_dispatch_table< ::std::tuple<T...> > {
 public:
     static constexpr ::std::size_t size = sizeof ... (T);
     using states_tuple      = ::std::tuple<T...>;
-    using dispatch_tuple    = ::std::tuple< process_event_handler<T>... >;
     using indexes_tuple     = typename ::psst::meta::index_builder< size >::type;
+    using dispatch_tuple    = typename handlers_tuple<indexes_tuple>::type;
     template < typename Event >
     using invokation_table  = ::std::array<
-            ::std::function< event_process_result(Event&&) >, size >;
+            ::std::function< event_process_result(states_tuple&, Event&&) >, size >;
 public:
     explicit
-    inner_dispatch_table( states_tuple& states )
-        : inner_dispatch_table( states, indexes_tuple{} ) {}
+    inner_dispatch_table() {}
 
     template < typename Event >
-    event_process_result
-    process_event(::std::size_t current_state, Event&& event)
+    static event_process_result
+    process_event(states_tuple& states, ::std::size_t current_state, Event&& event)
     {
         if (current_state >= size)
             throw ::std::logic_error{ "Invalid current state index" };
         auto inv_table = state_table< Event >(indexes_tuple{});
-        return inv_table[current_state](::std::forward<Event>(event));
+        return inv_table[current_state](states, ::std::forward<Event>(event));
     }
 private:
-    template < ::std::size_t ... Indexes >
-    inner_dispatch_table( states_tuple& states,
-            ::psst::meta::indexes_tuple< Indexes... > const& )
-        : states_( process_event_handler<T>{::std::get<Indexes>(states)} ... )
-    {}
     template < typename Event, ::std::size_t ... Indexes >
-    invokation_table<Event>
+    static invokation_table<Event> const&
     state_table( ::psst::meta::indexes_tuple< Indexes... > const& )
     {
-        // TODO Cache it
-        return invokation_table<Event> {{ ::std::get<Indexes>(states_)... }};
+        static invokation_table<Event> _table {{ process_event_handler<Indexes>{}... }};
+        return _table;
     }
-    dispatch_tuple states_;
 };
 
 }  /* namespace detail */

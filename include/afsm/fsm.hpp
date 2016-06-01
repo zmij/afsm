@@ -225,7 +225,8 @@ private:
     void
     process_deferred_queue()
     {
-        if (stack_size_ <= 1) {
+        if (stack_size_++ <= 1) {
+
             event_queue deferred;
             {
                 lock_guard lock{deferred_mutex_};
@@ -245,6 +246,7 @@ private:
                 }
             }
         }
+        --stack_size_;
     }
 private:
     using mutex_type        = Mutex;
