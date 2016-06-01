@@ -70,34 +70,37 @@ struct guard_check< FSM, State, none > {
     { return true; }
 };
 
-template < typename Action, typename FSM, typename Event,
+template < typename Action, typename FSM,
     typename SourceState, typename TargetState >
 struct action_invokation {
-    static_assert(action_is_callable< Action, Event,
-                FSM, SourceState, TargetState >::value,
-            "Action is not callable for this transition");
 
+    template < typename Event >
     void
     operator()(Event&& event, FSM& fsm, SourceState& source, TargetState& target) const
     {
+        static_assert(action_is_callable< Action, Event,
+                    FSM, SourceState, TargetState >::value,
+                "Action is not callable for this transition");
         Action{}(::std::forward<Event>(event), fsm, source, target);
     }
 };
 
-template < typename FSM, typename Event,
+template < typename FSM,
     typename SourceState, typename TargetState >
-struct action_invokation< none, FSM, Event, SourceState, TargetState > {
+struct action_invokation< none, FSM, SourceState, TargetState > {
+    template < typename Event >
     void
     operator()(Event&&, FSM&, SourceState&, TargetState&) const
     {}
 };
 
 template < typename Action, typename Guard, typename FSM,
-    typename Event, typename SourceState, typename TargetState >
+    typename SourceState, typename TargetState >
 struct guarded_action_invokation {
     using guard_type        = guard_check< FSM, SourceState, Guard >;
-    using invokation_type   = action_invokation< Action, FSM, Event, SourceState, TargetState >;
+    using invokation_type   = action_invokation< Action, FSM, SourceState, TargetState >;
 
+    template < typename Event >
     event_process_result
     operator()(Event&& event, FSM& fsm, SourceState& source, TargetState& target) const
     {
@@ -109,17 +112,17 @@ struct guarded_action_invokation {
     }
 };
 
-template < ::std::size_t N, typename FSM, typename State, typename Event,
-        typename Transitions >
+template < ::std::size_t N, typename FSM, typename State, typename Transitions >
 struct nth_inner_invokation {
     static_assert(Transitions::size > N, "Transitions list is too small");
     using transition        = typename Transitions::template type<N>;
     using action_type       = typename transition::action_type;
     using guard_type        = typename transition::guard_type;
     using invokation_type   = guarded_action_invokation<
-                action_type, guard_type, FSM, Event, State, State >;
-    using previous_action    = nth_inner_invokation<N - 1, FSM, State, Event, Transitions>;
+                action_type, guard_type, FSM, State, State >;
+    using previous_action    = nth_inner_invokation<N - 1, FSM, State, Transitions>;
 
+    template < typename Event >
     event_process_result
     operator()(Event&& event, FSM& fsm, State& state) const
     {
@@ -130,15 +133,16 @@ struct nth_inner_invokation {
     }
 };
 
-template < typename FSM, typename State, typename Event, typename Transitions >
-struct nth_inner_invokation<0, FSM, State, Event, Transitions> {
+template < typename FSM, typename State, typename Transitions >
+struct nth_inner_invokation<0, FSM, State, Transitions> {
     static_assert(Transitions::size > 0, "Transitions list is empty");
     using transition        = typename Transitions::template type<0>;
     using action_type       = typename transition::action_type;
     using guard_type        = typename transition::guard_type;
     using invokation_type   = guarded_action_invokation<
-                action_type, guard_type, FSM, Event, State, State >;
+                action_type, guard_type, FSM, State, State >;
 
+    template < typename Event >
     event_process_result
     operator()(Event&& event, FSM& fsm, State& state) const
     {
@@ -155,13 +159,14 @@ struct no_in_state_invokation {
     }
 };
 
-template < typename FSM, typename State, typename Event, typename Transition >
+template < typename FSM, typename State, typename Transition >
 struct unconditional_in_state_invokation {
     using action_type = typename Transition::action_type;
     using guard_type  = typename Transition::guard_type;
     using invokation_type = guarded_action_invokation<
-                action_type, guard_type, FSM, Event, State, State >;
+                action_type, guard_type, FSM, State, State >;
 
+    template < typename Event >
     event_process_result
     operator()(Event&& event, FSM& fsm, State& state) const
     {
@@ -169,12 +174,12 @@ struct unconditional_in_state_invokation {
     }
 };
 
-template < typename FSM, typename State, typename Event,
-        typename Transitions >
+template < typename FSM, typename State, typename Transitions >
 struct conditional_in_state_invokation {
     static constexpr ::std::size_t size = Transitions::size;
-    using invokation_type = nth_inner_invokation< size - 1, FSM, State, Event, Transitions>;
+    using invokation_type = nth_inner_invokation< size - 1, FSM, State, Transitions>;
 
+    template < typename Event >
     event_process_result
     operator()(Event&& event, FSM& fsm, State& state) const
     {
@@ -199,16 +204,15 @@ struct in_state_action_invokation {
     using handler_type      = typename ::std::conditional<
                 event_handlers::size == 1,
                 detail::unconditional_in_state_invokation<
-                    fsm_type, state_type, event_type,
-                    typename event_handlers::template type<0>>,
-                detail::conditional_in_state_invokation<
-                    fsm_type, state_type, event_type, event_handlers>
+                    fsm_type, state_type, typename event_handlers::template type<0>>,
+                detail::conditional_in_state_invokation< fsm_type, state_type, event_handlers>
             >::type;
 
+    template < typename Evt >
     event_process_result
-    operator()(event_type&& event, fsm_type& fsm, state_type& state) const
+    operator()(Evt&& event, fsm_type& fsm, state_type& state) const
     {
-       auto res = handler_type{}(::std::forward<event_type>(event), fsm, state);
+       auto res = handler_type{}(::std::forward<Evt>(event), fsm, state);
        if (res == event_process_result::process) {
            return event_process_result::process_in_state;
        }
@@ -222,8 +226,9 @@ struct in_state_action_invokation<false, FSM, State, Event> {
     using state_type        = State;
     using event_type        = Event;
 
+    template < typename Evt >
     event_process_result
-    operator()(event_type&&, fsm_type&, state_type&) const
+    operator()(Evt&&, fsm_type&, state_type&) const
     {
        return event_process_result::refuse;
     }
@@ -290,6 +295,7 @@ public:
     static event_process_result
     process_event(states_tuple& states, ::std::size_t current_state, Event&& event)
     {
+        //using event_type = typename ::std::decay<Event>::type;
         if (current_state >= size)
             throw ::std::logic_error{ "Invalid current state index" };
         auto inv_table = state_table< Event >(indexes_tuple{});

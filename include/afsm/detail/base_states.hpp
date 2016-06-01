@@ -77,6 +77,10 @@ struct state_base_impl<T, true> : T {
             typename state_definition_type::deferred_events, void >::value,
             "Terminal state must not define deferred events");
 
+    using handled_events  = ::psst::meta::type_tuple<>;
+    using internal_events = ::psst::meta::type_tuple<>;
+    using deferred_events = ::psst::meta::type_tuple<>;
+
     state_base_impl() : state_definition_type{} {}
 protected:
     template< typename ... Args >
@@ -181,11 +185,11 @@ protected:
     process_event_impl(FSM& enclosing_fsm, Event&& event,
         detail::process_type<actions::event_process_result::process> const&)
     {
-        // Internal transitions
-        auto res = actions::handle_in_state_event(::std::forward<Event>(event), enclosing_fsm, *this);
+        // Transitions and internal event dispatch
+        auto res = transitions_.process_event(::std::forward<Event>(event));
         if (res == actions::event_process_result::refuse) {
-            // Transitions and event dispatch
-            res = transitions_.process_event(::std::forward<Event>(event));
+            // Internal transitions
+            res = actions::handle_in_state_event(::std::forward<Event>(event), enclosing_fsm, *this);
         }
         return res;
     }
