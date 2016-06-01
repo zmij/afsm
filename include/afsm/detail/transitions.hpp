@@ -44,7 +44,7 @@ struct event_handle_selector
 template <typename SourceState, typename Event, typename Transition>
 struct transits_on_event
     : ::std::conditional<
-        !def::detail::is_internal_transition<Transition>::value &&
+        !def::traits::is_internal_transition<Transition>::value &&
         ::std::is_same< typename Transition::source_state_type, SourceState >::value &&
         ::std::is_same< typename Transition::event_type, Event >::value,
         ::std::true_type,
@@ -183,7 +183,8 @@ struct state_clear_impl< FSM, State, true > {
 };
 
 template < typename FSM, typename State >
-struct state_clear : state_clear_impl< FSM, State, State::has_history > {};
+struct state_clear : state_clear_impl< FSM, State,
+    def::traits::has_history< State >::value > {};
 
 template < typename FSM, typename StateTable >
 struct no_transition {
@@ -478,9 +479,9 @@ private:
     static cast_table<T> const&
     get_cast_table( ::psst::meta::indexes_tuple< Indexes... > const& )
     {
-        static cast_table<T> _table {
+        static cast_table<T> _table {{
             detail::common_base_cast_func<T, Indexes>{}...
-        };
+        }};
         return _table;
     }
 private:

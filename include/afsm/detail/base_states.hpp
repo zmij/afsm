@@ -37,7 +37,7 @@ struct state_base_impl : T {
     using state_type            = state_base_impl<T, isTerminal>;
     using internal_transitions = typename state_definition_type::internal_transitions;
 
-    static_assert(def::detail::is_state<T>::value,
+    static_assert(def::traits::is_state<T>::value,
             "Front state can be created only with a descendant of afsm::def::state");
     static_assert(!def::detail::has_inner_states< internal_transitions >::value,
             "Internal transition table cannot have transitions between other states");
@@ -45,7 +45,7 @@ struct state_base_impl : T {
             typename def::detail::handled_events<state_definition_type>::type;
     using internal_events =
             typename def::detail::handled_events<state_definition_type>::type;
-    static_assert(def::detail::is_state_machine<state_definition_type>::value
+    static_assert(def::traits::is_state_machine<state_definition_type>::value
                 || !def::detail::has_default_transitions< handled_events >::value,
             "Internal transition cannot be a default transition");
     using deferred_events =
@@ -68,7 +68,7 @@ struct state_base_impl<T, true> : T {
     using state_type            = state_base_impl<T, false>;
     using internal_transitions = typename state_definition_type::internal_transitions;
 
-    static_assert(def::detail::is_state<T>::value,
+    static_assert(def::traits::is_state<T>::value,
             "Front state can be created only with a descendant of afsm::def::state");
     static_assert(::std::is_same<
             typename state_definition_type::internal_transitions, void >::value,
@@ -89,12 +89,12 @@ protected:
 };
 
 template < typename T >
-class state_base : public state_base_impl<T, def::detail::is_terminal_state<T>::value> {
+class state_base : public state_base_impl<T, def::traits::is_terminal_state<T>::value> {
 public:
     using state_definition_type = T;
     using state_type            = state_base<T>;
     using internal_transitions  = typename state_definition_type::internal_transitions;
-    using base_impl_type        = state_base_impl<T, def::detail::is_terminal_state<T>::value>;
+    using base_impl_type        = state_base_impl<T, def::traits::is_terminal_state<T>::value>;
 public:
     state_base() : base_impl_type{} {}
 protected:
@@ -110,12 +110,12 @@ public:
     using state_type                    = state_base<T>;
     using machine_type                  = state_machine_base_impl<T, Mutex, FrontMachine>;
     using front_machine_type            = FrontMachine;
-    static_assert(def::detail::is_state_machine<T>::value,
+    static_assert(def::traits::is_state_machine<T>::value,
             "Front state machine can be created only with a descendant of afsm::def::state_machine");
     using transitions = typename state_machine_definition_type::transitions;
     using handled_events =
             typename def::detail::recursive_handled_events<state_machine_definition_type>::type;
-    static_assert(def::detail::is_state<
+    static_assert(def::traits::is_state<
                 typename state_machine_definition_type::initial_state >::value,
             "State machine definition must specify an initial state");
     using initial_state = typename state_machine_definition_type::initial_state;
@@ -238,13 +238,13 @@ protected:
 
 template < typename T, typename Mutex, typename FrontMachine >
 struct state_machine_base : ::std::conditional<
-        def::detail::has_common_base<T>::value,
+        def::traits::has_common_base<T>::value,
         state_machine_base_with_base< T, Mutex, FrontMachine >,
         state_machine_base_impl< T, Mutex, FrontMachine >
     >::type {
 public:
     using state_machine_impl_type = typename ::std::conditional<
-            def::detail::has_common_base<T>::value,
+            def::traits::has_common_base<T>::value,
             state_machine_base_with_base< T, Mutex, FrontMachine >,
             state_machine_base_impl< T, Mutex, FrontMachine >
         >::type;

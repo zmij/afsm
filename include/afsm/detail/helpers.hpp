@@ -20,16 +20,16 @@ struct not_a_state;
 
 template < typename T >
 struct not_a_state<T> {
-    static_assert( def::detail::is_state<T>::value, "Type is not a state" );
+    static_assert( def::traits::is_state<T>::value, "Type is not a state" );
 };
 
 template < typename FSM, typename T >
 struct front_state_type
     : ::std::conditional<
-        def::detail::is_state_machine< T >::value,
+        def::traits::is_state_machine< T >::value,
         inner_state_machine< FSM, T >,
         typename ::std::conditional<
-            def::detail::is_state< T >::value,
+            def::traits::is_state< T >::value,
             state< FSM, T >,
             not_a_state< T >
         >::type
