@@ -82,7 +82,7 @@ struct human_def : ::afsm::def::state_machine< human_def, human_interface > {
     };
 
     struct awake : state_machine<awake, human_interface> {
-        using fsm_type = ::afsm::inner_state_machine< human_def, awake >;
+        using fsm_type = ::afsm::inner_state_machine< awake, human_def::fsm_type >;
 
         template < typename Event >
         void
@@ -97,6 +97,16 @@ struct human_def : ::afsm::def::state_machine< human_def, human_interface > {
         {
             ::std::cerr << "Going to sleep\n";
         }
+
+        struct is_tired {
+            template < typename FSM, typename State >
+            bool
+            operator()(FSM const& fsm, State const&) const
+            {
+                ::std::cerr << "Check tired " << fsm.fatigue << "\n";
+                return fsm.fatigue >= 5;
+            }
+        };
 
         struct woken_up : state<woken_up> {
             using deferred_events = type_tuple< do_work >;
@@ -120,7 +130,7 @@ struct human_def : ::afsm::def::state_machine< human_def, human_interface > {
             { ::std::cerr << "Nay!\n"; }
 
             using internal_transitions = transition_table<
-                in< do_work, work_action, none >
+                in< do_work, work_action, not_<is_tired> >
             >;
         };
         struct tired : state <tired> {
@@ -138,16 +148,6 @@ struct human_def : ::afsm::def::state_machine< human_def, human_interface > {
             void
             sleep() override
             { ::std::cerr << "Yaaawn!\n"; }
-        };
-
-        struct is_tired {
-            template < typename FSM, typename State >
-            bool
-            operator()(FSM const& fsm, State const&) const
-            {
-                ::std::cerr << "Check tired " << fsm.fatigue << "\n";
-                return fsm.fatigue >= 5;
-            }
         };
 
         using initial_state = woken_up;

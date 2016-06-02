@@ -70,7 +70,7 @@ struct internal_transitions_test : def::state< internal_transitions_test > {
     >;
 };
 
-using test_state = state<none, internal_transitions_test>;
+using test_state = state<internal_transitions_test, none>;
 
 TEST(FSM, InnerStateTransitions)
 {
@@ -159,7 +159,7 @@ struct inner_dispatch_test : def::state_machine< inner_dispatch_test > {
     ::std::string value = "none";
 };
 
-using test_sm = inner_state_machine< none, inner_dispatch_test >;
+using test_sm = inner_state_machine< inner_dispatch_test, none >;
 
 TEST(FSM, InnerEventDispatch)
 {

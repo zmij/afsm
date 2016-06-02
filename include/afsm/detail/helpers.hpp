@@ -20,17 +20,17 @@ struct not_a_state;
 
 template < typename T >
 struct not_a_state<T> {
-    static_assert( def::detail::is_state<T>::value, "Type is not a state" );
+    static_assert( def::traits::is_state<T>::value, "Type is not a state" );
 };
 
-template < typename FSM, typename T >
+template < typename T, typename FSM >
 struct front_state_type
     : ::std::conditional<
-        def::detail::is_state_machine< T >::value,
-        inner_state_machine< FSM, T >,
+        def::traits::is_state_machine< T >::value,
+        inner_state_machine< T, FSM >,
         typename ::std::conditional<
-            def::detail::is_state< T >::value,
-            state< FSM, T >,
+            def::traits::is_state< T >::value,
+            state< T, FSM >,
             not_a_state< T >
         >::type
     > {};
@@ -50,12 +50,12 @@ struct front_state_tuple< FSM, void> {
 template < typename FSM, typename ... T>
 struct front_state_tuple< FSM, ::psst::meta::type_tuple<T...> > {
     using type = ::std::tuple<
-            typename front_state_type<FSM, T>::type ... >;
+            typename front_state_type<T, FSM>::type ... >;
     using index_tuple = typename ::psst::meta::index_builder< sizeof ... (T) >::type;
 
     static type
     construct(FSM& fsm)
-    { return type( typename front_state_type<FSM, T>::type{fsm}... ); }
+    { return type( typename front_state_type<T, FSM>::type{fsm}... ); }
     static type
     copy_construct(FSM& fsm, type const& rhs)
     {
@@ -71,14 +71,14 @@ private:
     static type
     copy_construct(FSM& fsm, type const& rhs, ::psst::meta::indexes_tuple<Indexes...> const&)
     {
-        return type( typename front_state_type<FSM, T>::type{
+        return type( typename front_state_type<T, FSM>::type{
             fsm, ::std::get< Indexes >(rhs)}...);
     }
     template < ::std::size_t ... Indexes >
     static type
     move_construct(FSM& fsm, type&& rhs, ::psst::meta::indexes_tuple<Indexes...> const&)
     {
-        return type( typename front_state_type<FSM, T>::type{
+        return type( typename front_state_type<T, FSM>::type{
             fsm, ::std::move(::std::get< Indexes >(rhs))}...);
     }
 };

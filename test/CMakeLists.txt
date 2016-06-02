@@ -30,6 +30,7 @@ target_link_libraries(
     ${GTEST_BOTH_LIBRARIES}
     ${CMAKE_THREAD_LIBS_INIT}
     # Add your libraries here
+    ${PSST_ANSI_COLORS_LIB}
 )
 
 if (GTEST_XML_OUTPUT)

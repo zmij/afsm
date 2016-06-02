@@ -45,6 +45,13 @@ include_directories(${METAPUSHKIN_INCLUDE_DIR})
 
 if (BUILD_TESTS)
     enable_testing()
+    if (NOT PSST_ANSI_COLORS_INCLUDE_DIR)
+    add_subdirectory(lib/ansi-colors)
+    endif()
+    message(STATUS ${PSST_ANSI_COLORS_LINK_DIR})
+
+    include_directories(${PSST_ANSI_COLORS_INCLUDE_DIR})
+    link_directories(${PSST_ANSI_COLORS_LINK_DIR})
     add_subdirectory(test)
 endif()
 

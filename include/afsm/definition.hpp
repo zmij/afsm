@@ -10,25 +10,11 @@
 
 #include <pushkin/meta.hpp>
 #include <afsm/fsm_fwd.hpp>
+#include <afsm/definition_fwd.hpp>
+#include <afsm/detail/def_traits.hpp>
 
 namespace afsm {
-
 namespace def {
-template < typename SourceState, typename Event, typename TargetState,
-        typename Action = none, typename Guard = none >
-struct transition;
-template < typename Event, typename Action = none, typename Guard = none >
-struct internal_transition;
-template < typename ... T >
-struct transition_table;
-
-template < typename T, typename CommonBase = void, bool History = false >
-struct state;
-template < typename T, typename CommonBase = void  >
-struct terminal_state;
-
-template < typename T, typename CommonBase = void, bool History = false >
-struct state_machine;
 
 namespace detail {
 
@@ -72,62 +58,6 @@ template < typename Event, typename Action, typename Guard >
 struct event_type< internal_transition< Event, Action, Guard > > {
     using type = Event;
 };
-
-
-template < typename T >
-struct is_transition : ::std::false_type {};
-
-template < typename SourceState, typename Event, typename TargetState,
-    typename Action, typename Guard>
-struct is_transition< transition<SourceState, Event, TargetState, Action, Guard> >
-    : ::std::true_type{};
-template < typename Event, typename Action, typename Guard >
-struct is_transition< internal_transition< Event, Action, Guard > >
-    : ::std::true_type {};
-
-template < typename T >
-struct is_internal_transition : ::std::false_type {};
-
-template < typename Event, typename Action, typename Guard >
-struct is_internal_transition< internal_transition< Event, Action, Guard > >
-    : ::std::true_type {};
-
-template < typename T >
-struct state_tag {};
-
-template < typename T >
-struct is_state : ::std::conditional<
-        ::std::is_base_of< state_tag<T>, T >::value,
-        ::std::true_type,
-        ::std::false_type
-    >::type {};
-
-template < typename T >
-struct is_terminal_state : ::std::conditional<
-        ::std::is_base_of< terminal_state<T>, T >::value,
-        ::std::true_type,
-        ::std::false_type
-    >::type {};
-
-template <typename T>
-struct state_machine_trait {};
-
-template < typename T >
-struct is_state_machine : ::std::conditional<
-        ::std::is_base_of< state_machine_trait<T>, T >::value,
-        ::std::true_type,
-        ::std::false_type
-    >::type {};
-
-template <typename T>
-struct common_base_trait {};
-
-template < typename T >
-struct has_common_base : ::std::conditional<
-        ::std::is_base_of< common_base_trait<T>, T >::value,
-        ::std::true_type,
-        ::std::false_type
-    >::type {};
 
 template < typename SourceState, typename Event, typename Guard >
 struct transition_key {
@@ -196,7 +126,7 @@ struct transition_table {
     static_assert(
             ::std::conditional<
                 (sizeof ... (T) > 0),
-                ::psst::meta::all_match< detail::is_transition, T ... >,
+                ::psst::meta::all_match< traits::is_transition, T ... >,
                 ::std::true_type
             >::type::value,
             "Transition table can contain only transition or internal_transition template instantiations" );
@@ -219,7 +149,7 @@ struct transition_table {
     static_assert(
             ::std::conditional<
                  (inner_state_count > 0),
-                 ::psst::meta::all_match< detail::is_state, inner_states >,
+                 ::psst::meta::all_match< traits::is_state, inner_states >,
                  ::std::true_type
             >::type::value,
             "State types must derive from afsm::def::state");
@@ -227,12 +157,10 @@ struct transition_table {
     // TODO Check for different guards for transitions from one state on one event
 };
 
-template < typename StateType, bool HasHistory >
-struct state< StateType, void, HasHistory > : detail::state_tag< StateType > {
-    static constexpr bool has_history = HasHistory;
-
+template < typename StateType, typename ... Tags >
+struct state< StateType, void, Tags ... > : tags::state, Tags... {
     using state_type            = StateType;
-    using base_state_type       = state<state_type, void, has_history>;
+    using base_state_type       = state<state_type, void, Tags...>;
     using internal_transitions  = void;
     using transitions           = void;
     using deferred_events       = void;
@@ -250,12 +178,10 @@ struct state< StateType, void, HasHistory > : detail::state_tag< StateType > {
     using type_tuple = ::psst::meta::type_tuple<T...>;
 };
 
-template < typename StateType, typename CommonBase, bool HasHistory >
-struct state : state<StateType, void, HasHistory>, CommonBase,
-        detail::common_base_trait<StateType> {
-    static constexpr bool has_history = HasHistory;
+template < typename StateType, typename CommonBase, typename ... Tags >
+struct state : state<StateType, void, Tags...>, CommonBase, tags::has_common_base {
     using state_type            = StateType;
-    using base_state_type       = state<state_type, CommonBase, has_history>;
+    using base_state_type       = state<state_type, CommonBase, Tags...>;
     using internal_transitions  = void;
     using transitions           = void;
     using deferred_events       = void;
@@ -264,7 +190,7 @@ struct state : state<StateType, void, HasHistory>, CommonBase,
 };
 
 template < typename StateType >
-struct terminal_state< StateType, void > : detail::state_tag< StateType > {
+struct terminal_state< StateType, void > : tags::state {
     using state_type            = StateType;
     using base_state_type       = terminal_state<state_type, void>;
     using internal_transitions  = void;
@@ -279,12 +205,11 @@ struct terminal_state : terminal_state<StateType, void>, CommonBase {
     using base_state_type       = terminal_state<state_type, void>;
 };
 
-template < typename StateMachine, typename CommonBase, bool HasHistory >
-struct state_machine : state< StateMachine, CommonBase, HasHistory >,
-        detail::state_machine_trait<StateMachine> {
-    static constexpr bool has_history = HasHistory;
+template < typename StateMachine, typename CommonBase, typename ... Tags >
+struct state_machine : state< StateMachine, CommonBase, Tags... >,
+        tags::state_machine {
     using state_machine_type    = StateMachine;
-    using base_state_type       = state_machine< state_machine_type, CommonBase, has_history >;
+    using base_state_type       = state_machine< state_machine_type, CommonBase, Tags... >;
     using initial_state         = void;
     using internal_transitions  = void;
     using transitions           = void;
@@ -295,8 +220,8 @@ struct state_machine : state< StateMachine, CommonBase, HasHistory >,
             typename Action = none, typename Guard = none>
     using tr = transition<SourceState, Event, TargetState, Action, Guard>;
 
-    template < typename T, typename Base = CommonBase, bool History = false >
-    using state = def::state<T, Base, History>;
+    template < typename T, typename Base = CommonBase, typename ... TTags>
+    using state = def::state<T, Base, TTags...>;
 
     template < typename T, typename Base = CommonBase >
     using terminal_state = def::terminal_state<T, Base>;
@@ -340,7 +265,7 @@ struct has_transitions< transition_table<T...> >
 template < typename T >
 struct handled_events
     : std::conditional<
-          is_state_machine<T>::value,
+          traits::is_state_machine<T>::value,
           handled_events<state_machine<T>>,
           handled_events<state<T>>
       >::type {};
@@ -382,7 +307,7 @@ struct handled_events< ::psst::meta::type_tuple<T...> > {
 template < typename T >
 struct recursive_handled_events
     : ::std::conditional<
-        is_state_machine<T>::value,
+        traits::is_state_machine<T>::value,
         recursive_handled_events< state_machine<T> >,
         handled_events< state<T> >
     >::type {};

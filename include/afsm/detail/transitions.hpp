@@ -10,6 +10,8 @@
 
 #include <afsm/detail/actions.hpp>
 
+#include <iostream>
+
 namespace afsm {
 namespace transitions {
 
@@ -44,7 +46,7 @@ struct event_handle_selector
 template <typename SourceState, typename Event, typename Transition>
 struct transits_on_event
     : ::std::conditional<
-        !def::detail::is_internal_transition<Transition>::value &&
+        !def::traits::is_internal_transition<Transition>::value &&
         ::std::is_same< typename Transition::source_state_type, SourceState >::value &&
         ::std::is_same< typename Transition::event_type, Event >::value,
         ::std::true_type,
@@ -134,15 +136,22 @@ template < typename FSM, typename State, typename Event, bool hasExit >
 struct state_exit_impl {
     void
     operator()(State& state, Event const& event, FSM& fsm) const
-    { state.on_exit(event, fsm); }
+    {
+        state.state_exit(event);
+        state.on_exit(event, fsm);
+    }
 };
 
 template < typename FSM, typename State, typename Event >
 struct state_exit_impl< FSM, State, Event, false > {
     void
-    operator()(State&, Event const&, FSM&) const {}
+    operator()(State& state, Event const& event, FSM&) const
+    {
+        state.state_exit(event);
+    }
 };
 
+// TODO Parameter to allow/disallow empty on_exit function
 template < typename FSM, typename State, typename Event >
 struct state_exit : state_exit_impl< FSM, State, Event,
     has_on_exit<State, FSM, Event>::value > {};
@@ -152,16 +161,23 @@ struct state_enter_impl {
     template < typename Event >
     void
     operator()(State& state, Event&& event, FSM& fsm) const
-    { state.on_enter(::std::forward<Event>(event), fsm); }
+    {
+        state.on_enter(::std::forward<Event>(event), fsm);
+        state.state_enter(::std::forward<Event>(event));
+    }
 };
 
 template < typename FSM, typename State >
 struct state_enter_impl< FSM, State, false > {
     template < typename Event >
     void
-    operator()(State&, Event&&, FSM&) const {}
+    operator()(State& state, Event&& event, FSM&) const
+    {
+        state.state_enter(::std::forward<Event>(event));
+    }
 };
 
+// TODO Parameter to allow/disallow empty enter function
 template < typename FSM, typename State, typename Event >
 struct state_enter : state_enter_impl<FSM, State,
         has_on_enter<State, FSM, Event>::value> {};
@@ -171,7 +187,7 @@ struct state_clear_impl {
     void
     operator()(FSM& fsm, State& state) const
     {
-        state = typename afsm::detail::front_state_type<FSM, State>::type{fsm};
+        state = State{fsm};
     }
 };
 
@@ -183,7 +199,8 @@ struct state_clear_impl< FSM, State, true > {
 };
 
 template < typename FSM, typename State >
-struct state_clear : state_clear_impl< FSM, State, State::has_history > {};
+struct state_clear : state_clear_impl< FSM, State,
+    def::traits::has_history< State >::value > {};
 
 template < typename FSM, typename StateTable >
 struct no_transition {
@@ -206,8 +223,11 @@ struct single_transition<FSM, StateTable,
 
     using fsm_type          = FSM;
     using state_table       = StateTable;
-    using source_state_type = SourceState;
-    using target_state_type = TargetState;
+    using source_state_def  = SourceState;
+    using target_state_def  = TargetState;
+
+    using source_state_type = typename afsm::detail::front_state_type<source_state_def, FSM>::type;
+    using target_state_type = typename afsm::detail::front_state_type<target_state_def, FSM>::type;
 
     using states_def        = typename fsm_type::inner_states_def;
 
@@ -216,10 +236,10 @@ struct single_transition<FSM, StateTable,
     using target_enter      = state_enter<fsm_type, target_state_type, Event>;
     using action_type       = actions::detail::action_invokation<Action, FSM,
             SourceState, TargetState>;
-    using state_clear_type  = state_clear<FSM, SourceState>;
+    using state_clear_type  = state_clear<FSM, source_state_type>;
 
-    using source_index = ::psst::meta::index_of<source_state_type, states_def>;
-    using target_index = ::psst::meta::index_of<target_state_type, states_def>;
+    using source_index = ::psst::meta::index_of<source_state_def, states_def>;
+    using target_index = ::psst::meta::index_of<target_state_def, states_def>;
 
     static_assert(source_index::found, "Failed to find source state index");
     static_assert(target_index::found, "Failed to find target state index");
@@ -228,7 +248,7 @@ struct single_transition<FSM, StateTable,
     actions::event_process_result
     operator()(state_table& states, Evt&& event) const
     {
-        return states.template transit_state< source_state_type, target_state_type >
+        return states.template transit_state< source_state_def, target_state_def >
             ( ::std::forward<Evt>(event), guard_type{}, action_type{},
                     source_exit{}, target_enter{}, state_clear_type{});
     }
@@ -316,6 +336,22 @@ struct common_base_cast_func {
     }
 };
 
+template < ::std::size_t StateIndex >
+struct final_state_exit_func {
+    static constexpr ::std::size_t state_index = StateIndex;
+
+    template < typename StateTuple, typename Event, typename FSM >
+    void
+    operator()(StateTuple& states, Event&& event, FSM& fsm)
+    {
+        using final_state_type = typename ::std::tuple_element< state_index, StateTuple >::type;
+        using final_exit = state_exit< FSM, final_state_type, Event >;
+
+        auto& final_state = ::std::get<state_index>(states);
+        final_exit{}(final_state, ::std::forward<Event>(event), fsm);
+    }
+};
+
 }  /* namespace detail */
 
 template < typename FSM, typename FSM_DEF, typename Size >
@@ -349,26 +385,30 @@ public:
     using state_indexes     = typename ::psst::meta::index_builder<size>::type;
 
     template < typename Event >
-    using invokation_table = ::std::array<
+    using transition_table_type = ::std::array<
             ::std::function< actions::event_process_result(this_type&, Event&&) >, size >;
 
-    template < typename CommonBase >
-    using cast_table = ::std::array< ::std::function<
-            typename ::std::decay<CommonBase>::type&( inner_states_tuple& ) >, size >;
+    template < typename Event >
+    using exit_table_type = ::std::array<
+            ::std::function< void(inner_states_tuple&, Event&&, fsm_type&) >, size>;
+
+    template < typename CommonBase, typename StatesTuple >
+    using cast_table_type = ::std::array< ::std::function<
+            CommonBase&( StatesTuple& ) >, size >;
 public:
     state_transition_table(fsm_type& fsm)
-        : fsm_{fsm},
+        : fsm_{&fsm},
           current_state_{initial_state_index},
           states_{ inner_states_constructor::construct(fsm) }
     {}
 
     state_transition_table(fsm_type& fsm, state_transition_table const& rhs)
-        : fsm_{fsm},
+        : fsm_{&fsm},
           current_state_{ (::std::size_t)rhs.current_state_ },
           states_{ inner_states_constructor::copy_construct(fsm, rhs.states_) }
       {}
     state_transition_table(fsm_type& fsm, state_transition_table&& rhs)
-        : fsm_{fsm},
+        : fsm_{&fsm},
           current_state_{ (::std::size_t)rhs.current_state_ },
           states_{ inner_states_constructor::move_construct(fsm, ::std::move(rhs.states_)) }
       {}
@@ -379,6 +419,14 @@ public:
     operator = (state_transition_table const&) = delete;
     state_transition_table&
     operator = (state_transition_table&&) = delete;
+
+    void
+    swap(state_transition_table& rhs)
+    {
+        using ::std::swap;
+        swap(current_state_, rhs.current_state_);
+        swap(states_, rhs.states_);
+    }
 
     inner_states_tuple&
     states()
@@ -411,10 +459,39 @@ public:
         auto res = dispatch_table::process_event(states_, current_state(),
                 ::std::forward<Event>(event));
         if (res == actions::event_process_result::refuse) {
-            auto const& inv_table = state_table<Event>( state_indexes{} );
+            auto const& inv_table = transition_table<Event>( state_indexes{} );
             res = inv_table[current_state()](*this, ::std::forward<Event>(event));
         }
+        if (res == actions::event_process_result::process) {
+            check_default_transition();
+        }
         return res;
+    }
+
+    void
+    check_default_transition()
+    {
+        auto const& ttable = transition_table<none>( state_indexes{} );
+        ttable[current_state()](*this, none{});
+    }
+
+    template < typename Event >
+    void
+    enter(Event&& event)
+    {
+        using initial_state_type = typename ::std::tuple_element<initial_state_index, inner_states_tuple>::type;
+        using initial_enter = detail::state_enter< fsm_type, initial_state_type, Event >;
+
+        auto& initial = ::std::get< initial_state_index >(states_);
+        initial_enter{}(initial, ::std::forward<Event>(event), *fsm_);
+        check_default_transition();
+    }
+    template < typename Event >
+    void
+    exit(Event&& event)
+    {
+        auto const& table = exit_table<Event>( state_indexes{} );
+        table[current_state()](states_, ::std::forward<Event>(event), *fsm_);
     }
 
     template < typename SourceState, typename TargetState,
@@ -430,14 +507,14 @@ public:
         static_assert(source_index::found, "Failed to find source state index");
         static_assert(target_index::found, "Failed to find target state index");
 
-        auto source = ::std::get< source_index::value >(states_);
-        auto target = ::std::get< target_index::value >(states_);
+        auto& source = ::std::get< source_index::value >(states_);
+        auto& target = ::std::get< target_index::value >(states_);
         try {
-            if (guard(fsm_, source)) {
-                exit(source, ::std::forward<Event>(event), fsm_);
-                action(::std::forward<Event>(event), fsm_, source, target);
-                enter(target, ::std::forward<Event>(event), fsm_);
-                clear(fsm_, source);
+            if (guard(*fsm_, source)) {
+                exit(source, ::std::forward<Event>(event), *fsm_);
+                action(::std::forward<Event>(event), *fsm_, source, target);
+                enter(target, ::std::forward<Event>(event), *fsm_);
+                clear(*fsm_, source);
                 current_state_ = target_index::value;
                 return actions::event_process_result::process;
             }
@@ -451,19 +528,27 @@ public:
     T&
     cast_current_state()
     {
-        using decayed_type = typename ::std::decay<T>::type;
-        auto const& ct = get_cast_table<decayed_type>( state_indexes{} );
+        using target_type = typename ::std::decay<T>::type;
+        auto const& ct = get_cast_table<target_type, inner_states_tuple>( state_indexes{} );
+        return ct[current_state_]( states_ );
+    }
+    template < typename T >
+    T const&
+    cast_current_state() const
+    {
+        using target_type = typename ::std::add_const< typename ::std::decay<T>::type >::type;
+        auto const& ct = get_cast_table<target_type, inner_states_tuple const>( state_indexes{} );
         return ct[current_state_]( states_ );
     }
 private:
     template < typename Event, ::std::size_t ... Indexes >
-    static invokation_table< Event > const&
-    state_table( ::psst::meta::indexes_tuple< Indexes... > const& )
+    static transition_table_type< Event > const&
+    transition_table( ::psst::meta::indexes_tuple< Indexes... > const& )
     {
         using event_type = typename ::std::decay<Event>::type;
         using event_transitions = typename ::psst::meta::find_if<
                 def::handles_event< event_type >::template type, transitions_tuple >::type;
-        static invokation_table< Event > _table {{
+        static transition_table_type< Event > _table {{
             typename detail::transition_action_selector< fsm_type, this_type,
                 typename ::psst::meta::find_if<
                     def::originates_from<
@@ -474,17 +559,26 @@ private:
         }};
         return _table;
     }
-    template < typename T, ::std::size_t ... Indexes >
-    static cast_table<T> const&
+    template < typename Event, ::std::size_t ... Indexes >
+    static exit_table_type<Event> const&
+    exit_table( ::psst::meta::indexes_tuple< Indexes... > const& )
+    {
+        static exit_table_type<Event> _table {{
+            detail::final_state_exit_func<Indexes>{} ...
+        }};
+        return _table;
+    }
+    template < typename T, typename StateTuple, ::std::size_t ... Indexes >
+    static cast_table_type<T, StateTuple> const&
     get_cast_table( ::psst::meta::indexes_tuple< Indexes... > const& )
     {
-        static cast_table<T> _table {
+        static cast_table_type<T, StateTuple> _table {{
             detail::common_base_cast_func<T, Indexes>{}...
-        };
+        }};
         return _table;
     }
 private:
-    fsm_type&           fsm_;
+    fsm_type*           fsm_;
     size_type           current_state_;
     inner_states_tuple  states_;
 };

@@ -13,17 +13,41 @@
 
 namespace afsm {
 
-template < typename FSM, typename T >
+template < typename T, typename FSM >
 class state : public detail::state_base< T > {
 public:
     using enclosing_fsm_type    = FSM;
 public:
     state(enclosing_fsm_type& fsm)
-        : state::state_type{}, fsm_{fsm}
+        : state::state_type{}, fsm_{&fsm}
     {}
+    state(state const& rhs) = default;
+    state(state&& rhs) = default;
     state(enclosing_fsm_type& fsm, state const& rhs)
-        : state::state_type{rhs}, fsm_{fsm}
+        : state::state_type{static_cast<typename state::state_type const&>(rhs)}, fsm_{&fsm}
     {}
+    state(enclosing_fsm_type& fsm, state&& rhs)
+        : state::state_type{static_cast<typename state::state_type&&>(rhs)}, fsm_{&fsm}
+    {}
+
+    state&
+    operator = (state const& rhs)
+    {
+        state{rhs}.swap(*this);
+        return *this;
+    }
+    state&
+    operator = (state&& rhs)
+    {
+        swap(rhs);
+        return *this;
+    }
+
+    void
+    swap(state& rhs) noexcept
+    {
+        static_cast<typename state::state_type&>(*this).swap(rhs);
+    }
 
     template < typename Event >
     actions::event_process_result
@@ -38,17 +62,24 @@ public:
 
     enclosing_fsm_type&
     enclosing_fsm()
-    { return fsm_; }
+    { return *fsm_; }
     enclosing_fsm_type const&
     enclosing_fsm() const
-    { return fsm_; }
+    { return *fsm_; }
+
+    template < typename Event >
+    void
+    state_enter(Event&&) {}
+    template < typename Event >
+    void
+    state_exit(Event&&) {}
 private:
     template < typename Event >
     actions::event_process_result
     process_event_impl(Event&& evt,
         detail::process_type<actions::event_process_result::process> const&)
     {
-        return actions::handle_in_state_event(::std::forward<Event>(evt), fsm_, *this);
+        return actions::handle_in_state_event(::std::forward<Event>(evt), *fsm_, *this);
     }
     template < typename Event >
     actions::event_process_result
@@ -65,26 +96,52 @@ private:
         return actions::event_process_result::refuse;
     }
 private:
-    enclosing_fsm_type&    fsm_;
+    enclosing_fsm_type*    fsm_;
 };
 
-template < typename FSM, typename T >
-class inner_state_machine : public detail::state_machine_base< T, none, inner_state_machine<FSM, T> > {
+template < typename T, typename FSM >
+class inner_state_machine : public detail::state_machine_base< T, none, inner_state_machine<T, FSM> > {
 public:
     using enclosing_fsm_type    = FSM;
-    using this_type = inner_state_machine<FSM, T>;
+    using this_type = inner_state_machine<T, FSM>;
     using base_machine_type     = detail::state_machine_base< T, none, this_type >;
 public:
     inner_state_machine(enclosing_fsm_type& fsm)
-        : base_machine_type{}, fsm_{fsm} {}
+        : base_machine_type{}, fsm_{&fsm} {}
+    inner_state_machine(inner_state_machine const&) = default;
+    inner_state_machine(inner_state_machine&&) = default;
+
     inner_state_machine(enclosing_fsm_type& fsm, inner_state_machine const& rhs)
-        : base_machine_type{rhs}, fsm_{fsm} {}
+        : base_machine_type{static_cast<base_machine_type const&>(rhs)}, fsm_{&fsm} {}
+    inner_state_machine(enclosing_fsm_type& fsm, inner_state_machine&& rhs)
+        : base_machine_type{static_cast<base_machine_type&&>(rhs)}, fsm_{&fsm} {}
+
+    void
+    swap(inner_state_machine& rhs) noexcept
+    {
+        using ::std::swap;
+        static_cast<base_machine_type&>(*this).swap(rhs);
+        swap(fsm_, rhs.fsm_);
+    }
+    inner_state_machine&
+    operator = (inner_state_machine const& rhs)
+    {
+        inner_state_machine tmp{rhs};
+        swap(tmp);
+        return *this;
+    }
+    inner_state_machine&
+    operator = (inner_state_machine&& rhs)
+    {
+        swap(rhs);
+        return *this;
+    }
 
     template < typename Event >
     actions::event_process_result
     process_event( Event&& event )
     {
-        return process_event_impl(fsm_, ::std::forward<Event>(event),
+        return process_event_impl(*fsm_, ::std::forward<Event>(event),
                 detail::event_process_selector<
                     Event,
                     typename inner_state_machine::handled_events,
@@ -93,14 +150,14 @@ public:
 
     enclosing_fsm_type&
     enclosing_fsm()
-    { return fsm_; }
+    { return *fsm_; }
     enclosing_fsm_type const&
     enclosing_fsm() const
-    { return fsm_; }
+    { return *fsm_; }
 private:
     using base_machine_type::process_event_impl;
 private:
-    enclosing_fsm_type&    fsm_;
+    enclosing_fsm_type*    fsm_;
 };
 
 template < typename T, typename Mutex >
