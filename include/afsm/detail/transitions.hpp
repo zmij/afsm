@@ -10,6 +10,8 @@
 
 #include <afsm/detail/actions.hpp>
 
+#include <iostream>
+
 namespace afsm {
 namespace transitions {
 
@@ -186,8 +188,6 @@ struct state_clear_impl {
     operator()(FSM& fsm, State& state) const
     {
         state = State{fsm};
-        //::std::swap( State{fsm}, state );
-        //state = typename afsm::detail::front_state_type<FSM, State>::type{fsm};
     }
 };
 
@@ -226,8 +226,8 @@ struct single_transition<FSM, StateTable,
     using source_state_def  = SourceState;
     using target_state_def  = TargetState;
 
-    using source_state_type = typename afsm::detail::front_state_type<FSM, source_state_def>::type;
-    using target_state_type = typename afsm::detail::front_state_type<FSM, target_state_def>::type;
+    using source_state_type = typename afsm::detail::front_state_type<source_state_def, FSM>::type;
+    using target_state_type = typename afsm::detail::front_state_type<target_state_def, FSM>::type;
 
     using states_def        = typename fsm_type::inner_states_def;
 
@@ -397,18 +397,18 @@ public:
             CommonBase&( StatesTuple& ) >, size >;
 public:
     state_transition_table(fsm_type& fsm)
-        : fsm_{fsm},
+        : fsm_{&fsm},
           current_state_{initial_state_index},
           states_{ inner_states_constructor::construct(fsm) }
     {}
 
     state_transition_table(fsm_type& fsm, state_transition_table const& rhs)
-        : fsm_{fsm},
+        : fsm_{&fsm},
           current_state_{ (::std::size_t)rhs.current_state_ },
           states_{ inner_states_constructor::copy_construct(fsm, rhs.states_) }
       {}
     state_transition_table(fsm_type& fsm, state_transition_table&& rhs)
-        : fsm_{fsm},
+        : fsm_{&fsm},
           current_state_{ (::std::size_t)rhs.current_state_ },
           states_{ inner_states_constructor::move_construct(fsm, ::std::move(rhs.states_)) }
       {}
@@ -483,14 +483,15 @@ public:
         using initial_enter = detail::state_enter< fsm_type, initial_state_type, Event >;
 
         auto& initial = ::std::get< initial_state_index >(states_);
-        initial_enter{}(initial, ::std::forward<Event>(event), fsm_);
+        initial_enter{}(initial, ::std::forward<Event>(event), *fsm_);
+        check_default_transition();
     }
     template < typename Event >
     void
     exit(Event&& event)
     {
         auto const& table = exit_table<Event>( state_indexes{} );
-        table[current_state()](states_, ::std::forward<Event>(event), fsm_);
+        table[current_state()](states_, ::std::forward<Event>(event), *fsm_);
     }
 
     template < typename SourceState, typename TargetState,
@@ -509,11 +510,11 @@ public:
         auto& source = ::std::get< source_index::value >(states_);
         auto& target = ::std::get< target_index::value >(states_);
         try {
-            if (guard(fsm_, source)) {
-                exit(source, ::std::forward<Event>(event), fsm_);
-                action(::std::forward<Event>(event), fsm_, source, target);
-                enter(target, ::std::forward<Event>(event), fsm_);
-                clear(fsm_, source);
+            if (guard(*fsm_, source)) {
+                exit(source, ::std::forward<Event>(event), *fsm_);
+                action(::std::forward<Event>(event), *fsm_, source, target);
+                enter(target, ::std::forward<Event>(event), *fsm_);
+                clear(*fsm_, source);
                 current_state_ = target_index::value;
                 return actions::event_process_result::process;
             }
@@ -577,7 +578,7 @@ private:
         return _table;
     }
 private:
-    fsm_type&           fsm_;
+    fsm_type*           fsm_;
     size_type           current_state_;
     inner_states_tuple  states_;
 };

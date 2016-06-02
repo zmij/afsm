@@ -82,7 +82,7 @@ struct human_def : ::afsm::def::state_machine< human_def, human_interface > {
     };
 
     struct awake : state_machine<awake, human_interface> {
-        using fsm_type = ::afsm::inner_state_machine< human_def, awake >;
+        using fsm_type = ::afsm::inner_state_machine< awake, human_def::fsm_type >;
 
         template < typename Event >
         void
