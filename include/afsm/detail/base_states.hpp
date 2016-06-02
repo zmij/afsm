@@ -58,6 +58,11 @@ struct state_base_impl : T {
     state_base_impl() : state_definition_type{} {}
     state_base_impl(state_base_impl const&) = default;
     state_base_impl(state_base_impl&&) = default;
+
+    state_base_impl&
+    operator = (state_base_impl const&) = default;
+    state_base_impl&
+    operator = (state_base_impl&&) = default;
 protected:
     template< typename ... Args >
     state_base_impl(Args&& ... args)
@@ -86,6 +91,11 @@ struct state_base_impl<T, true> : T {
     state_base_impl() : state_definition_type{} {}
     state_base_impl(state_base_impl const&) = default;
     state_base_impl(state_base_impl&&) = default;
+
+    state_base_impl&
+    operator = (state_base_impl const&) = default;
+    state_base_impl&
+    operator = (state_base_impl&&) = default;
 protected:
     template< typename ... Args >
     state_base_impl(Args&& ... args)
@@ -103,6 +113,18 @@ public:
     state_base() : base_impl_type{} {}
     state_base(state_base const&) = default;
     state_base(state_base&&) = default;
+
+    state_base&
+    operator = (state_base const&) = default;
+    state_base&
+    operator = (state_base&&) = default;
+
+    void
+    swap(state_base& rhs) noexcept
+    {
+        using ::std::swap;
+        swap(static_cast<T&>(*this), rhs);
+    }
 protected:
     template< typename ... Args >
     state_base(Args&& ... args)
@@ -157,10 +179,29 @@ public:
           transitions_{front_machine(), ::std::move(rhs.transitions_)}
     {}
 
+    void
+    swap(state_machine_base_impl& rhs) noexcept
+    {
+        using ::std::swap;
+        swap(static_cast<state_type&>(*this), rhs);
+        swap(transitions_, rhs.transitions_);
+    }
+
     state_machine_base_impl&
-    operator = (state_machine_base_impl const&) = delete;
+    operator = (state_machine_base_impl const& rhs)
+    {
+        using ::std::swap;
+        state_machine_base_impl tmp{rhs};
+        swap(*this, tmp);
+        return *this;
+    }
     state_machine_base_impl&
-    operator = (state_machine_base_impl&&) = delete;
+    operator = (state_machine_base_impl&& rhs)
+    {
+        using ::std::swap;
+        swap(*this, rhs);
+        return *this;
+    }
 
     template < ::std::size_t N>
     ::std::tuple_element< N, inner_states_tuple >&
@@ -245,7 +286,12 @@ struct state_machine_base_with_base : state_machine_base_impl<T, Mutex, FrontMac
     state_machine_base_with_base() = default;
     state_machine_base_with_base(state_machine_base_with_base const&) = default;
     state_machine_base_with_base(state_machine_base_with_base&&) = default;
-    
+
+    state_machine_base_with_base&
+    operator = (state_machine_base_with_base const&) = default;
+    state_machine_base_with_base&
+    operator = (state_machine_base_with_base&&) = default;
+
     common_base&
     current_state_base()
     {
@@ -279,6 +325,11 @@ public:
     state_machine_base() = default;
     state_machine_base(state_machine_base const&) = default;
     state_machine_base(state_machine_base&&) = default;
+
+    state_machine_base&
+    operator = (state_machine_base const&) = default;
+    state_machine_base&
+    operator = (state_machine_base&&) = default;
 protected:
     template<typename ... Args>
     explicit

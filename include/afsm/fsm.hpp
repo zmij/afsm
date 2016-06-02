@@ -21,12 +21,27 @@ public:
     state(enclosing_fsm_type& fsm)
         : state::state_type{}, fsm_{fsm}
     {}
+    state(state const& rhs) = default;
+    state(state&& rhs) = default;
     state(enclosing_fsm_type& fsm, state const& rhs)
         : state::state_type{static_cast<typename state::state_type const&>(rhs)}, fsm_{fsm}
     {}
     state(enclosing_fsm_type& fsm, state&& rhs)
         : state::state_type{static_cast<typename state::state_type&&>(rhs)}, fsm_{fsm}
     {}
+
+    state&
+    operator = (state const& rhs)
+    {
+        static_cast<typename state::state_type&>(*this) = rhs;
+        return *this;
+    }
+    state&
+    operator = (state&& rhs)
+    {
+        static_cast<typename state::state_type&>(*this) = ::std::move(rhs);
+        return *this;
+    }
 
     template < typename Event >
     actions::event_process_result
@@ -87,10 +102,26 @@ public:
 public:
     inner_state_machine(enclosing_fsm_type& fsm)
         : base_machine_type{}, fsm_{fsm} {}
+    inner_state_machine(inner_state_machine const&) = default;
+    inner_state_machine(inner_state_machine&&) = default;
+
     inner_state_machine(enclosing_fsm_type& fsm, inner_state_machine const& rhs)
         : base_machine_type{static_cast<base_machine_type const&>(rhs)}, fsm_{fsm} {}
     inner_state_machine(enclosing_fsm_type& fsm, inner_state_machine&& rhs)
         : base_machine_type{static_cast<base_machine_type&&>(rhs)}, fsm_{fsm} {}
+
+    inner_state_machine&
+    operator = (inner_state_machine const& rhs)
+    {
+        static_cast<base_machine_type&>(*this) = rhs;
+        return *this;
+    }
+    inner_state_machine&
+    operator = (inner_state_machine&& rhs)
+    {
+        static_cast<base_machine_type&>(*this) = ::std::move(rhs);
+        return *this;
+    }
 
     template < typename Event >
     actions::event_process_result

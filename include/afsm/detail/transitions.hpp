@@ -185,7 +185,9 @@ struct state_clear_impl {
     void
     operator()(FSM& fsm, State& state) const
     {
-        state = typename afsm::detail::front_state_type<FSM, State>::type{fsm};
+        state = State{fsm};
+        //::std::swap( State{fsm}, state );
+        //state = typename afsm::detail::front_state_type<FSM, State>::type{fsm};
     }
 };
 
@@ -234,7 +236,7 @@ struct single_transition<FSM, StateTable,
     using target_enter      = state_enter<fsm_type, target_state_type, Event>;
     using action_type       = actions::detail::action_invokation<Action, FSM,
             SourceState, TargetState>;
-    using state_clear_type  = state_clear<FSM, SourceState>;
+    using state_clear_type  = state_clear<FSM, source_state_type>;
 
     using source_index = ::psst::meta::index_of<source_state_def, states_def>;
     using target_index = ::psst::meta::index_of<target_state_def, states_def>;
@@ -417,6 +419,14 @@ public:
     operator = (state_transition_table const&) = delete;
     state_transition_table&
     operator = (state_transition_table&&) = delete;
+
+    void
+    swap(state_transition_table& rhs)
+    {
+        using ::std::swap;
+        swap(current_state_, rhs.current_state_);
+        swap(states_, rhs.states_);
+    }
 
     inner_states_tuple&
     states()
