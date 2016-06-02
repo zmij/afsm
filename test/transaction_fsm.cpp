@@ -7,6 +7,7 @@
 
 #include <gtest/gtest.h>
 #include <afsm/fsm.hpp>
+#include <afsm/detail/debug_io.hpp>
 #include <iostream>
 
 namespace afsm {
@@ -37,22 +38,51 @@ struct command_complete {};
 
 }  /* namespace events */
 
-struct dummy_action {
+struct transit_action {
     template < typename Event, typename FSM, typename SourceState, typename TargetState >
     void
-    operator()(Event&&, FSM&, SourceState&, TargetState&) const
+    operator()(Event&&, FSM&, SourceState& src, TargetState& tgt) const
     {
-        ::std::cerr << "Dummy action triggered\n";
+        ::std::cerr << src.name() << " -> " << tgt.name() << "\n";
     }
 };
 
-struct connection_fsm_def : def::state_machine<connection_fsm_def> {
+struct state_name {
+    virtual ~state_name() {}
+    virtual ::std::string
+    name() const = 0;
+};
+
+struct connection_fsm_def : def::state_machine<connection_fsm_def, state_name> {
+    using connection_fsm = ::afsm::state_machine<connection_fsm_def, ::std::mutex>;
+
+    connection_fsm&
+    fsm()
+    {
+        return static_cast<connection_fsm&>(*this);
+    }
+    connection_fsm const&
+    fsm() const
+    {
+        return static_cast<connection_fsm const&>(*this);
+    }
+    ::std::string
+    name() const override
+    {
+        return fsm().current_state_base().name();
+    }
     struct closed : state<closed> {
         template <typename Event, typename FSM>
         void
         on_exit(Event&&, FSM&)
         {
             ::std::cerr << "Exit closed\n";
+        }
+
+        ::std::string
+        name() const override
+        {
+            return "closed";
         }
     };
 
@@ -69,6 +99,12 @@ struct connection_fsm_def : def::state_machine<connection_fsm_def> {
         {
             ::std::cerr << "Exit connecting\n";
         }
+
+        ::std::string
+        name() const override
+        {
+            return "connecting";
+        }
     };
 
     struct authorizing : state<authorizing> {
@@ -83,6 +119,12 @@ struct connection_fsm_def : def::state_machine<connection_fsm_def> {
         on_exit(Event&&, FSM&)
         {
             ::std::cerr << "Exit authorizing\n";
+        }
+
+        ::std::string
+        name() const override
+        {
+            return "authorizing";
         }
     };
 
@@ -99,6 +141,12 @@ struct connection_fsm_def : def::state_machine<connection_fsm_def> {
         {
             ::std::cerr << "Exit idle\n";
         }
+
+        ::std::string
+        name() const override
+        {
+            return "idle";
+        }
     };
 
     struct terminated : terminal_state<terminated> {
@@ -108,14 +156,28 @@ struct connection_fsm_def : def::state_machine<connection_fsm_def> {
         {
             ::std::cerr << "Enter terminated\n";
         }
+
+        ::std::string
+        name() const override
+        {
+            return "teminated";
+        }
     };
 
-    struct transaction : state_machine<transaction> {
+    struct transaction : state_machine<transaction, state_name> {
+        using transaction_fsm = ::afsm::inner_state_machine<connection_fsm, transaction>;
+
+        transaction()
+        {
+            ::std::cerr << "Construct trasaction state\n";
+        }
         template <typename Event, typename FSM>
         void
         on_enter(Event&&, FSM&)
         {
-            ::std::cerr << "Enter transaction\n";
+            ::std::cerr << "Enter transaction (" << name() << ")\n";
+            ::std::cerr << "Initial state index " << transaction_fsm::initial_state_index
+                    << " current state index " << fsm().current_state() << "\n";
         }
         template <typename Event, typename FSM>
         void
@@ -123,6 +185,18 @@ struct connection_fsm_def : def::state_machine<connection_fsm_def> {
         {
             ::std::cerr << "Exit transaction\n";
         }
+        ::std::string
+        name() const override
+        {
+            return "transaction " + fsm().current_state_base().name();
+        }
+        transaction_fsm&
+        fsm()
+        { return static_cast<transaction_fsm&>(*this); }
+        transaction_fsm const&
+        fsm() const
+        { return static_cast<transaction_fsm const&>(*this); }
+
         struct starting : state<starting> {
             template <typename Event, typename FSM>
             void
@@ -135,6 +209,11 @@ struct connection_fsm_def : def::state_machine<connection_fsm_def> {
             on_exit(Event&&, FSM&)
             {
                 ::std::cerr << "Exit transaction starting\n";
+            }
+            ::std::string
+            name() const override
+            {
+                return "starting";
             }
             using internal_transitions = transition_table<
                 in< events::command_complete >
@@ -154,13 +233,20 @@ struct connection_fsm_def : def::state_machine<connection_fsm_def> {
             {
                 ::std::cerr << "Exit transaction idle\n";
             }
+            ::std::string
+            name() const override
+            {
+                return "transaction idle";
+            }
             using internal_transitions = transition_table<
-                in< events::command_complete,   dummy_action,   none >,
-                in< events::ready_for_query,    dummy_action,   none >
+                in< events::command_complete,   transit_action,   none >,
+                in< events::ready_for_query,    transit_action,   none >
             >;
         };
 
-        struct simple_query : state_machine<simple_query> {
+        struct simple_query : state_machine<simple_query, state_name> {
+            using simple_query_fsm = ::afsm::inner_state_machine<transaction_fsm, simple_query>;
+
             template <typename Event, typename FSM>
             void
             on_enter(Event&&, FSM&)
@@ -173,6 +259,18 @@ struct connection_fsm_def : def::state_machine<connection_fsm_def> {
             {
                 ::std::cerr << "Exit simple query\n";
             }
+            ::std::string
+            name() const override
+            {
+                return "simple query " + fsm().current_state_base().name();
+            }
+            simple_query_fsm&
+            fsm()
+            { return static_cast<simple_query_fsm&>(*this); }
+            simple_query_fsm const&
+            fsm() const
+            { return static_cast<simple_query_fsm const&>(*this); }
+
             struct waiting : state<waiting> {
                 template <typename Event, typename FSM>
                 void
@@ -185,6 +283,11 @@ struct connection_fsm_def : def::state_machine<connection_fsm_def> {
                 on_exit(Event&&, FSM&)
                 {
                     ::std::cerr << "Exit waiting\n";
+                }
+                ::std::string
+                name() const override
+                {
+                    return "waiting results";
                 }
                 using internal_transitions = transition_table<
                     in< events::command_complete >
@@ -203,6 +306,11 @@ struct connection_fsm_def : def::state_machine<connection_fsm_def> {
                 {
                     ::std::cerr << "Exit fetch data\n";
                 }
+                ::std::string
+                name() const override
+                {
+                    return "fetch data";
+                }
                 using internal_transitions = transition_table<
                     in< events::row_event >
                 >;
@@ -215,7 +323,8 @@ struct connection_fsm_def : def::state_machine<connection_fsm_def> {
             >;
         };
 
-        struct extended_query : state_machine<extended_query> {
+        struct extended_query : state_machine<extended_query, state_name> {
+            using extended_query_fsm = ::afsm::inner_state_machine<transaction_fsm, extended_query>;
             template <typename Event, typename FSM>
             void
             on_enter(Event&&, FSM&)
@@ -228,15 +337,97 @@ struct connection_fsm_def : def::state_machine<connection_fsm_def> {
             {
                 ::std::cerr << "Exit extended query\n";
             }
-            struct prepare  : state<prepare> {};
+            ::std::string
+            name() const override
+            {
+                return "extended query " + fsm().current_state_base().name();
+            }
+            extended_query_fsm&
+            fsm()
+            { return static_cast<extended_query_fsm&>(*this); }
+            extended_query_fsm const&
+            fsm() const
+            { return static_cast<extended_query_fsm const&>(*this); }
+
+            struct prepare  : state<prepare> {
+                template <typename Event, typename FSM>
+                void
+                on_enter(Event&&, FSM&)
+                {
+                    ::std::cerr << "Enter prepare extended query\n";
+                }
+                template <typename Event, typename FSM>
+                void
+                on_exit(Event&&, FSM&)
+                {
+                    ::std::cerr << "Exit prepare extended query\n";
+                }
+                ::std::string
+                name() const override
+                {
+                    return "prepare";
+                }
+            };
             struct parse    : state<parse> {
+                template <typename Event, typename FSM>
+                void
+                on_enter(Event&&, FSM&)
+                {
+                    ::std::cerr << "Enter parse extended query\n";
+                }
+                template <typename Event, typename FSM>
+                void
+                on_exit(Event&&, FSM&)
+                {
+                    ::std::cerr << "Exit parse extended query\n";
+                }
+                ::std::string
+                name() const override
+                {
+                    return "parse";
+                }
                 using internal_transitions = transition_table<
                     in< events::row_description >,
                     in< events::no_data >
                 >;
             };
-            struct bind     : state<bind> {};
+            struct bind     : state<bind> {
+                template <typename Event, typename FSM>
+                void
+                on_enter(Event&&, FSM&)
+                {
+                    ::std::cerr << "Enter bind extended query\n";
+                }
+                template <typename Event, typename FSM>
+                void
+                on_exit(Event&&, FSM&)
+                {
+                    ::std::cerr << "Exit bind extended query\n";
+                }
+                ::std::string
+                name() const override
+                {
+                    return "bind";
+                }
+            };
             struct exec     : state<exec> {
+                template <typename Event, typename FSM>
+                void
+                on_enter(Event&&, FSM&)
+                {
+                    ::std::cerr << "Enter exec extended query\n";
+                }
+                template <typename Event, typename FSM>
+                void
+                on_exit(Event&&, FSM&)
+                {
+                    ::std::cerr << "Exit exec extended query\n";
+                }
+                ::std::string
+                name() const override
+                {
+                    return "exec";
+                }
                 using internal_transitions = transition_table<
                     in< events::row_event >,
                     in< events::command_complete >
@@ -264,6 +455,11 @@ struct connection_fsm_def : def::state_machine<connection_fsm_def> {
             {
                 ::std::cerr << "Exit transaction error\n";
             }
+            ::std::string
+            name() const override
+            {
+                return "tran error";
+            }
             using internal_transitions = transition_table<
                 in< events::commit >,
                 in< events::rollback >
@@ -283,7 +479,12 @@ struct connection_fsm_def : def::state_machine<connection_fsm_def> {
             {
                 ::std::cerr << "Exit transaction exiting\n";
             }
-            using internal_transition = transition_table<
+            ::std::string
+            name() const override
+            {
+                return "exiting";
+            }
+            using internal_transitions = transition_table<
                 in< events::command_complete >,
                 in< events::commit >,
                 in< events::rollback >,
@@ -294,44 +495,44 @@ struct connection_fsm_def : def::state_machine<connection_fsm_def> {
 
         using initial_state = starting;
         using transitions = transition_table<
-            tr< starting,       events::ready_for_query,    idle            >,
+            tr< starting,       events::ready_for_query,    idle,           transit_action>,
 
-            tr< idle,           events::commit,             exiting         >,
-            tr< idle,           events::rollback,           exiting         >,
-            tr< idle,           events::query_error,        exiting         >,
-            tr< idle,           events::client_error,       exiting         >,
+            tr< idle,           events::commit,             exiting,        transit_action         >,
+            tr< idle,           events::rollback,           exiting,        transit_action>,
+            tr< idle,           events::query_error,        exiting,        transit_action>,
+            tr< idle,           events::client_error,       exiting,        transit_action>,
 
-            tr< idle,           events::execute,            simple_query    >,
-            tr< simple_query,   events::ready_for_query,    idle            >,
-            tr< simple_query,   events::query_error,        tran_error      >,
-            tr< simple_query,   events::client_error,       tran_error      >,
+            tr< idle,           events::execute,            simple_query,   transit_action>,
+            tr< simple_query,   events::ready_for_query,    idle,           transit_action>,
+            tr< simple_query,   events::query_error,        tran_error,     transit_action>,
+            tr< simple_query,   events::client_error,       tran_error,     transit_action>,
 
-            tr< idle,           events::exec_prepared,      extended_query  >,
-            tr< extended_query, events::ready_for_query,    idle            >,
-            tr< extended_query, events::query_error,        tran_error      >,
-            tr< extended_query, events::client_error,       tran_error      >,
+            tr< idle,           events::exec_prepared,      extended_query, transit_action>,
+            tr< extended_query, events::ready_for_query,    idle,           transit_action>,
+            tr< extended_query, events::query_error,        tran_error,     transit_action>,
+            tr< extended_query, events::client_error,       tran_error,     transit_action>,
 
-            tr< tran_error,     events::ready_for_query,    exiting         >
+            tr< tran_error,     events::ready_for_query,    exiting,        transit_action>
         >;
     };
 
     using initial_state = closed;
     using transitions = transition_table<
-        tr< closed,             events::connect,            connecting      >,
-        tr< closed,             events::terminate,          terminated      >,
+        tr< closed,             events::connect,            connecting,     transit_action>,
+        tr< closed,             events::terminate,          terminated,     transit_action>,
 
-        tr< connecting,         events::complete,           authorizing     >,
-        tr< connecting,         events::conn_error,         terminated      >,
+        tr< connecting,         events::complete,           authorizing,    transit_action>,
+        tr< connecting,         events::conn_error,         terminated,     transit_action>,
 
-        tr< authorizing,        events::ready_for_query,    idle            >,
-        tr< authorizing,        events::conn_error,         terminated      >,
+        tr< authorizing,        events::ready_for_query,    idle,           transit_action>,
+        tr< authorizing,        events::conn_error,         terminated,     transit_action>,
 
-        tr< idle,               events::begin,              transaction     >,
-        tr< idle,               events::conn_error,         terminated      >,
-        tr< idle,               events::terminate,          terminated      >,
+        tr< idle,               events::begin,              transaction,    transit_action>,
+        tr< idle,               events::conn_error,         terminated,     transit_action>,
+        tr< idle,               events::terminate,          terminated,     transit_action>,
 
-        tr< transaction,        events::ready_for_query,    idle            >,
-        tr< transaction,        events::conn_error,         terminated      >
+        tr< transaction,        events::ready_for_query,    idle,           transit_action>,
+        tr< transaction,        events::conn_error,         terminated,     transit_action>
     >;
 };
 
@@ -341,44 +542,48 @@ using connection_fsm = state_machine<connection_fsm_def, ::std::mutex>;
 
 TEST(TranFSM, AllEvents)
 {
+    using actions::event_process_result;
     connection_fsm fsm;
-    fsm.process_event(events::connect{});
-    fsm.process_event(events::complete{});
-    fsm.process_event(events::ready_for_query{});
+    EXPECT_EQ(event_process_result::process, fsm.process_event(events::connect{}));
+    EXPECT_EQ(event_process_result::process, fsm.process_event(events::complete{}));
+    EXPECT_EQ(event_process_result::process, fsm.process_event(events::ready_for_query{}));
 
     // Start transaction sequence
-    fsm.process_event(events::begin{});
-    fsm.process_event(events::ready_for_query{});
+    EXPECT_EQ(event_process_result::process, fsm.process_event(events::begin{}));
+    EXPECT_EQ(event_process_result::process, fsm.process_event(events::ready_for_query{}));
 
     // Simple query sequence
-    fsm.process_event(events::execute{});
-    fsm.process_event(events::row_description{});
-    fsm.process_event(events::row_event{});
-    fsm.process_event(events::row_event{});
-    fsm.process_event(events::row_event{});
-    fsm.process_event(events::row_event{});
-    fsm.process_event(events::command_complete{});
-    fsm.process_event(events::ready_for_query{});
+    EXPECT_EQ(event_process_result::process, fsm.process_event(events::execute{}));
+    EXPECT_EQ(event_process_result::process, fsm.process_event(events::row_description{}));
+    EXPECT_EQ(event_process_result::process_in_state, fsm.process_event(events::row_event{}));
+    EXPECT_EQ(event_process_result::process_in_state, fsm.process_event(events::row_event{}));
+    EXPECT_EQ(event_process_result::process_in_state, fsm.process_event(events::row_event{}));
+    EXPECT_EQ(event_process_result::process_in_state, fsm.process_event(events::row_event{}));
+    EXPECT_EQ(event_process_result::process, fsm.process_event(events::command_complete{}));
+    EXPECT_EQ(event_process_result::process, fsm.process_event(events::ready_for_query{}));
 
     // Commit transaction sequence
-    fsm.process_event(events::commit{});
-    fsm.process_event(events::command_complete{});
-    fsm.process_event(events::ready_for_query{});
+    EXPECT_EQ(event_process_result::process, fsm.process_event(events::commit{}));
+    EXPECT_EQ(event_process_result::process_in_state, fsm.process_event(events::command_complete{}));
+    EXPECT_EQ(event_process_result::process, fsm.process_event(events::ready_for_query{}));
 
     // Start transaction sequence
-    fsm.process_event(events::begin{});
-    fsm.process_event(events::ready_for_query{});
+    EXPECT_EQ(event_process_result::process, fsm.process_event(events::begin{}));
+    ::std::cerr << fsm.name() << "\n";
+    EXPECT_EQ(event_process_result::process, fsm.process_event(events::ready_for_query{}));
+    ::std::cerr << fsm.name() << "\n";
 
     // Extended query no data sequence
-    fsm.process_event(events::exec_prepared{});
+    EXPECT_EQ(event_process_result::process, fsm.process_event(events::exec_prepared{}));
+    ::std::cerr << fsm.name() << "\n";
 
     // Commit transaction sequence
-    fsm.process_event(events::commit{});
-    fsm.process_event(events::command_complete{});
-    fsm.process_event(events::ready_for_query{});
+    EXPECT_EQ(event_process_result::process, fsm.process_event(events::commit{}));
+    EXPECT_EQ(event_process_result::process, fsm.process_event(events::command_complete{}));
+    EXPECT_EQ(event_process_result::process, fsm.process_event(events::ready_for_query{}));
 
     // Terminate
-    fsm.process_event(events::terminate{});
+    EXPECT_EQ(event_process_result::process, fsm.process_event(events::terminate{}));
 }
 
 TEST(TranFSM, TranIdleState)

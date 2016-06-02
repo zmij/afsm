@@ -340,7 +340,7 @@ struct final_state_exit_func {
 
     template < typename StateTuple, typename Event, typename FSM >
     void
-    operator()(StateTuple& states, Event&& event, FSM fsm)
+    operator()(StateTuple& states, Event&& event, FSM& fsm)
     {
         using final_state_type = typename ::std::tuple_element< state_index, StateTuple >::type;
         using final_exit = state_exit< FSM, final_state_type, Event >;
@@ -390,9 +390,9 @@ public:
     using exit_table_type = ::std::array<
             ::std::function< void(inner_states_tuple&, Event&&, fsm_type&) >, size>;
 
-    template < typename CommonBase >
+    template < typename CommonBase, typename StatesTuple >
     using cast_table_type = ::std::array< ::std::function<
-            typename ::std::decay<CommonBase>::type&( inner_states_tuple& ) >, size >;
+            CommonBase&( StatesTuple& ) >, size >;
 public:
     state_transition_table(fsm_type& fsm)
         : fsm_{fsm},
@@ -452,7 +452,17 @@ public:
             auto const& inv_table = transition_table<Event>( state_indexes{} );
             res = inv_table[current_state()](*this, ::std::forward<Event>(event));
         }
+        if (res == actions::event_process_result::process) {
+            check_default_transition();
+        }
         return res;
+    }
+
+    void
+    check_default_transition()
+    {
+        auto const& ttable = transition_table<none>( state_indexes{} );
+        ttable[current_state()](*this, none{});
     }
 
     template < typename Event >
@@ -507,8 +517,16 @@ public:
     T&
     cast_current_state()
     {
-        using decayed_type = typename ::std::decay<T>::type;
-        auto const& ct = get_cast_table<decayed_type>( state_indexes{} );
+        using target_type = typename ::std::decay<T>::type;
+        auto const& ct = get_cast_table<target_type, inner_states_tuple>( state_indexes{} );
+        return ct[current_state_]( states_ );
+    }
+    template < typename T >
+    T const&
+    cast_current_state() const
+    {
+        using target_type = typename ::std::add_const< typename ::std::decay<T>::type >::type;
+        auto const& ct = get_cast_table<target_type, inner_states_tuple const>( state_indexes{} );
         return ct[current_state_]( states_ );
     }
 private:
@@ -539,11 +557,11 @@ private:
         }};
         return _table;
     }
-    template < typename T, ::std::size_t ... Indexes >
-    static cast_table_type<T> const&
+    template < typename T, typename StateTuple, ::std::size_t ... Indexes >
+    static cast_table_type<T, StateTuple> const&
     get_cast_table( ::psst::meta::indexes_tuple< Indexes... > const& )
     {
-        static cast_table_type<T> _table {{
+        static cast_table_type<T, StateTuple> _table {{
             detail::common_base_cast_func<T, Indexes>{}...
         }};
         return _table;

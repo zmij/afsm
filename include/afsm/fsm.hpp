@@ -22,7 +22,10 @@ public:
         : state::state_type{}, fsm_{fsm}
     {}
     state(enclosing_fsm_type& fsm, state const& rhs)
-        : state::state_type{rhs}, fsm_{fsm}
+        : state::state_type{static_cast<typename state::state_type const&>(rhs)}, fsm_{fsm}
+    {}
+    state(enclosing_fsm_type& fsm, state&& rhs)
+        : state::state_type{static_cast<typename state::state_type&&>(rhs)}, fsm_{fsm}
     {}
 
     template < typename Event >
@@ -85,7 +88,9 @@ public:
     inner_state_machine(enclosing_fsm_type& fsm)
         : base_machine_type{}, fsm_{fsm} {}
     inner_state_machine(enclosing_fsm_type& fsm, inner_state_machine const& rhs)
-        : base_machine_type{rhs}, fsm_{fsm} {}
+        : base_machine_type{static_cast<base_machine_type const&>(rhs)}, fsm_{fsm} {}
+    inner_state_machine(enclosing_fsm_type& fsm, inner_state_machine&& rhs)
+        : base_machine_type{static_cast<base_machine_type&&>(rhs)}, fsm_{fsm} {}
 
     template < typename Event >
     actions::event_process_result

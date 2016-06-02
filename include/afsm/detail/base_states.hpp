@@ -56,6 +56,8 @@ struct state_base_impl : T {
             >::type;
 
     state_base_impl() : state_definition_type{} {}
+    state_base_impl(state_base_impl const&) = default;
+    state_base_impl(state_base_impl&&) = default;
 protected:
     template< typename ... Args >
     state_base_impl(Args&& ... args)
@@ -82,6 +84,8 @@ struct state_base_impl<T, true> : T {
     using deferred_events = ::psst::meta::type_tuple<>;
 
     state_base_impl() : state_definition_type{} {}
+    state_base_impl(state_base_impl const&) = default;
+    state_base_impl(state_base_impl&&) = default;
 protected:
     template< typename ... Args >
     state_base_impl(Args&& ... args)
@@ -97,6 +101,8 @@ public:
     using base_impl_type        = state_base_impl<T, def::traits::is_terminal_state<T>::value>;
 public:
     state_base() : base_impl_type{} {}
+    state_base(state_base const&) = default;
+    state_base(state_base&&) = default;
 protected:
     template< typename ... Args >
     state_base(Args&& ... args)
@@ -143,16 +149,18 @@ public:
     {}
 
     state_machine_base_impl(state_machine_base_impl const& rhs)
-        : state_type{rhs},
+        : state_type{static_cast<state_type const&>(rhs)},
           transitions_{front_machine(), rhs.transitions_}
     {}
     state_machine_base_impl(state_machine_base_impl&& rhs)
-        : state_type{rhs},
+        : state_type{static_cast<state_type&&>(rhs)},
           transitions_{front_machine(), ::std::move(rhs.transitions_)}
     {}
 
     state_machine_base_impl&
-    operator = (state_machine_base_impl&&) = default;
+    operator = (state_machine_base_impl const&) = delete;
+    state_machine_base_impl&
+    operator = (state_machine_base_impl&&) = delete;
 
     template < ::std::size_t N>
     ::std::tuple_element< N, inner_states_tuple >&
@@ -235,11 +243,18 @@ struct state_machine_base_with_base : state_machine_base_impl<T, Mutex, FrontMac
     using common_base = typename T::common_base;
 
     state_machine_base_with_base() = default;
-
+    state_machine_base_with_base(state_machine_base_with_base const&) = default;
+    state_machine_base_with_base(state_machine_base_with_base&&) = default;
+    
     common_base&
     current_state_base()
     {
         return base_type::transitions_.template cast_current_state<common_base>();
+    }
+    common_base const&
+    current_state_base() const
+    {
+        return base_type::transitions_.template cast_current_state<common_base const>();
     }
 protected:
     template<typename ... Args>
@@ -262,6 +277,8 @@ public:
             state_machine_base_impl< T, Mutex, FrontMachine >
         >::type;
     state_machine_base() = default;
+    state_machine_base(state_machine_base const&) = default;
+    state_machine_base(state_machine_base&&) = default;
 protected:
     template<typename ... Args>
     explicit
