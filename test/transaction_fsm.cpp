@@ -472,47 +472,6 @@ commit_transaction(connection_fsm& fsm)
 
 TEST(TranFSM, AllEvents)
 {
-    connection_fsm fsm;
-    fsm.process_event(events::connect{});
-    fsm.process_event(events::complete{});
-    fsm.process_event(events::ready_for_query{});
-
-    // Start transaction sequence
-    fsm.process_event(events::begin{});
-    fsm.process_event(events::ready_for_query{});
-
-    // Simple query sequence
-    fsm.process_event(events::execute{});
-    fsm.process_event(events::row_description{});
-    fsm.process_event(events::row_event{});
-    fsm.process_event(events::row_event{});
-    fsm.process_event(events::row_event{});
-    fsm.process_event(events::row_event{});
-    fsm.process_event(events::command_complete{});
-    fsm.process_event(events::ready_for_query{});
-
-    // Commit transaction sequence
-    fsm.process_event(events::commit{});
-    fsm.process_event(events::command_complete{});
-    fsm.process_event(events::ready_for_query{});
-
-    // Start transaction sequence
-    fsm.process_event(events::begin{});
-    fsm.process_event(events::ready_for_query{});
-
-    // Extended query no data sequence
-    fsm.process_event(events::exec_prepared{});
-
-    // Commit transaction sequence
-    fsm.process_event(events::commit{});
-    fsm.process_event(events::command_complete{});
-    fsm.process_event(events::ready_for_query{});
-
-    // Terminate
-    fsm.process_event(events::terminate{});
-}
-
-{
     using actions::event_process_result;
     using ::psst::ansi_color;
     connection_fsm fsm;
