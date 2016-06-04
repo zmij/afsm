@@ -179,19 +179,22 @@ public:
     using transition_tuple  = afsm::transitions::state_transition_table<
             front_machine_type, state_machine_definition_type, size_type >;
 
-    state_machine_base_impl()
+    state_machine_base_impl(front_machine_type* fsm)
         : state_type{},
-          transitions_{front_machine()}
+          transitions_{*fsm}
     {}
 
-    state_machine_base_impl(state_machine_base_impl const& rhs)
+    state_machine_base_impl(front_machine_type* fsm, state_machine_base_impl const& rhs)
         : state_type{static_cast<state_type const&>(rhs)},
-          transitions_{front_machine(), rhs.transitions_}
+          transitions_{*fsm, rhs.transitions_}
     {}
-    state_machine_base_impl(state_machine_base_impl&& rhs)
+    state_machine_base_impl(front_machine_type* fsm, state_machine_base_impl&& rhs)
         : state_type{static_cast<state_type&&>(rhs)},
-          transitions_{front_machine(), ::std::move(rhs.transitions_)}
+          transitions_{*fsm, ::std::move(rhs.transitions_)}
     {}
+
+    state_machine_base_impl(state_machine_base_impl const& rhs) = delete;
+    state_machine_base_impl(state_machine_base_impl&& rhs) = delete;
 
     void
     swap(state_machine_base_impl& rhs) noexcept
@@ -219,12 +222,6 @@ public:
     current_state() const
     { return transitions_.current_state(); }
 
-    front_machine_type&
-    front_machine()
-    {
-        return static_cast<front_machine_type&>(*this);
-    }
-
     template < typename Event >
     void
     state_enter(Event&& event)
@@ -240,9 +237,9 @@ public:
 protected:
     template<typename ... Args>
     explicit
-    state_machine_base_impl(Args&& ... args)
+    state_machine_base_impl(front_machine_type* fsm, Args&& ... args)
         : state_type(::std::forward<Args>(args)...),
-          transitions_{front_machine()}
+          transitions_{*fsm}
     {}
 
     template < typename FSM, typename Event >
@@ -286,10 +283,21 @@ struct state_machine_base_with_base : state_machine_base_impl<T, Mutex, FrontMac
     using base_type = state_machine_base_impl<T, Mutex, FrontMachine>;
     using common_base = typename T::common_base;
 
-    state_machine_base_with_base() = default;
-    state_machine_base_with_base(state_machine_base_with_base const&) = default;
-    state_machine_base_with_base(state_machine_base_with_base&&) = default;
+    state_machine_base_with_base(FrontMachine* fsm)
+        : base_type{fsm}
+    {
+    }
+    state_machine_base_with_base(FrontMachine* fsm, state_machine_base_with_base const& rhs)
+        : base_type{fsm, rhs}
+    {
+    }
+    state_machine_base_with_base(FrontMachine* fsm, state_machine_base_with_base&& rhs)
+        : base_type{fsm, ::std::move(rhs)}
+    {
+    }
 
+    state_machine_base_with_base(state_machine_base_with_base const&) = delete;
+    state_machine_base_with_base(state_machine_base_with_base&&) = delete;
     state_machine_base_with_base&
     operator = (state_machine_base_with_base const&) = delete;
     state_machine_base_with_base&
@@ -308,8 +316,8 @@ struct state_machine_base_with_base : state_machine_base_impl<T, Mutex, FrontMac
 protected:
     template<typename ... Args>
     explicit
-    state_machine_base_with_base(Args&& ... args)
-        : state_machine_base_with_base::machine_type(::std::forward<Args>(args)...)
+    state_machine_base_with_base(FrontMachine* fsm, Args&& ... args)
+        : state_machine_base_with_base::machine_type(fsm, ::std::forward<Args>(args)...)
     {}
 };
 
@@ -325,10 +333,15 @@ public:
             state_machine_base_with_base< T, Mutex, FrontMachine >,
             state_machine_base_impl< T, Mutex, FrontMachine >
         >::type;
-    state_machine_base() = default;
-    state_machine_base(state_machine_base const&) = default;
-    state_machine_base(state_machine_base&&) = default;
+    state_machine_base(FrontMachine* fsm)
+        : state_machine_impl_type{fsm} {}
+    state_machine_base(FrontMachine* fsm, state_machine_base const& rhs)
+        : state_machine_impl_type{fsm, rhs} {}
+    state_machine_base(FrontMachine* fsm, state_machine_base&& rhs)
+        : state_machine_impl_type{fsm, ::std::move(rhs)} {}
 
+    state_machine_base(state_machine_base const&) = delete;
+    state_machine_base(state_machine_base&&) = delete;
     state_machine_base&
     operator = (state_machine_base const&) = delete;
     state_machine_base&
@@ -336,9 +349,8 @@ public:
 protected:
     template<typename ... Args>
     explicit
-    state_machine_base(Args&& ... args)
-        : state_machine_impl_type(::std::forward<Args>(args)...)
-    {}
+    state_machine_base(FrontMachine* fsm, Args&& ... args)
+        : state_machine_impl_type(fsm, ::std::forward<Args>(args)...) {}
 };
 
 }  /* namespace detail */

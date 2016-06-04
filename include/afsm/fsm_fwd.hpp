@@ -16,7 +16,7 @@ template < typename FSM, typename T >
 class state;
 template < typename FSM, typename T >
 class inner_state_machine;
-template < typename T, typename Mutex = none >
+template < typename T, typename Mutex = none, typename Observer = none >
 class state_machine;
 
 }  /* namespace afsm */

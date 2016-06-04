@@ -172,8 +172,147 @@ struct state_name {
     }
 };
 
+struct connection_observer {
+    template < typename FSM, typename Event >
+    void
+    start_process_event(FSM const&, Event const&) const noexcept
+    {
+        using decayed_event = typename ::std::decay<Event>::type;
+        using ::psst::ansi_color;
+        ::std::cerr
+             << (ansi_color::green | ansi_color::dim)
+             << ::std::setw(event_name_width) << ::std::left
+             << decayed_event::name << ansi_color::clear
+             << ": Start processing\n";
+    }
+
+    template < typename FSM >
+    void
+    start_process_event(FSM const&, none const&) const noexcept
+    {
+        using ::psst::ansi_color;
+        ::std::cerr
+             << (ansi_color::green | ansi_color::dim)
+             << ::std::setw(event_name_width) << ::std::left
+             << "[default]" << ansi_color::clear
+             << ": Start processing\n";
+    }
+
+    template < typename FSM >
+    void
+    state_changed(FSM const&) const noexcept
+    {
+        using ::psst::ansi_color;
+        ::std::cerr
+             << (ansi_color::blue | ansi_color::bright)
+             << ::std::setw(event_name_width) << ::std::setfill('*')
+             << "*" << ansi_color::clear  << ::std::setfill(' ')
+             << ": State changed\n";
+    }
+
+    template < typename FSM, typename Event >
+    void
+    processed_in_state(FSM const&, Event const&) const noexcept
+    {
+        using decayed_event = typename ::std::decay<Event>::type;
+        using ::psst::ansi_color;
+        ::std::cerr
+             << (ansi_color::blue | ansi_color::dim)
+             << ::std::setw(event_name_width) << ::std::left
+             << decayed_event::name << ansi_color::clear
+             << ": Processed in state\n";
+    }
+
+    template < typename FSM, typename Event >
+    void
+    enqueue_event(FSM const&, Event const&) const noexcept
+    {
+        using decayed_event = typename ::std::decay<Event>::type;
+        using ::psst::ansi_color;
+        ::std::cerr
+             << (ansi_color::blue | ansi_color::dim)
+             << ::std::setw(event_name_width) << ::std::left
+             << decayed_event::name << ansi_color::clear
+             << ": Enqueue event\n";
+    }
+
+    template < typename FSM >
+    void
+    start_process_events_queue(FSM const&) const noexcept
+    {
+        using ::psst::ansi_color;
+        ::std::cerr
+             << (ansi_color::blue | ansi_color::bright)
+             << ::std::setw(event_name_width) << ::std::setfill('*')
+             << "*" << ansi_color::clear  << ::std::setfill(' ')
+             << ": Start processing event queue\n";
+    }
+    template < typename FSM >
+    void
+    end_process_events_queue(FSM const&) const noexcept
+    {
+        using ::psst::ansi_color;
+        ::std::cerr
+             << (ansi_color::blue | ansi_color::bright)
+             << ::std::setw(event_name_width) << ::std::setfill('*')
+             << "*" << ansi_color::clear  << ::std::setfill(' ')
+             << ": End processing event queue\n";
+    }
+
+    template < typename FSM, typename Event >
+    void
+    defer_event(FSM const&, Event const&) const noexcept
+    {
+        using decayed_event = typename ::std::decay<Event>::type;
+        using ::psst::ansi_color;
+        ::std::cerr
+             << (ansi_color::red | ansi_color::dim)
+             << ::std::setw(event_name_width) << ::std::left
+             << decayed_event::name << ansi_color::clear
+             << ": Defer event\n";
+    }
+
+    template < typename FSM >
+    void
+    start_process_deferred_queue(FSM const&) const noexcept
+    {
+        using ::psst::ansi_color;
+        ::std::cerr
+             << (ansi_color::blue | ansi_color::bright)
+             << ::std::setw(event_name_width) << ::std::setfill('*')
+             << "*" << ansi_color::clear  << ::std::setfill(' ')
+             << ": Start processing deferred event queue\n";
+    }
+    template < typename FSM >
+    void
+    end_process_deferred_queue(FSM const&) const noexcept
+    {
+        using ::psst::ansi_color;
+        ::std::cerr
+             << (ansi_color::blue | ansi_color::bright)
+             << ::std::setw(event_name_width) << ::std::setfill('*')
+             << "*" << ansi_color::clear  << ::std::setfill(' ')
+             << ": End processing deferred event queue\n";
+    }
+
+    template < typename FSM, typename Event >
+    void
+    reject_event(FSM const& fsm, Event const&) const noexcept
+    {
+        using decayed_event = typename ::std::decay<Event>::type;
+        using ::psst::ansi_color;
+        ::std::cerr
+             << (ansi_color::red | ansi_color::bright)
+             << ::std::setw(event_name_width) << ::std::left
+             << decayed_event::name << ansi_color::clear
+             << ": Reject event. State " << fsm.name() << "\n";
+    }
+};
+
 struct connection_fsm_def : def::state_machine<connection_fsm_def, state_name> {
-    using connection_fsm = ::afsm::state_machine<connection_fsm_def, ::std::mutex>;
+    using connection_fsm =
+            ::afsm::state_machine<
+                 connection_fsm_def, ::std::mutex, connection_observer>;
 
     connection_fsm&
     fsm()
@@ -250,13 +389,19 @@ struct connection_fsm_def : def::state_machine<connection_fsm_def, state_name> {
         { return static_cast<transaction_fsm const&>(*this); }
 
         struct starting : state<starting> {
+            using deferred_events = type_tuple<
+                events::execute,
+                events::exec_prepared,
+                events::commit,
+                events::rollback
+            >;
             ::std::string
             name() const override
             {
                 return "starting";
             }
             using internal_transitions = transition_table<
-                in< events::command_complete,   transit_action >
+                in< events::command_complete,   transit_action,   none >
             >;
         };
 
@@ -311,6 +456,12 @@ struct connection_fsm_def : def::state_machine<connection_fsm_def, state_name> {
             using transitions = transition_table<
                 tr< waiting,    events::row_description,    fetch_data,     transit_action>,
                 tr< fetch_data, events::command_complete,   waiting,        transit_action>
+            >;
+            using deferred_events = type_tuple<
+                events::execute,
+                events::exec_prepared,
+                events::commit,
+                events::rollback
             >;
         };
 
@@ -443,7 +594,7 @@ struct connection_fsm_def : def::state_machine<connection_fsm_def, state_name> {
     >;
 };
 
-using connection_fsm = state_machine<connection_fsm_def, ::std::mutex>;
+using connection_fsm = state_machine<connection_fsm_def, ::std::mutex, connection_observer>;
 
 void
 begin_transaction(connection_fsm& fsm)
@@ -475,6 +626,8 @@ TEST(TranFSM, AllEvents)
     using actions::event_process_result;
     using ::psst::ansi_color;
     connection_fsm fsm;
+    fsm.make_observer();
+
     EXPECT_EQ(event_process_result::process, fsm.process_event(events::connect{}));
     EXPECT_EQ(event_process_result::process, fsm.process_event(events::complete{}));
     EXPECT_EQ(event_process_result::process, fsm.process_event(events::ready_for_query{}));
@@ -510,15 +663,36 @@ TEST(TranFSM, AllEvents)
     EXPECT_EQ(event_process_result::process, fsm.process_event(events::terminate{}));
 }
 
-TEST(TranFSM, Transitions)
+TEST(TranFSM, RealEventSequence)
 {
-    ::std::mutex mutex;
+    using actions::event_process_result;
+    using ::psst::ansi_color;
     connection_fsm fsm;
+    fsm.make_observer();
 
-    ::std::cerr << connection_fsm::initial_state_index
-            << "/" << connection_fsm::inner_state_count << "\n";
+    // Enqueueing commands
+    EXPECT_EQ(event_process_result::process, fsm.process_event(events::connect{}));
+    EXPECT_EQ(event_process_result::process, fsm.process_event(events::complete{}));
+    // Connect response
+    EXPECT_EQ(event_process_result::process, fsm.process_event(events::ready_for_query{}));
 
-    EXPECT_EQ(connection_fsm::initial_state_index, fsm.current_state());
+    // Enqueueing commands
+    EXPECT_EQ(event_process_result::process, fsm.process_event(events::begin{}));
+    EXPECT_EQ(event_process_result::defer, fsm.process_event(events::execute{}));
+    EXPECT_EQ(event_process_result::defer, fsm.process_event(events::commit{}));
+
+    // Server responses
+    // Begin
+    EXPECT_EQ(event_process_result::process_in_state, fsm.process_event(events::command_complete{}));
+    EXPECT_EQ(event_process_result::process, fsm.process_event(events::ready_for_query{}));
+    // Simple query responses
+    EXPECT_EQ(event_process_result::process, fsm.process_event(events::row_description{}));
+    EXPECT_EQ(event_process_result::process_in_state, fsm.process_event(events::row_event{}));
+    EXPECT_EQ(event_process_result::process_in_state, fsm.process_event(events::row_event{}));
+    EXPECT_EQ(event_process_result::process, fsm.process_event(events::command_complete{}));
+    EXPECT_EQ(event_process_result::process, fsm.process_event(events::ready_for_query{}));
+    // Commit response
+    EXPECT_EQ(event_process_result::process, fsm.process_event(events::ready_for_query{}));
 }
 
 }  /* namespace test */

@@ -352,6 +352,31 @@ struct final_state_exit_func {
     }
 };
 
+template < ::std::size_t StateIndex >
+struct set_enclosing_fsm {
+    static constexpr ::std::size_t state_index = StateIndex;
+
+    template < typename FSM, typename ... T >
+    static void
+    set(FSM& fsm, ::std::tuple<T...>& states)
+    {
+        set_enclosing_fsm<StateIndex - 1>::set(fsm, states);
+        ::std::get<state_index>(states).enclosing_fsm(fsm);
+    }
+};
+
+template <>
+struct set_enclosing_fsm<0> {
+    static constexpr ::std::size_t state_index = 0;
+
+    template < typename FSM, typename ... T >
+    static void
+    set(FSM& fsm, ::std::tuple<T...>& states)
+    {
+        ::std::get<state_index>(states).enclosing_fsm(fsm);
+    }
+};
+
 }  /* namespace detail */
 
 template < typename FSM, typename FSM_DEF, typename Size >
@@ -426,6 +451,8 @@ public:
         using ::std::swap;
         swap(current_state_, rhs.current_state_);
         swap(states_, rhs.states_);
+        detail::set_enclosing_fsm< size - 1 >::set(*fsm_, states_);
+        detail::set_enclosing_fsm< size - 1 >::set(*rhs.fsm_, rhs.states_);
     }
 
     inner_states_tuple&
