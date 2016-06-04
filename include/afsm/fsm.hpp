@@ -181,11 +181,12 @@ private:
 //----------------------------------------------------------------------------
 //  State machine
 //----------------------------------------------------------------------------
-template < typename T, typename Mutex, typename Observer >
+template < typename T, typename Mutex, typename Observer,
+        template<typename> class ObserverWrapper >
 class state_machine :
         public detail::state_machine_base< T, Mutex,
             state_machine<T, Mutex, Observer> >,
-        public detail::observer_wrapper<Observer> {
+        public ObserverWrapper<Observer> {
 public:
     static_assert( ::psst::meta::is_empty< typename T::deferred_events >::value,
             "Outer state machine cannot defer events" );
@@ -193,7 +194,7 @@ public:
     using base_machine_type = detail::state_machine_base< T, Mutex, this_type >;
     using mutex_type        = Mutex;
     using lock_guard        = typename detail::lock_guard_type<mutex_type>::type;
-    using observer_wrapper  = detail::observer_wrapper<Observer>;
+    using observer_wrapper  = ObserverWrapper<Observer>;
 public:
     state_machine()
         : base_machine_type{this},

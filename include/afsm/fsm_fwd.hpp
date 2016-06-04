@@ -12,11 +12,18 @@ namespace afsm {
 
 struct none {};
 
+namespace detail {
+template < typename Observer >
+struct observer_wrapper;
+
+}
+
 template < typename FSM, typename T >
 class state;
 template < typename FSM, typename T >
 class inner_state_machine;
-template < typename T, typename Mutex = none, typename Observer = none >
+template < typename T, typename Mutex = none, typename Observer = none,
+        template<typename> class ObserverWrapper = detail::observer_wrapper >
 class state_machine;
 
 }  /* namespace afsm */
