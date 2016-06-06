@@ -218,6 +218,27 @@ public:
     get_state() const
     { return transitions_.template get_state<N>(); }
 
+    template < typename StateDef >
+    ::std::tuple_element< ::psst::meta::index_of<StateDef, inner_states_def>::value,
+         inner_states_tuple >&
+    get_state()
+    {
+        using index_of_state = ::psst::meta::index_of<StateDef, inner_states_def>;
+        static_assert(index_of_state::found,
+                "Type is not a definition of inner state");
+        return transitions_.template get_state< index_of_state::value >();
+    }
+    template < typename StateDef >
+    ::std::tuple_element< ::psst::meta::index_of<StateDef, inner_states_def>::value,
+         inner_states_tuple > const&
+    get_state() const
+    {
+        using index_of_state = ::psst::meta::index_of<StateDef, inner_states_def>;
+        static_assert(index_of_state::found,
+                "Type is not a definition of inner state");
+        return transitions_.template get_state< index_of_state::value >();
+    }
+
     ::std::size_t
     current_state() const
     { return transitions_.current_state(); }
@@ -256,14 +277,14 @@ protected:
         return res;
     }
     template < typename FSM, typename Event >
-    actions::event_process_result
+    constexpr actions::event_process_result
     process_event_impl(FSM&, Event&&,
         detail::process_type<actions::event_process_result::defer> const&)
     {
         return actions::event_process_result::defer;
     }
     template < typename FSM, typename Event >
-    actions::event_process_result
+    constexpr actions::event_process_result
     process_event_impl(FSM&, Event&&,
         detail::process_type<actions::event_process_result::refuse> const&)
     {

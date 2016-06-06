@@ -60,7 +60,7 @@ public:
         return process_event_impl(::std::forward<Event>(evt),
                 detail::event_process_selector<
                     Event,
-                    typename state::handled_events,
+                    typename state::internal_events,
                     typename state::deferred_events>{} );
     }
 
@@ -89,14 +89,14 @@ private:
         return actions::handle_in_state_event(::std::forward<Event>(evt), *fsm_, *this);
     }
     template < typename Event >
-    actions::event_process_result
+    constexpr actions::event_process_result
     process_event_impl(Event&&,
         detail::process_type<actions::event_process_result::defer> const&)
     {
         return actions::event_process_result::defer;
     }
     template < typename Event >
-    actions::event_process_result
+    constexpr actions::event_process_result
     process_event_impl(Event&&,
         detail::process_type<actions::event_process_result::refuse> const&)
     {
@@ -314,6 +314,7 @@ private:
             }
             {
                 lock_guard lock{mutex_};
+                postponed.clear();
                 ::std::swap(queued_events_, postponed);
             }
             observer_wrapper::end_process_events_queue(*this);
