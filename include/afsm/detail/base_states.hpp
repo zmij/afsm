@@ -279,14 +279,14 @@ protected:
     template < typename FSM, typename Event >
     constexpr actions::event_process_result
     process_event_impl(FSM&, Event&&,
-        detail::process_type<actions::event_process_result::defer> const&)
+        detail::process_type<actions::event_process_result::defer> const&) const
     {
         return actions::event_process_result::defer;
     }
     template < typename FSM, typename Event >
     constexpr actions::event_process_result
     process_event_impl(FSM&, Event&&,
-        detail::process_type<actions::event_process_result::refuse> const&)
+        detail::process_type<actions::event_process_result::refuse> const&) const
     {
         return actions::event_process_result::refuse;
     }
