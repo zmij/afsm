@@ -14,7 +14,7 @@ struct none {};
 
 namespace detail {
 template < typename Observer >
-struct observer_wrapper;
+class observer_wrapper;
 
 }
 

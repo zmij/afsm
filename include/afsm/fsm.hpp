@@ -60,7 +60,7 @@ public:
         return process_event_impl(::std::forward<Event>(evt),
                 detail::event_process_selector<
                     Event,
-                    typename state::handled_events,
+                    typename state::internal_events,
                     typename state::deferred_events>{} );
     }
 
@@ -89,16 +89,16 @@ private:
         return actions::handle_in_state_event(::std::forward<Event>(evt), *fsm_, *this);
     }
     template < typename Event >
-    actions::event_process_result
+    constexpr actions::event_process_result
     process_event_impl(Event&&,
-        detail::process_type<actions::event_process_result::defer> const&)
+        detail::process_type<actions::event_process_result::defer> const&) const
     {
         return actions::event_process_result::defer;
     }
     template < typename Event >
-    actions::event_process_result
+    constexpr actions::event_process_result
     process_event_impl(Event&&,
-        detail::process_type<actions::event_process_result::refuse> const&)
+        detail::process_type<actions::event_process_result::refuse> const&) const
     {
         return actions::event_process_result::refuse;
     }
@@ -195,12 +195,15 @@ public:
     using mutex_type        = Mutex;
     using lock_guard        = typename detail::lock_guard_type<mutex_type>::type;
     using observer_wrapper  = ObserverWrapper<Observer>;
+    using event_invokation  = ::std::function< actions::event_process_result() >;
+    using event_queue       = ::std::deque< event_invokation >;
 public:
     state_machine()
         : base_machine_type{this},
           stack_size_{0},
           mutex_{},
           queued_events_{},
+          queue_size_{0},
           deferred_mutex_{},
           deferred_events_{}
       {}
@@ -211,6 +214,7 @@ public:
           stack_size_{0},
           mutex_{},
           queued_events_{},
+          queue_size_{0},
           deferred_mutex_{},
           deferred_events_{}
     {}
@@ -221,9 +225,9 @@ public:
     {
         if (!stack_size_++) {
             auto res = process_event_dispatch(::std::forward<Event>(event));
+            --stack_size_;
             // Process enqueued events
             process_event_queue();
-            --stack_size_;
             return res;
         } else {
             --stack_size_;
@@ -291,33 +295,43 @@ private:
     void
     enqueue_event(Event&& event)
     {
+        {
+            lock_guard lock{mutex_};
+            ++queue_size_;
+            observer_wrapper::enqueue_event(*this, ::std::forward<Event>(event));
+            Event evt = event;
+            queued_events_.emplace_back([&, evt]() mutable {
+                return process_event_dispatch(::std::move(evt));
+            });
+        }
+        // Process enqueued events in case we've been waiting for queue
+        // mutex release
+        process_event_queue();
+    }
+
+    void
+    lock_and_swap_queue(event_queue& queue)
+    {
         lock_guard lock{mutex_};
-        observer_wrapper::enqueue_event(*this, ::std::forward<Event>(event));
-        Event evt = event;
-        queued_events_.emplace_back([&, evt]() mutable {
-            return process_event_dispatch(::std::move(evt));
-        });
+        ::std::swap(queued_events_, queue);
     }
 
     void
     process_event_queue()
     {
-        event_queue postponed;
-        {
-            lock_guard lock{mutex_};
-            ::std::swap(queued_events_, postponed);
-        }
-        while (!postponed.empty()) {
-            observer_wrapper::start_process_events_queue(*this);
-            for (auto const& event : postponed) {
-                event();
+        if (!stack_size_++) {
+            while (queue_size_ > 0) {
+                event_queue postponed;
+                lock_and_swap_queue(postponed);
+                queue_size_ -= postponed.size();
+                observer_wrapper::start_process_events_queue(*this);
+                for (auto const& event : postponed) {
+                    event();
+                }
+                observer_wrapper::end_process_events_queue(*this);
             }
-            {
-                lock_guard lock{mutex_};
-                ::std::swap(queued_events_, postponed);
-            }
-            observer_wrapper::end_process_events_queue(*this);
         }
+        --stack_size_;
     }
 
     template < typename Event >
@@ -366,13 +380,12 @@ private:
     }
 private:
     using atomic_counter    = ::std::atomic< ::std::size_t >;
-    using event_invokation  = ::std::function< actions::event_process_result() >;
-    using event_queue       = ::std::deque< event_invokation >;
 
     atomic_counter          stack_size_;
 
     mutex_type              mutex_;
     event_queue             queued_events_;
+    atomic_counter          queue_size_;
 
     mutex_type              deferred_mutex_;
     event_queue             deferred_events_;

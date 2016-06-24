@@ -65,7 +65,7 @@ struct guard_check {
 
 template < typename FSM, typename State >
 struct guard_check< FSM, State, none > {
-    bool
+    constexpr bool
     operator()(FSM const&, State const&) const
     { return true; }
 };
@@ -155,6 +155,7 @@ struct no_in_state_invokation {
     event_process_result
     operator()(Event&&, FSM&, State&) const
     {
+        static_assert(::std::is_same<Event, State>::value, "");
         return event_process_result::refuse;
     }
 };
@@ -248,7 +249,8 @@ template < typename FSM, typename State, typename Event >
 event_process_result
 handle_in_state_event(Event&& event, FSM& fsm, State& state)
 {
-    return in_state_action_invokation< FSM, State, Event >{}
+    using decayed_event = typename ::std::decay<Event>::type;
+    return in_state_action_invokation< FSM, State, decayed_event >{}
         (::std::forward<Event>(event), fsm, state);
 }
 
