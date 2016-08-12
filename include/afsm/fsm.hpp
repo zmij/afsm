@@ -314,24 +314,32 @@ private:
     {
         lock_guard lock{mutex_};
         ::std::swap(queued_events_, queue);
+        queue_size_ -= queue.size();
     }
 
     void
     process_event_queue()
     {
-        if (!stack_size_++) {
-            while (queue_size_ > 0) {
-                event_queue postponed;
-                lock_and_swap_queue(postponed);
-                queue_size_ -= postponed.size();
-                observer_wrapper::start_process_events_queue(*this);
-                for (auto const& event : postponed) {
-                    event();
-                }
-                observer_wrapper::end_process_events_queue(*this);
+        // TODO replace those if's with atomic compare and swap
+        if (stack_size_)
+            return;
+        if (stack_size_++) {
+            --stack_size_;
+            return;
+        }
+        observer_wrapper::start_process_events_queue(*this);
+        while (queue_size_ > 0) {
+            event_queue postponed;
+            lock_and_swap_queue(postponed);
+            for (auto const& event : postponed) {
+                event();
             }
         }
         --stack_size_;
+        observer_wrapper::end_process_events_queue(*this);
+        if (queue_size_ > 0) {
+            process_event_queue();
+        }
     }
 
     template < typename Event >
