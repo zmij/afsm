@@ -223,7 +223,7 @@ public:
     actions::event_process_result
     process_event( Event&& event )
     {
-        if (!is_top_.test_and_set()) {
+        if (!queue_size_ && !is_top_.test_and_set()) {
             auto res = process_event_dispatch(::std::forward<Event>(event));
             is_top_.clear();
             // Process enqueued events
