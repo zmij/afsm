@@ -40,8 +40,22 @@ static_assert(
         type_tuple<int, long>
      >::value, "");
 
-using type_set_1 = type_set< int, float, int, double, long, float, double, bool >::type;
-//static_assert( contains )
+static_assert( ::std::is_same<insert_type<int, float, bool>::type,
+        type_tuple<int, float, bool>>::value, "" );
+static_assert( ::std::is_same<insert_type<int, int, float, bool>::type,
+        type_tuple<int, float, bool>>::value, "" );
+
+static_assert( ::std::is_same<insert_type<type_tuple<float, bool>, int>::type,
+        type_tuple<int, float, bool>>::value, "" );
+static_assert( ::std::is_same<insert_type<type_tuple<int, float, bool>, int>::type,
+        type_tuple<int, float, bool>>::value, "" );
+using type_set_1 = unique< int, float, int, double, long, float, double, bool >::type;
+static_assert( contains< int, type_set_1 >::value, "" );
+static_assert( contains< float, type_set_1 >::value, "" );
+static_assert( contains< double, type_set_1 >::value, "" );
+static_assert( contains< long, type_set_1 >::value, "" );
+static_assert( contains< bool, type_set_1 >::value, "" );
+
 
 struct test_callable {
     template < typename A, typename B >

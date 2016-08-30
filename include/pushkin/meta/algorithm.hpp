@@ -186,6 +186,32 @@ struct insert_type< type_tuple<Y...>, T > {
     using type = typename insert_type<T, Y...>::type;
 };
 
+template < typename ... T >
+struct unique;
+
+template < typename T, typename ... Y >
+struct unique<T, Y...> {
+    using type = typename insert_type<
+            typename unique<Y...>::type, T>::type;
+};
+
+template <>
+struct unique<> {
+    using type = type_tuple<>;
+};
+
+template < typename ... T >
+struct unique< type_tuple<T...> > : unique<T...> {};
+template < typename ... T, typename ... Y >
+struct unique< type_tuple<T...>, type_tuple<Y...> >
+    : unique<T..., Y...> {};
+
+template < typename ... T, typename ... Y >
+struct unique< unique<T...>, unique<Y...> >
+    : unique<T..., Y...> {};
+
+template < typename T, typename ... Y >
+struct contains< T, unique<Y...> > : contains<T, Y...> {};
 
 template < template <typename> class Predicate, typename ... T >
 struct all_match;
