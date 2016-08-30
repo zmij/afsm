@@ -200,7 +200,7 @@ public:
 public:
     state_machine()
         : base_machine_type{this},
-          stack_size_{0},
+          is_top_{},
           mutex_{},
           queued_events_{},
           queue_size_{0},
@@ -211,7 +211,7 @@ public:
     explicit
     state_machine(Args&& ... args)
         : base_machine_type(this, ::std::forward<Args>(args)...),
-          stack_size_{0},
+          is_top_{},
           mutex_{},
           queued_events_{},
           queue_size_{0},
@@ -223,14 +223,13 @@ public:
     actions::event_process_result
     process_event( Event&& event )
     {
-        if (!stack_size_++) {
+        if (!queue_size_ && !is_top_.test_and_set()) {
             auto res = process_event_dispatch(::std::forward<Event>(event));
-            --stack_size_;
+            is_top_.clear();
             // Process enqueued events
             process_event_queue();
             return res;
         } else {
-            --stack_size_;
             // Enqueue event
             enqueue_event(::std::forward<Event>(event));
             return actions::event_process_result::defer;
@@ -314,24 +313,24 @@ private:
     {
         lock_guard lock{mutex_};
         ::std::swap(queued_events_, queue);
+        queue_size_ -= queue.size();
     }
 
     void
     process_event_queue()
     {
-        if (!stack_size_++) {
+        while (queue_size_ > 0 && !is_top_.test_and_set()) {
+            observer_wrapper::start_process_events_queue(*this);
             while (queue_size_ > 0) {
                 event_queue postponed;
                 lock_and_swap_queue(postponed);
-                queue_size_ -= postponed.size();
-                observer_wrapper::start_process_events_queue(*this);
                 for (auto const& event : postponed) {
                     event();
                 }
-                observer_wrapper::end_process_events_queue(*this);
             }
+            observer_wrapper::end_process_events_queue(*this);
+            is_top_.clear();
         }
-        --stack_size_;
     }
 
     template < typename Event >
@@ -349,39 +348,36 @@ private:
     process_deferred_queue()
     {
         using actions::event_process_result;
-        if (stack_size_++ <= 1) {
-            event_queue deferred;
+        event_queue deferred;
+        {
+            lock_guard lock{deferred_mutex_};
+            ::std::swap(deferred_events_, deferred);
+        }
+        while (!deferred.empty()) {
+            observer_wrapper::start_process_deferred_queue(*this);
+            auto res = event_process_result::refuse;
+            while (!deferred.empty()) {
+                auto event = deferred.front();
+                deferred.pop_front();
+                res = event();
+                if (res == event_process_result::process)
+                    break;
+            }
             {
                 lock_guard lock{deferred_mutex_};
+                deferred_events_.insert(deferred_events_.end(), deferred.begin(), deferred.end());
+                deferred.clear();
+            }
+            if (res == event_process_result::process) {
                 ::std::swap(deferred_events_, deferred);
             }
-            while (!deferred.empty()) {
-                observer_wrapper::start_process_deferred_queue(*this);
-                auto res = event_process_result::refuse;
-                while (!deferred.empty()) {
-                    auto event = deferred.front();
-                    deferred.pop_front();
-                    res = event();
-                    if (res == event_process_result::process)
-                        break;
-                }
-                {
-                    lock_guard lock{deferred_mutex_};
-                    deferred_events_.insert(deferred_events_.end(), deferred.begin(), deferred.end());
-                    deferred.clear();
-                }
-                if (res == event_process_result::process) {
-                    ::std::swap(deferred_events_, deferred);
-                }
-                observer_wrapper::end_process_deferred_queue(*this);
-            }
+            observer_wrapper::end_process_deferred_queue(*this);
         }
-        --stack_size_;
     }
 private:
     using atomic_counter    = ::std::atomic< ::std::size_t >;
 
-    atomic_counter          stack_size_;
+    ::std::atomic_flag      is_top_;
 
     mutex_type              mutex_;
     event_queue             queued_events_;
