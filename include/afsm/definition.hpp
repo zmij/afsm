@@ -383,6 +383,50 @@ struct is_default_unguarded_transition
     >::type {};
 
 }  /* namespace detail */
+template < typename T, typename SubState >
+struct contains_substate;
+
+namespace detail {
+
+template < typename T, typename SubState >
+struct contains_recursively :
+    ::std::conditional<
+        ::std::is_same<T, SubState>::value,
+        ::std::true_type,
+        typename def::contains_substate<T, SubState>::type
+    >::type {};
+
+template < typename SubState >
+struct contains_predicate {
+    template < typename T >
+    using type = contains_recursively<T, SubState>;
+};
+
+template < typename T, typename SubState, bool IsMachine >
+struct contains_substate : ::std::false_type {};
+
+template < typename T, typename SubState >
+struct contains_substate< T, SubState, true >
+    : ::std::conditional<
+        ::psst::meta::any_match<
+            contains_predicate<SubState>::template type,
+            typename inner_states< typename T::transitions >::type >::value,
+        ::std::true_type,
+        ::std::false_type
+    >::type {};
+
+}  /* namespace detail */
+
+template < typename T, typename SubState >
+struct contains_substate :
+    detail::contains_substate<T, SubState, traits::is_state_machine<T>::value> {};
+
+template < typename SubState >
+struct contains_substate_predicate {
+    template < typename T >
+    using type = contains_substate<T, SubState>;
+};
+
 }  /* namespace def */
 }  /* namespace afsm */
 

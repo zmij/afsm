@@ -463,11 +463,11 @@ public:
     { return states_; }
 
     template < ::std::size_t N>
-    ::std::tuple_element< N, inner_states_tuple >&
+    typename ::std::tuple_element< N, inner_states_tuple >::type&
     get_state()
     { return ::std::get<N>(states_); }
     template < ::std::size_t N>
-    ::std::tuple_element< N, inner_states_tuple > const&
+    typename ::std::tuple_element< N, inner_states_tuple >::type const&
     get_state() const
     { return ::std::get<N>(states_); }
 

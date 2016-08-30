@@ -12,6 +12,8 @@
 #include <afsm/detail/helpers.hpp>
 #include <afsm/detail/transitions.hpp>
 
+#include <pushkin/meta/functions.hpp>
+
 namespace afsm {
 namespace detail {
 
@@ -30,6 +32,27 @@ struct event_process_selector
             process_type<actions::event_process_result::refuse>
         >::type
     >::type{};
+
+enum class state_containment {
+    none,
+    immediate,
+    substate
+};
+
+template < state_containment C >
+using containment_type = ::std::integral_constant<state_containment, C>;
+
+template < typename StateDef, typename InnerStates >
+struct state_containment_type :
+        ::std::conditional< ::psst::meta::contains<StateDef, InnerStates>::value,
+             containment_type< state_containment::immediate >,
+             typename ::std::conditional<
+                 ::psst::meta::any_match<
+                     def::contains_substate_predicate<StateDef>::template type, InnerStates >::value,
+                     containment_type< state_containment::substate >,
+                     containment_type< state_containment::none >
+             >::type
+        >::type {};
 
 template < typename T, bool isTerminal >
 struct state_base_impl : T {
@@ -139,6 +162,13 @@ public:
         using ::std::swap;
         static_cast<base_impl_type&>(*this).swap(rhs);
     }
+
+    template < typename StateDef >
+    bool
+    is_in_state() const
+    {
+        return ::std::is_same<state_definition_type, StateDef>::value;
+    }
 protected:
     template< typename ... Args >
     state_base(Args&& ... args)
@@ -163,10 +193,6 @@ public:
     using initial_state = typename state_machine_definition_type::initial_state;
     using inner_states_def =
             typename def::detail::inner_states< transitions >::type;
-    using inner_states_constructor =
-            front_state_tuple< machine_type, inner_states_def >;
-    using inner_states_tuple =
-            typename inner_states_constructor::type;
 
     static constexpr ::std::size_t initial_state_index =
             ::psst::meta::index_of<initial_state, inner_states_def>::value;
@@ -178,6 +204,7 @@ public:
     using size_type         = typename detail::size_type<mutex_type>::type;
     using transition_tuple  = afsm::transitions::state_transition_table<
             front_machine_type, state_machine_definition_type, size_type >;
+    using inner_states_tuple = typename transition_tuple::inner_states_tuple;
 
     state_machine_base_impl(front_machine_type* fsm)
         : state_type{},
@@ -209,18 +236,25 @@ public:
     state_machine_base_impl&
     operator = (state_machine_base_impl&& rhs) = delete;
 
+    template < typename StateDef >
+    bool
+    is_in_state() const
+    {
+        return is_in_state<StateDef>(state_containment_type<StateDef, inner_states_def>{});
+    }
+
     template < ::std::size_t N>
-    ::std::tuple_element< N, inner_states_tuple >&
+    typename ::std::tuple_element< N, inner_states_tuple >::type&
     get_state()
     { return transitions_.template get_state<N>(); }
     template < ::std::size_t N>
-    ::std::tuple_element< N, inner_states_tuple > const&
+    typename ::std::tuple_element< N, inner_states_tuple >::type const&
     get_state() const
     { return transitions_.template get_state<N>(); }
 
     template < typename StateDef >
-    ::std::tuple_element< ::psst::meta::index_of<StateDef, inner_states_def>::value,
-         inner_states_tuple >&
+    typename ::std::tuple_element< ::psst::meta::index_of<StateDef, inner_states_def>::value,
+         inner_states_tuple >::type&
     get_state()
     {
         using index_of_state = ::psst::meta::index_of<StateDef, inner_states_def>;
@@ -229,8 +263,8 @@ public:
         return transitions_.template get_state< index_of_state::value >();
     }
     template < typename StateDef >
-    ::std::tuple_element< ::psst::meta::index_of<StateDef, inner_states_def>::value,
-         inner_states_tuple > const&
+    typename ::std::tuple_element< ::psst::meta::index_of<StateDef, inner_states_def>::value,
+         inner_states_tuple >::type const&
     get_state() const
     {
         using index_of_state = ::psst::meta::index_of<StateDef, inner_states_def>;
@@ -289,6 +323,58 @@ protected:
         detail::process_type<actions::event_process_result::refuse> const&) const
     {
         return actions::event_process_result::refuse;
+    }
+
+    /**
+     * Constant false for states not contained by this state machine
+     * @param
+     * @return
+     */
+    template < typename StateDef >
+    bool
+    is_in_state(containment_type< state_containment::none > const&) const
+    {
+        return false;
+    }
+    /**
+     * Is in substate of an inner state
+     * @param
+     * @return
+     */
+    template < typename StateDef >
+    bool
+    is_in_state(containment_type< state_containment::substate > const&) const
+    {
+        using immediate_states =
+            typename ::psst::meta::find_if<
+                def::contains_substate_predicate<StateDef>::template type,
+                inner_states_def >::type;
+        return is_in_substate<StateDef>(immediate_states{});
+    }
+
+    template < typename StateDef, typename ... ImmediateSubStates >
+    bool
+    is_in_substate( ::psst::meta::type_tuple<ImmediateSubStates...> const& ) const
+    {
+        return ::psst::meta::any_of({
+                (this->template is_in_state<ImmediateSubStates>() &&
+                 this->template get_state< ImmediateSubStates >().
+                            template is_in_state<StateDef>()) ...
+        });
+    }
+    /**
+     * In in an immediately inner state
+     * @param Template tag switch
+     * @return
+     */
+    template < typename StateDef >
+    bool
+    is_in_state(containment_type< state_containment::immediate > const&) const
+    {
+        using index_of_state = ::psst::meta::index_of<StateDef, inner_states_def>;
+        static_assert(index_of_state::found,
+                    "Type is not a definition of inner state");
+        return index_of_state::value == transitions_.current_state();
     }
 protected:
     transition_tuple        transitions_;
