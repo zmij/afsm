@@ -20,6 +20,7 @@ set(
     test_program_SRCS
     # Add your sources here
     static_tests.cpp
+    state_machine_with_internal_transitions.cpp
     fsm_parts_test.cpp
     transaction_fsm.cpp
     common_base_test.cpp

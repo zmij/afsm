@@ -483,11 +483,12 @@ public:
     actions::event_process_result
     process_event(Event&& event)
     {
+        // Try dispatch to inner states
         auto res = dispatch_table::process_event(states_, current_state(),
                 ::std::forward<Event>(event));
         if (res == actions::event_process_result::refuse) {
-            auto const& inv_table = transition_table<Event>( state_indexes{} );
-            res = inv_table[current_state()](*this, ::std::forward<Event>(event));
+            // Check if the event can cause a transition and process it
+            res = process_transition_event(::std::forward<Event>(event));
         }
         if (res == actions::event_process_result::process) {
             check_default_transition();
@@ -519,6 +520,14 @@ public:
     {
         auto const& table = exit_table<Event>( state_indexes{} );
         table[current_state()](states_, ::std::forward<Event>(event), *fsm_);
+    }
+
+    template < typename Event >
+    actions::event_process_result
+    process_transition_event(Event&& event)
+    {
+        auto const& inv_table = transition_table<Event>( state_indexes{} );
+        return inv_table[current_state()](*this, ::std::forward<Event>(event));
     }
 
     template < typename SourceState, typename TargetState,

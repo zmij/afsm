@@ -188,6 +188,23 @@ struct conditional_in_state_invokation {
     }
 };
 
+template < bool hasActions, typename State, typename Event >
+struct is_in_state_action {
+    using state_type        = State;
+    using event_type        = Event;
+    using transitions       = typename state_type::internal_transitions;
+    using event_handlers    = typename ::psst::meta::find_if<
+        def::handles_event<event_type>::template type,
+        typename transitions::transitions >::type;
+
+    static constexpr bool value = event_handlers::size > 0;
+};
+
+template < typename State, typename Event >
+struct is_in_state_action <false, State, Event> {
+    static constexpr bool value = false;
+};
+
 template < bool hasActions, typename FSM, typename State, typename Event >
 struct in_state_action_invokation {
     using fsm_type          = FSM;
@@ -236,6 +253,12 @@ struct in_state_action_invokation<false, FSM, State, Event> {
 };
 
 }  /* namespace detail */
+
+template < typename State, typename Event >
+struct is_in_state_action : detail::is_in_state_action <
+        !::std::is_same<typename State::internal_transitions, void>::value &&
+        ::psst::meta::contains<Event, typename State::internal_events>::value,
+        State, Event >{};
 
 template < typename FSM, typename State, typename Event >
 struct in_state_action_invokation :

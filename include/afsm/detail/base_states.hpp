@@ -302,11 +302,15 @@ protected:
     process_event_impl(FSM& enclosing_fsm, Event&& event,
         detail::process_type<actions::event_process_result::process> const&)
     {
+        using event_type = typename ::std::decay<Event>::type;
+        using can_handle_in_state = ::std::integral_constant<bool,
+                actions::is_in_state_action<state_type, event_type>::value>;
         // Transitions and internal event dispatch
         auto res = transitions_.process_event(::std::forward<Event>(event));
         if (res == actions::event_process_result::refuse) {
         // Internal transitions
-            res = actions::handle_in_state_event(::std::forward<Event>(event), enclosing_fsm, *this);
+            res = process_event_impl(enclosing_fsm,
+                ::std::forward<Event>(event), can_handle_in_state{});
         }
         return res;
     }
@@ -325,6 +329,23 @@ protected:
         return actions::event_process_result::refuse;
     }
 
+    //@{
+    /** @name Dispatch of in-state events */
+    template < typename FSM, typename Event >
+    actions::event_process_result
+    process_event_impl(FSM& enclosing_fsm, Event&& event,
+        ::std::true_type const& /* Is in-state event */)
+    {
+        return actions::handle_in_state_event(::std::forward<Event>(event), enclosing_fsm, *this);
+    }
+    template < typename FSM, typename Event >
+    actions::event_process_result
+    process_event_impl(FSM&, Event&&,
+            ::std::false_type const& /* Is not an in-state event */ )
+    {
+        return actions::event_process_result::refuse;
+    }
+    //@}
     /**
      * Constant false for states not contained by this state machine
      * @param
