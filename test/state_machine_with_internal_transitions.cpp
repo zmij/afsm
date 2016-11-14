@@ -33,7 +33,9 @@ struct outer_machine : def::state_machine<outer_machine> {
         {}
     };
     struct state_a : def::state<state_a> {};
-    struct state_b : def::state<state_b> {};
+    struct state_b : def::state<state_b> {
+        using deferred_events = type_tuple< events::a_to_b >;
+    };
 
     using initial_state = state_a;
     using internal_transitions  = def::transition_table<
@@ -57,12 +59,17 @@ using test_sm = state_machine<outer_machine>;
 TEST(FSM, MachineWithInstate)
 {
     test_sm tsm;
+    // *** INITIAL STATE ***
+    // Check current state
+    EXPECT_TRUE(tsm.is_in_state< outer_machine::state_a >());
+    EXPECT_FALSE(tsm.is_in_state< outer_machine::state_b >());
     // Process in-state
     EXPECT_EQ( actions::event_process_result::process_in_state,
             tsm.process_event(events::in_state{}));
     // Check current state
     EXPECT_TRUE(tsm.is_in_state< outer_machine::state_a >());
     EXPECT_FALSE(tsm.is_in_state< outer_machine::state_b >());
+    // *** A -> B ***
     // Process with transition
     EXPECT_EQ( actions::event_process_result::process,
             tsm.process_event(events::a_to_b{}));
@@ -75,9 +82,7 @@ TEST(FSM, MachineWithInstate)
     // Check current state
     EXPECT_TRUE(tsm.is_in_state< outer_machine::state_b >());
     EXPECT_FALSE(tsm.is_in_state< outer_machine::state_a >());
-    // Erroneous transition
-    EXPECT_EQ( actions::event_process_result::refuse,
-            tsm.process_event(events::a_to_b{}));
+    // *** B -> A ***
     // Process with transition
     EXPECT_EQ( actions::event_process_result::process,
             tsm.process_event(events::b_to_a{}));
@@ -87,6 +92,62 @@ TEST(FSM, MachineWithInstate)
     // Process in-state
     EXPECT_EQ( actions::event_process_result::process_in_state,
             tsm.process_event(events::in_state{}));
+}
+
+TEST(FSM, MachineWithInstateDefers)
+{
+    test_sm tsm;
+    // *** INITIAL STATE ***
+    // Check current state
+    EXPECT_TRUE(tsm.is_in_state< outer_machine::state_a >());
+    EXPECT_FALSE(tsm.is_in_state< outer_machine::state_b >());
+    // *** A -> B ***
+    // Process with transition
+    EXPECT_EQ( actions::event_process_result::process,
+            tsm.process_event(events::a_to_b{}));
+    // Check current state
+    EXPECT_TRUE(tsm.is_in_state< outer_machine::state_b >());
+    EXPECT_FALSE(tsm.is_in_state< outer_machine::state_a >());
+    // Process in-state
+    EXPECT_EQ( actions::event_process_result::process_in_state,
+            tsm.process_event(events::in_state{}));
+    // Check current state
+    EXPECT_TRUE(tsm.is_in_state< outer_machine::state_b >());
+    EXPECT_FALSE(tsm.is_in_state< outer_machine::state_a >());
+    // Defer events
+    EXPECT_EQ( actions::event_process_result::defer,
+            tsm.process_event(events::a_to_b{}));
+    EXPECT_EQ( actions::event_process_result::defer,
+            tsm.process_event(events::a_to_b{}));
+    // Check current state
+    EXPECT_TRUE(tsm.is_in_state< outer_machine::state_b >());
+    EXPECT_FALSE(tsm.is_in_state< outer_machine::state_a >());
+    // Process in-state
+    EXPECT_EQ( actions::event_process_result::process_in_state,
+            tsm.process_event(events::in_state{}));
+    // Check current state
+    EXPECT_TRUE(tsm.is_in_state< outer_machine::state_b >());
+    EXPECT_FALSE(tsm.is_in_state< outer_machine::state_a >());
+    // *** B -> A -> B ***
+    // Process with transition
+    EXPECT_EQ( actions::event_process_result::process,
+            tsm.process_event(events::b_to_a{}));
+    // Check current state
+    EXPECT_TRUE(tsm.is_in_state< outer_machine::state_b >());
+    EXPECT_FALSE(tsm.is_in_state< outer_machine::state_a >());
+    // Process in-state
+    EXPECT_EQ( actions::event_process_result::process_in_state,
+            tsm.process_event(events::in_state{}));
+    // Check current state
+    EXPECT_TRUE(tsm.is_in_state< outer_machine::state_b >());
+    EXPECT_FALSE(tsm.is_in_state< outer_machine::state_a >());
+    // *** B -> A -> B ***
+    // Process with transition
+    EXPECT_EQ( actions::event_process_result::process,
+            tsm.process_event(events::b_to_a{}));
+    // Check current state
+    EXPECT_TRUE(tsm.is_in_state< outer_machine::state_b >());
+    EXPECT_FALSE(tsm.is_in_state< outer_machine::state_a >());
 }
 
 }  /* namespace test */
