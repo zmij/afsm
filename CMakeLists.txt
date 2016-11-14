@@ -24,6 +24,7 @@ else()
 endif()
 
 option(BUILD_TESTS "Build test programs" ON)
+option(BUILD_EXAMPLES "Build example programs" OFF)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 
@@ -53,6 +54,10 @@ if (BUILD_TESTS)
     include_directories(${PSST_ANSI_COLORS_INCLUDE_DIR})
     link_directories(${PSST_ANSI_COLORS_LINK_DIR})
     add_subdirectory(test)
+endif()
+
+if (BUILD_EXAMPLES)
+    add_subdirectory(examples)
 endif()
 
 get_directory_property(has_parent PARENT_DIRECTORY)
