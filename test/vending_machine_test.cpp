@@ -140,6 +140,8 @@ TEST(Vending, BuyItem)
         { 1, { 100, 5.0f } }
     }};
 
+    auto initial_count = vm.count();
+
     EXPECT_FALSE(vm.is_empty()) << "Vending machine is empty";
 
     EXPECT_TRUE(vm.is_in_state< vending_def::off >())
@@ -156,6 +158,25 @@ TEST(Vending, BuyItem)
                                 << "Vending machine is on";
     EXPECT_TRUE(vm.is_in_state< vending_def::on::serving >())
                                 << "Vending machine is serving";
+    EXPECT_TRUE(vm.is_in_state< vending_def::on::serving::idle >())
+                                << "Vending machine is serving";
+
+    EXPECT_TRUE(done(vm.process_event(events::money{3})))
+                                << "Vending machine accepts money";
+    EXPECT_TRUE(vm.is_in_state< vending_def::on::serving::active >())
+                                << "Vending machine is serving";
+    EXPECT_FALSE(ok(vm.process_event(events::select_item{0})))
+                                << "Vending machine doesn't allow dispensing when low balance";
+    EXPECT_FALSE(ok(vm.process_event(events::select_item{42})))
+                                << "Vending machine doesn't allow dispensing non-existent items";
+    EXPECT_TRUE(done(vm.process_event(events::money{5})))
+                                << "Vending machine accepts money";
+    EXPECT_TRUE(ok(vm.process_event(events::select_item{1})))
+                                << "Vending machine dispenses when enough money";
+    EXPECT_EQ(vm.get_price(1), vm.balance)
+                                << "Machine's balance increased by item's price";
+    EXPECT_EQ(initial_count - 1, vm.count())  << "Item count decreased by 1";
+
 
 }
 

@@ -11,6 +11,7 @@
 #include <afsm/fsm.hpp>
 #include <map>
 #include <algorithm>
+#include <numeric>
 
 namespace vending {
 
@@ -159,12 +160,31 @@ struct vending_def : ::afsm::def::state_machine<vending_def> {
         };
         struct serving : state_machine<serving, history> {
             //@{
+            /** @name Guards */
+            struct enough_money {
+                template < typename FSM, typename State >
+                bool
+                operator()(FSM const& fsm, State const& state, events::select_item const& item) const
+                {
+                    return root_machine(fsm).get_price(item.p_no) <= state.balance;
+                }
+            };
+            struct dispense {
+                template < typename FSM, typename SourceState, typename TargetState >
+                void
+                operator()(events::select_item&& item, FSM& fsm, SourceState&, TargetState&) const
+                {
+                    root_machine(fsm).dispense_product(item.p_no);
+                }
+            };
+            //@}
+            //@{
             /** @name Substates */
             struct idle : state<idle> {};
             struct active : state<active> {
                 template < typename FSM >
                 void
-                on_enter(events::money&& money, FSM& fsm)
+                on_enter(events::money&& money, FSM&)
                 {
                     balance += money.amount;
                 }
@@ -173,7 +193,11 @@ struct vending_def : ::afsm::def::state_machine<vending_def> {
                 on_exit(events::select_item&& item, FSM& fsm)
                 {
                     // Subtract balance
-                    // Give change
+                    auto& root = root_machine(fsm);
+                    balance -= root.get_price(item.p_no);
+                    if (balance > 0) {
+                        // Give change
+                    }
                 }
 
                 float       balance{0};
@@ -182,10 +206,10 @@ struct vending_def : ::afsm::def::state_machine<vending_def> {
             using initial_state = idle;
 
             using transitions = transition_table<
-                /*  Start       Event                   Next        Action  Guard   */
-                tr< idle,       events::money,          active,     none,   none    >,
-                tr< active,     events::money,          active,     none,   none    >,
-                tr< active,     events::select_item,    idle,       none,   none    >
+                /*  Start       Event                   Next    Action      Guard                               */
+                tr< idle,       events::money,          active, none,       none                                >,
+                tr< active,     events::money,          active, none,       none                                >,
+                tr< active,     events::select_item,    idle,   dispense,   and_< goods_exist, enough_money >   >
             >;
         };
         struct out_of_service : state<out_of_service> {};
@@ -280,6 +304,29 @@ struct vending_def : ::afsm::def::state_machine<vending_def> {
         if (f != goods.end()) {
             f->second.price = price;
         }
+    }
+    float
+    get_price(::std::size_t p_no) const
+    {
+        auto f = goods.find(p_no);
+        if (f != goods.end()) {
+            return f->second.price;
+        }
+        return 0;
+    }
+    void
+    dispense_product(::std::size_t p_no)
+    {
+        auto f = goods.find(p_no);
+        if (f != goods.end() && f->second.amount > 0) {
+            --f->second.amount;
+            balance += f->second.price;
+        }
+    }
+    void
+    add_balance(float amount)
+    {
+        balance += amount;
     }
     void
     clear_balance()
