@@ -231,7 +231,7 @@ struct single_transition<FSM, StateTable,
 
     using states_def        = typename fsm_type::inner_states_def;
 
-    using guard_type        = actions::detail::guard_check<FSM, SourceState, Guard>;
+    using guard_type        = actions::detail::guard_check<FSM, SourceState, Event, Guard>;
     using source_exit       = state_exit<fsm_type, source_state_type, Event>;
     using target_enter      = state_enter<fsm_type, target_state_type, Event>;
     using action_type       = actions::detail::action_invokation<Action, FSM,
@@ -390,6 +390,8 @@ public:
 
     using transitions       =
             typename state_machine_definition_type::transitions;
+    static_assert(!::std::is_same<transitions, void>::value,
+            "Transition table is not defined for a state machine");
     using transitions_tuple =
             typename transitions::transitions;
     using initial_state     =
@@ -546,7 +548,7 @@ public:
         auto& source = ::std::get< source_index::value >(states_);
         auto& target = ::std::get< target_index::value >(states_);
         try {
-            if (guard(*fsm_, source)) {
+            if (guard(*fsm_, source, event)) {
                 exit(source, ::std::forward<Event>(event), *fsm_);
                 action(::std::forward<Event>(event), *fsm_, source, target);
                 enter(target, ::std::forward<Event>(event), *fsm_);

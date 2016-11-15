@@ -52,9 +52,9 @@ struct dummy_action_a {
 };
 
 struct a_guard {
-    template <typename FSM, typename State>
+    template <typename FSM, typename State, typename Event>
     bool
-    operator()(FSM const&, State const&) const
+    operator()(FSM const&, State const&, Event const&) const
     { return true; }
 };
 
@@ -100,6 +100,13 @@ struct is_none {
     {
         return fsm.value == "none";
     }
+};
+
+struct dummy_sm {
+    dummy_sm&
+    root_fsm() { return *this; }
+    dummy_sm const&
+    root_fsm() const { return *this; }
 };
 
 struct inner_dispatch_test : def::state_machine< inner_dispatch_test > {
@@ -159,11 +166,11 @@ struct inner_dispatch_test : def::state_machine< inner_dispatch_test > {
     ::std::string value = "none";
 };
 
-using test_sm = inner_state_machine< inner_dispatch_test, none >;
+using test_sm = inner_state_machine< inner_dispatch_test, dummy_sm >;
 
 TEST(FSM, InnerEventDispatch)
 {
-    none n;
+    dummy_sm n;
     test_sm tsm{n};
     EXPECT_EQ("none", tsm.value);
     EXPECT_EQ(test_sm::initial_state_index, tsm.current_state());

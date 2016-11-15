@@ -172,6 +172,7 @@ public:
     void
     enclosing_fsm(enclosing_fsm_type& fsm)
     { fsm_ = &fsm; }
+
 private:
     using base_machine_type::process_event_impl;
 private:
@@ -190,7 +191,7 @@ class state_machine :
 public:
     static_assert( ::psst::meta::is_empty< typename T::deferred_events >::value,
             "Outer state machine cannot defer events" );
-    using this_type         = state_machine<T, Mutex, Observer>;
+    using this_type         = state_machine<T, Mutex, Observer, ObserverWrapper>;
     using base_machine_type = detail::state_machine_base< T, Mutex, this_type >;
     using mutex_type        = Mutex;
     using lock_guard        = typename detail::lock_guard_type<mutex_type>::type;
@@ -386,6 +387,54 @@ private:
     mutex_type              deferred_mutex_;
     event_queue             deferred_events_;
 };
+
+template < typename T, typename Mutex, typename Observer,
+        template<typename> class ObserverWrapper >
+state_machine<T, Mutex, Observer, ObserverWrapper>&
+root_machine(state_machine<T, Mutex, Observer, ObserverWrapper>& fsm)
+{
+    return fsm;
+}
+
+template < typename T, typename Mutex, typename Observer,
+        template<typename> class ObserverWrapper >
+state_machine<T, Mutex, Observer, ObserverWrapper> const&
+root_machine(state_machine<T, Mutex, Observer, ObserverWrapper> const& fsm)
+{
+    return fsm;
+}
+
+template < typename T, typename FSM >
+auto
+root_machine(inner_state_machine<T, FSM>& fsm)
+    -> decltype(root_machine(fsm.enclosing_fsm()))
+{
+    return root_machine(fsm.enclosing_fsm());
+}
+
+template < typename T, typename FSM >
+auto
+root_machine(inner_state_machine<T, FSM> const& fsm)
+    -> decltype(root_machine(fsm.enclosing_fsm()))
+{
+    return root_machine(fsm.enclosing_fsm());
+}
+
+template < typename T, typename FSM >
+auto
+root_machine(state<T, FSM>& fsm)
+    -> decltype(root_machine(fsm.enclosing_fsm()))
+{
+    return root_machine(fsm.enclosing_fsm());
+}
+
+template < typename T, typename FSM >
+auto
+root_machine(state<T, FSM> const& fsm)
+    -> decltype(root_machine(fsm.enclosing_fsm()))
+{
+    return root_machine(fsm.enclosing_fsm());
+}
 
 }  /* namespace afsm */
 

@@ -174,6 +174,10 @@ struct state< StateType, void, Tags ... > : tags::state, Tags... {
     using none = afsm::none;
     template < typename Predicate >
     using not_ = ::psst::meta::not_<Predicate>;
+    template < typename ... Predicates >
+    using and_ = ::psst::meta::and_<Predicates...>;
+    template < typename ... Predicates >
+    using or_ = ::psst::meta::or_<Predicates...>;
     template < typename ... T >
     using type_tuple = ::psst::meta::type_tuple<T...>;
 };
@@ -229,6 +233,10 @@ struct state_machine : state< StateMachine, CommonBase, Tags... >,
     using none = afsm::none;
     template < typename Predicate >
     using not_ = ::psst::meta::not_<Predicate>;
+    template < typename ... Predicates >
+    using and_ = ::psst::meta::and_<Predicates...>;
+    template < typename ... Predicates >
+    using or_ = ::psst::meta::or_<Predicates...>;
     template < typename ... T >
     using type_tuple = ::psst::meta::type_tuple<T...>;
 };
