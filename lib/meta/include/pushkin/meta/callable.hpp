@@ -73,7 +73,7 @@ template <>
 struct and_<> {
     template < typename ... Args >
     bool
-    operator()(Args&& ... args) const
+    operator()(Args&& ...) const
     {
         return false;
     }
@@ -104,7 +104,7 @@ template <>
 struct or_<> {
     template < typename ... Args >
     bool
-    operator()(Args&& ... args) const
+    operator()(Args&& ...) const
     {
         return true;
     }
