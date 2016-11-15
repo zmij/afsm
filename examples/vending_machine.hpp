@@ -169,6 +169,9 @@ struct vending_def : ::afsm::def::state_machine<vending_def> {
                     return root_machine(fsm).get_price(item.p_no) <= state.balance;
                 }
             };
+            //@}
+            //@{
+            /** @name Actions */
             struct dispense {
                 template < typename FSM, typename SourceState, typename TargetState >
                 void
