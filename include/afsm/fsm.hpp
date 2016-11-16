@@ -53,17 +53,6 @@ public:
         static_cast<typename state::state_type&>(*this).swap(rhs);
     }
 
-    template < typename Event >
-    actions::event_process_result
-    process_event( Event&& evt )
-    {
-        return process_event_impl(::std::forward<Event>(evt),
-                detail::event_process_selector<
-                    Event,
-                    typename state::internal_events,
-                    typename state::deferred_events>{} );
-    }
-
     enclosing_fsm_type&
     enclosing_fsm()
     { return *fsm_; }
@@ -80,6 +69,20 @@ public:
     template < typename Event >
     void
     state_exit(Event&&) {}
+protected: // For tests
+    template < ::std::size_t StateIndex >
+    friend struct actions::detail::process_event_handler;
+
+    template < typename Event >
+    actions::event_process_result
+    process_event( Event&& evt )
+    {
+        return process_event_impl(::std::forward<Event>(evt),
+                detail::event_process_selector<
+                    Event,
+                    typename state::internal_events,
+                    typename state::deferred_events>{} );
+    }
 private:
     template < typename Event >
     actions::event_process_result
@@ -152,6 +155,19 @@ public:
         return *this;
     }
 
+    enclosing_fsm_type&
+    enclosing_fsm()
+    { return *fsm_; }
+    enclosing_fsm_type const&
+    enclosing_fsm() const
+    { return *fsm_; }
+    void
+    enclosing_fsm(enclosing_fsm_type& fsm)
+    { fsm_ = &fsm; }
+protected: // For tests
+    template < ::std::size_t StateIndex >
+    friend struct actions::detail::process_event_handler;
+
     template < typename Event >
     actions::event_process_result
     process_event( Event&& event )
@@ -162,17 +178,6 @@ public:
                     typename inner_state_machine::handled_events,
                     typename inner_state_machine::deferred_events>{} );
     }
-
-    enclosing_fsm_type&
-    enclosing_fsm()
-    { return *fsm_; }
-    enclosing_fsm_type const&
-    enclosing_fsm() const
-    { return *fsm_; }
-    void
-    enclosing_fsm(enclosing_fsm_type& fsm)
-    { fsm_ = &fsm; }
-
 private:
     using base_machine_type::process_event_impl;
 private:
