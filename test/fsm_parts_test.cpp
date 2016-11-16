@@ -106,11 +106,7 @@ struct is_none {
     }
 };
 
-struct dummy_sm {
-    dummy_sm&
-    root_fsm() { return *this; }
-    dummy_sm const&
-    root_fsm() const { return *this; }
+struct dummy_sm : detail::null_observer {
 };
 
 struct inner_dispatch_test : def::state_machine< inner_dispatch_test > {
@@ -175,6 +171,18 @@ struct test_sm : inner_state_machine< inner_dispatch_test, dummy_sm > {
     using base_state::process_event;
     test_sm(enclosing_fsm_type& fsm) : base_state{fsm} {}
 };
+
+dummy_sm&
+root_machine(dummy_sm& sm)
+{
+    return sm;
+}
+
+dummy_sm const&
+root_machine(dummy_sm const& sm)
+{
+    return sm;
+}
 
 TEST(FSM, InnerEventDispatch)
 {

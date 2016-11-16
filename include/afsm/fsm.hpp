@@ -262,7 +262,6 @@ private:
         auto res = base_machine_type::process_event_impl(*this, ::std::forward<Event>(event), sel );
         switch (res) {
             case event_process_result::process:
-                observer_wrapper::state_changed(*this);
                 // Changed state. Process deferred events
                 process_deferred_queue();
                 break;

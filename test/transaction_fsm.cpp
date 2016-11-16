@@ -9,6 +9,7 @@
 #include <afsm/fsm.hpp>
 #include <afsm/detail/debug_io.hpp>
 #include <pushkin/ansi_colors.hpp>
+#include <pushkin/util/demangle.hpp>
 #include <iostream>
 #include <iomanip>
 
@@ -172,7 +173,7 @@ struct state_name {
     }
 };
 
-struct connection_observer {
+struct connection_observer : ::afsm::detail::null_observer {
     template < typename FSM, typename Event >
     void
     start_process_event(FSM const&, Event const&) const noexcept
@@ -198,16 +199,31 @@ struct connection_observer {
              << ": Start processing\n";
     }
 
-    template < typename FSM >
+    template < typename FSM, typename State >
     void
-    state_changed(FSM const&) const noexcept
+    state_cleared(FSM const&, State const&) const noexcept
     {
         using ::psst::ansi_color;
+        using ::psst::util::demangle;
+        ::std::cerr
+             << (ansi_color::red | ansi_color::bright)
+             << ::std::setw(event_name_width) << ::std::setfill('*')
+             << "*" << ansi_color::clear  << ::std::setfill(' ')
+             << ": State cleared " << demangle< typename State::state_definition_type >() <<"\n";
+    }
+    template < typename FSM, typename SourceState, typename TargetState, typename Event >
+    void
+    state_changed(FSM const&, SourceState const&, TargetState const&, Event const&) const noexcept
+    {
+        using ::psst::ansi_color;
+        using ::psst::util::demangle;
         ::std::cerr
              << (ansi_color::blue | ansi_color::bright)
              << ::std::setw(event_name_width) << ::std::setfill('*')
              << "*" << ansi_color::clear  << ::std::setfill(' ')
-             << ": State changed\n";
+             << ": State changed " << demangle< typename SourceState::state_definition_type >()
+             << " -> " << demangle< typename TargetState::state_definition_type >()
+             << " (" << demangle<Event>() << ")\n";
     }
 
     template < typename FSM, typename Event >
@@ -374,7 +390,6 @@ struct connection_fsm_def : def::state_machine<connection_fsm_def, state_name> {
 
         transaction()
         {
-            ::std::cerr << "Construct trasaction state\n";
         }
         ::std::string
         name() const override
