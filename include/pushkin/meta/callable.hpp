@@ -43,6 +43,73 @@ struct not_ {
     }
 };
 
+template < typename ... Predicates >
+struct and_;
+template < typename ... Predicates >
+struct or_;
+
+template < typename Predicate, typename ... Rest >
+struct and_<Predicate, Rest...> {
+    template < typename ... Args >
+    bool
+    operator()(Args&& ... args) const
+    {
+        return Predicate{}(::std::forward<Args>(args)...)
+            && and_<Rest...>{}(::std::forward<Args>(args)...);
+    }
+};
+
+template < typename Predicate >
+struct and_<Predicate> {
+    template < typename ... Args >
+    bool
+    operator()(Args&& ... args) const
+    {
+        return Predicate{}(::std::forward<Args>(args)...);
+    }
+};
+
+template <>
+struct and_<> {
+    template < typename ... Args >
+    bool
+    operator()(Args&& ...) const
+    {
+        return false;
+    }
+};
+
+template < typename Predicate, typename ... Rest >
+struct or_<Predicate, Rest...> {
+    template < typename ... Args >
+    bool
+    operator()(Args&& ... args) const
+    {
+        return Predicate{}(::std::forward<Args>(args)...)
+            || and_<Rest...>{}(::std::forward<Args>(args)...);
+    }
+};
+
+template < typename Predicate >
+struct or_<Predicate> {
+    template < typename ... Args >
+    bool
+    operator()(Args&& ... args) const
+    {
+        return Predicate{}(::std::forward<Args>(args)...);
+    }
+};
+
+template <>
+struct or_<> {
+    template < typename ... Args >
+    bool
+    operator()(Args&& ...) const
+    {
+        return true;
+    }
+};
+
 }  /* namespace meta */
 }  /* namespace pus */
 
