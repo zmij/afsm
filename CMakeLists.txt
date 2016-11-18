@@ -29,6 +29,8 @@ option(BUILD_EXAMPLES "Build example programs" OFF)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 
+set( CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules")
+
 add_definitions("-std=c++11")
 add_definitions(-Wall -Werror -Wextra -pedantic -Weffc++
     -Wno-non-virtual-dtor # I really know what I am exactly doing
@@ -57,6 +59,9 @@ if (BUILD_TESTS)
     include_directories(${PSST_ANSI_COLORS_INCLUDE_DIR})
     link_directories(${PSST_ANSI_COLORS_LINK_DIR})
     add_subdirectory(test)
+endif()
+if (BUILD_BENCHMARKS)
+    add_subdirectory(benchmark)
 endif()
 
 if (BUILD_EXAMPLES)
