@@ -31,6 +31,10 @@ add_definitions("-std=c++11")
 add_definitions(-Wall -Werror -Wextra -pedantic -Weffc++)
 
 # Add subdirectories here
+
+add_subdirectory(include)
+add_subdirectory(cmake)
+
 if (BUILD_TESTS)
     enable_testing()
     add_subdirectory(test)
