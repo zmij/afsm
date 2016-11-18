@@ -79,27 +79,26 @@ The library is header only and doesn't requre build or installation. Just add th
 
 ### CMake subproject
 
-You can add the library to your project as a subtree, e.g. `lib/afml`, and in your root `CMakeLists.txt` file just do the following:
+You can add the library to your project as a subtree, e.g. `lib/afsm`, and in your root `CMakeLists.txt` file just do the following:
+
 ```cmake
 add_subdirectory(lib/afsm)
-include_directories(${AFSM_INCLUDE_DIR})
+include_directories(${AFSM_INCLUDE_DIRS})
 ```
 
-### Installation to System Directories
+TODO write docs on gitrc subtree commands and link to the repository
 
-*TODO #3*
+### Installation to System Directories
 
 ```bash
 git clone git@github.com:zmij/afsm.git
 mkdir afsm/build
 cd afsm/build
 cmake ..
-make install
+sudo make install
 ```
 
 ### Finding the AFSM Package
-
-*TODO #4*
 
 ```cmake
 find_package(AFSM REQUIRED) # Will set AFSM_INCLUDE_DIRS variable

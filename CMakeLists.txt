@@ -38,19 +38,21 @@ set(${LIB_NAME}_LIB ${lib_name})
 
 # Add subdirectories here
 
-if (NOT METAPUSHKIN_INCLUDE_DIRS)
+if (NOT METAPUSHKIN_FOUND)
     add_subdirectory(lib/meta)
 endif()
 
 message(STATUS "Metapushkin include dir ${METAPUSHKIN_INCLUDE_DIRS}")
 include_directories(${METAPUSHKIN_INCLUDE_DIRS})
 
+add_subdirectory(include)
+add_subdirectory(cmake)
+
 if (BUILD_TESTS)
     enable_testing()
     if (NOT PSST_ANSI_COLORS_INCLUDE_DIR)
     add_subdirectory(lib/ansi-colors)
     endif()
-    message(STATUS ${PSST_ANSI_COLORS_LINK_DIR})
 
     include_directories(${PSST_ANSI_COLORS_INCLUDE_DIR})
     link_directories(${PSST_ANSI_COLORS_LINK_DIR})
