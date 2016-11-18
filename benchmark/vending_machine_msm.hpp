@@ -81,9 +81,9 @@ struct vending_def : public ::boost::msm::front::state_machine_def<vending_def> 
     //@{
     /** @name Guards */
     struct is_empty {
-        template < typename FSM, typename State >
+        template < typename Event, typename FSM, typename SourceState, typename TargetState >
         bool
-        operator()(FSM const& fsm, State const&) const
+        operator()(Event const&, FSM const& fsm, SourceState const&, TargetState const&)
         {
             return root_machine(fsm).is_empty();
         }
@@ -138,9 +138,9 @@ struct vending_def : public ::boost::msm::front::state_machine_def<vending_def> 
                 }
             };
             struct check_price {
-                template < typename FSM, typename State >
+                template < typename FSM, typename SourceState, typename TargetState >
                 bool
-                operator()(FSM const&, State const&, events::set_price const& price) const
+                operator()(events::set_price const& price, FSM const&, SourceState&, TargetState&) const
                 {
                     return price.price >= 0;
                 }
@@ -150,7 +150,7 @@ struct vending_def : public ::boost::msm::front::state_machine_def<vending_def> 
             struct set_price {
                 template < typename FSM, typename SourceState, typename TargetState >
                 void
-                operator()(events::set_price&& price, FSM& fsm, SourceState&, TargetState&) const
+                operator()(events::set_price const& price, FSM& fsm, SourceState&, TargetState&) const
                 {
                     root_machine(fsm).set_price(price.p_no, price.price);
                 }
@@ -165,7 +165,7 @@ struct vending_def : public ::boost::msm::front::state_machine_def<vending_def> 
             struct loading : state<> {
                 template < typename FSM >
                 void
-                on_enter(events::load_goods&& goods, FSM& fsm) const
+                on_enter(events::load_goods const& goods, FSM& fsm) const
                 {
                     root_machine(fsm).add_goods(::std::move(goods));
                 }
