@@ -5,6 +5,7 @@
 
 cmake_minimum_required(VERSION 2.6)
 
+if (NOT TARGET test-metapushkin)
 if (NOT GTEST_INCLUDE_DIRS)
     find_package(GTest REQUIRED)
 endif()
@@ -40,3 +41,4 @@ add_test(
     NAME test-metapushkin
     COMMAND test-metapushkin ${TEST_ARGS}
 )
+endif()
