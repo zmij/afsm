@@ -38,6 +38,6 @@ endif()
 
 get_directory_property(has_parent PARENT_DIRECTORY)
 if (has_parent)
-    set(${LIB_NAME}_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include CACHE
+    set(${LIB_NAME}_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include CACHE
         INTERNAL "Path to metapushkin libaray includes" )
 endif()
