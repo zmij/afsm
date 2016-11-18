@@ -8,7 +8,6 @@
 cmake_minimum_required(VERSION 2.6)
 
 if(NOT CMAKE_SCRIPT_INSTALL_DIR)
-    message(STATUS ${CMAKE_ROOT})
     find_path(CMAKE_SCRIPT_INSTALL_DIR "CheckLanguage.cmake"
         PATHS ${CMAKE_ROOT}
         PATH_SUFFIXES Modules )
