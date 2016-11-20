@@ -4,18 +4,18 @@
 
 ## Inspiration and Motivation
 
-The `afsm` library was inspired by [`::boost::msm`](http://www.boost.org/doc/libs/1_62_0/libs/msm/doc/HTML/index.html) library and implemented so that the migration from `::boost::msm` was a bunch of search and replace operations. The main motivation was to create a thread-safe FSM library and to achieve decent compile times for large and complex state machines not sacrificing performance. A state machine defined with `afms` library compiles several times faster than same library defined with `::boost::msm` and has similar (or better) performance. You can find some benchmark results [here](https://github.com/zmij/afsm/issues/10).
+The `afsm` library was inspired by [`::boost::msm`](http://www.boost.org/doc/libs/1_62_0/libs/msm/doc/HTML/index.html) library and implemented so that the migration from `::boost::msm` was a bunch of search and replace operations. The main motivation was to create a thread-safe FSM library and to achieve decent compile times for large and complex state machines not sacrificing performance. A state machine defined with `afms` library compiles several times faster than same library defined with `::boost::msm` and has similar (or better) performance. You can find some benchmark results [here](https://github.com/zmij/afsm/wiki/Performance-Benchmarks).
 
 ## Features
 
 * Statechart features
   * Hierarchical states
-  * Entry and exit actions
+  * [Entry and exit actions](https://github.com/zmij/afsm/wiki/Entry-and-Exit-Actions)
   * Internal transitions
-  * Transition actions
-  * Transition guards (conditions)
-  * State history
-  * Event deferral
+  * [Transition actions](https://github.com/zmij/afsm/wiki/Transition-Actions)
+  * [Transition guards (conditions)](https://github.com/zmij/afsm/wiki/Transition-Guards)
+  * [State history](https://github.com/zmij/afsm/wiki/History)
+  * [Event deferring](https://github.com/zmij/afsm/wiki/Event-Deferring)
 * Compile-time checks
 * Thread safety
 * Exception safety
@@ -27,10 +27,9 @@ The `afsm` library was inspired by [`::boost::msm`](http://www.boost.org/doc/lib
 
 ### Planned features
 
-* Install targets for library headers #3
-* Event priority #7
-* Orthogonal regions #6
-* Recursive state machine #8
+* [Event priority](https://github.com/zmij/afsm/issues/7)
+* [Orthogonal regions](https://github.com/zmij/afsm/issues/6)
+* [Recursive state machine](https://github.com/zmij/afsm/issues/8)
 
 
 ## Synopsis
@@ -73,6 +72,10 @@ void use()
 ```
 
 You can find a tutorial covering most of basic features [here](https://github.com/zmij/afsm/wiki/Tutorial:-Vending-machine-FSM).
+
+## Documentation
+
+Please see [project wiki](https://github.com/zmij/afsm/wiki) for documentation. *TODO* doxygen generated documentation.
 
 ## Installation
 
