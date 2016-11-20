@@ -4,7 +4,7 @@
 
 ## Inspiration and Motivation
 
-The `afsm` library was inspired by [`::boost::msm`](http://www.boost.org/doc/libs/1_62_0/libs/msm/doc/HTML/index.html) library and implemented so that the migration from `::boost::msm` was a bunch of search and replace operations. The main motivation was to create a thread-safe FSM library and to achieve decent compile times for large and complex state machines not sacrificing performance. A state machine defined with `afms` library compiles several times faster than same library defined with `::boost::msm` and has similar (or sometimes better) performance.
+The `afsm` library was inspired by [`::boost::msm`](http://www.boost.org/doc/libs/1_62_0/libs/msm/doc/HTML/index.html) library and implemented so that the migration from `::boost::msm` was a bunch of search and replace operations. The main motivation was to create a thread-safe FSM library and to achieve decent compile times for large and complex state machines not sacrificing performance. A state machine defined with `afms` library compiles several times faster than same library defined with `::boost::msm` and has similar (or better) performance. You can find some benchmark results [here](https://github.com/zmij/afsm/issues/10).
 
 ## Features
 
