@@ -34,6 +34,16 @@ find_package(Boost 1.58)
 if (Boost_FOUND)
     message(STATUS "Making benchmark with boost::msm library")
     include_directories(${Boost_INCLUDE_DIRS})
+
+    if (NOT GTEST_INCLUDE_DIRS)
+        find_package(GTest REQUIRED)
+    endif()
+    set(test_msm_SRCS vending_msm_test.cpp)
+    add_executable(test-msm ${test_msm_SRCS})
+    target_link_libraries(test-msm
+        ${GTEST_BOTH_LIBRARIES}
+        ${CMAKE_THREAD_LIBS_INIT})
+
     set(benchmark_msm_SRCS vending_msm_benchmark.cpp)
     add_executable(benchmark-msm ${benchmark_msm_SRCS})
     target_link_libraries(benchmark-msm

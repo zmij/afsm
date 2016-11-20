@@ -8,13 +8,21 @@
 #ifndef VENDING_MACHINE_MSM_HPP_
 #define VENDING_MACHINE_MSM_HPP_
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-local-typedef"
+
 #include <boost/msm/back/state_machine.hpp>
 #include <boost/msm/front/state_machine_def.hpp>
 #include <boost/msm/front/functor_row.hpp>
+#include <boost/msm/front/euml/operator.hpp>
+
+#pragma clang diagnostic pop
+
 #include <pushkin/meta/callable.hpp>
 #include <map>
 #include <algorithm>
 #include <numeric>
+#include <iostream>
 
 namespace vending_msm {
 
@@ -67,12 +75,14 @@ struct vending_def : public ::boost::msm::front::state_machine_def<vending_def> 
     template <typename ... T>
     using state_machine = ::boost::msm::front::state_machine_def<T...>;
     template <typename ... T>
+    using back_machine = ::boost::msm::back::state_machine<T...>;
+    template <typename ... T>
     using mpl_vector = ::boost::mpl::vector<T...>;
 
     template <typename ... T>
     using tr = ::boost::msm::front::Row<T...>;
-    template <typename ... T>
-    using in = ::boost::mpl::vector<T...>;
+    template < typename ... T >
+    using in = ::boost::msm::front::Internal< T ... >;
 
     using none = ::boost::msm::front::none;
 
@@ -83,39 +93,41 @@ struct vending_def : public ::boost::msm::front::state_machine_def<vending_def> 
     struct is_empty {
         template < typename Event, typename FSM, typename SourceState, typename TargetState >
         bool
-        operator()(Event const&, FSM const& fsm, SourceState const&, TargetState const&)
+        operator()(Event const&, FSM& fsm, SourceState&, TargetState&)
         {
             return root_machine(fsm).is_empty();
         }
     };
     struct prices_correct {
-        template < typename FSM, typename State >
+        template < typename Event, typename FSM, typename SourceState, typename TargetState >
         bool
-        operator()(FSM const& fsm, State const&) const
+        operator()(Event const&, FSM& fsm, SourceState&, TargetState&) const
         {
             return root_machine(fsm).prices_correct();
         }
     };
     struct goods_exist {
-        template < typename FSM, typename State, typename Event >
+        template < typename Event, typename FSM, typename SourceState, typename TargetState >
         bool
-        operator()(FSM const& fsm, State const&, Event const& evt) const
+        operator()(Event const& evt, FSM& fsm, SourceState&, TargetState&) const
         {
             return root_machine(fsm).goods_exist(evt.p_no);
         }
     };
     //@}
 
-    struct off : state<> {};
-    struct on  : state_machine<on> {
-        // Forward declaration
-        struct maintenance;
+    struct off : state<> {
+        using flag_list = mpl_vector<off>;
+    };
+    struct on_ : state_machine<on_> {
+        using on = back_machine<on_>;
+        using flag_list = mpl_vector<on>;
         //@{
         /** @name Guards */
         struct check_secret {
-            template < typename FSM, typename State >
+            template < typename Event, typename FSM, typename SourceState, typename TargetState >
             bool
-            operator()(FSM const& fsm, State const&, events::start_maintenance const& evt) const
+            operator()(Event const& evt, FSM& fsm, SourceState&, TargetState&) const
             {
                 return root_machine(fsm).secret == evt.secret;
             }
@@ -126,13 +138,15 @@ struct vending_def : public ::boost::msm::front::state_machine_def<vending_def> 
         //@}
         //@{
         /** @name Substates */
-        struct maintenance : state_machine<maintenance> {
+        struct maintenance_ : state_machine<maintenance_> {
+            using maintenance = back_machine<maintenance_>;
+            using flag_list = mpl_vector<maintenance>;
             //@{
             /** @name Guards */
             struct check_amount {
-                template < typename FSM, typename State >
+                template < typename FSM, typename SourceState, typename TargetState >
                 bool
-                operator()(FSM const&, State const&, events::load_goods const& goods) const
+                operator()(events::load_goods const& goods, FSM const&, SourceState&, TargetState&) const
                 {
                     return goods.amount >= 0;
                 }
@@ -156,19 +170,24 @@ struct vending_def : public ::boost::msm::front::state_machine_def<vending_def> 
                 }
             };
             //@}
-            struct internal_transitions : mpl_vector <
+            struct internal_transition_table : mpl_vector <
                 /*  Event                   Action      Guard                               */
                 in< events::set_price,      set_price,  and_< goods_exist, check_price >    >,
                 in< events::withdraw_money, none,       none                                >
             >{};
-            struct idle : state<> {};
+            struct idle : state<> {
+                using flag_list = mpl_vector<idle>;
+            };
             struct loading : state<> {
                 template < typename FSM >
                 void
-                on_enter(events::load_goods const& goods, FSM& fsm) const
+                on_entry(events::load_goods const& goods, FSM& fsm)
                 {
-                    root_machine(fsm).add_goods(::std::move(goods));
+                    root_machine(fsm).add_goods(goods);
                 }
+                template < typename Event, typename FSM >
+                void
+                on_entry(Event const&, FSM&) {}
             };
 
             using initial_state = idle;
@@ -177,14 +196,27 @@ struct vending_def : public ::boost::msm::front::state_machine_def<vending_def> 
                 tr< idle,       events::load_goods,     loading,    none,   check_amount    >,
                 tr< loading,    events::load_done,      idle,       none,   none            >
             > {};
+
+            template < typename Event, typename FSM >
+            void
+            on_entry(Event const&, FSM& fsm)
+            {
+                enclosing = &fsm;
+            }
+            on*    enclosing;
         };
-        struct serving : state_machine<serving> {
+        using maintenance = back_machine<maintenance_>;
+
+        struct serving_ : state_machine<serving_> {
+            using serving = back_machine<serving_>;
+            using flag_list = mpl_vector<serving>;
             //@{
             /** @name Guards */
             struct enough_money {
-                template < typename FSM, typename State >
+                template < typename FSM, typename SourceState, typename TargetState >
                 bool
-                operator()(FSM const& fsm, State const& state, events::select_item const& item) const
+                operator()(events::select_item const& item, FSM const& fsm,
+                        SourceState& state, TargetState&) const
                 {
                     return root_machine(fsm).get_price(item.p_no) <= state.balance;
                 }
@@ -195,7 +227,7 @@ struct vending_def : public ::boost::msm::front::state_machine_def<vending_def> 
             struct dispense {
                 template < typename FSM, typename SourceState, typename TargetState >
                 void
-                operator()(events::select_item&& item, FSM& fsm, SourceState&, TargetState&) const
+                operator()(events::select_item const& item, FSM& fsm, SourceState&, TargetState&) const
                 {
                     root_machine(fsm).dispense_product(item.p_no);
                 }
@@ -203,17 +235,26 @@ struct vending_def : public ::boost::msm::front::state_machine_def<vending_def> 
             //@}
             //@{
             /** @name Substates */
-            struct idle : state<> {};
+            struct idle : state<> {
+                using flag_list = mpl_vector<idle>;
+            };
             struct active : state<> {
+                using flag_list = mpl_vector<active>;
+                template < typename Event, typename FSM >
+                void
+                on_entry(Event const&, FSM&) {}
                 template < typename FSM >
                 void
-                on_enter(events::money&& money, FSM&)
+                on_entry(events::money const& money, FSM&)
                 {
                     balance += money.amount;
                 }
+                template < typename Event, typename FSM >
+                void
+                on_exit(Event const&, FSM&) {}
                 template < typename FSM >
                 void
-                on_exit(events::select_item&& item, FSM& fsm)
+                on_exit(events::select_item const& item, FSM& fsm)
                 {
                     // Subtract balance
                     auto& root = root_machine(fsm);
@@ -234,8 +275,25 @@ struct vending_def : public ::boost::msm::front::state_machine_def<vending_def> 
                 tr< active,     events::money,          active, none,       none                                >,
                 tr< active,     events::select_item,    idle,   dispense,   and_< goods_exist, enough_money >   >
             >{};
+            template < typename Event, typename FSM >
+            void
+            on_entry(Event const&, FSM& fsm)
+            {
+                enclosing = &fsm;
+            }
+            on*    enclosing;
         };
-        struct out_of_service : state<> {};
+        using serving = back_machine<serving_>;
+
+        struct out_of_service : state<> {
+            using flag_list = mpl_vector<out_of_service>;
+//            template < typename Event, typename FSM >
+//            void
+//            on_entry(Event const&, FSM&)
+//            {
+//                ::std::cerr << "Enter out_of_service state\n";
+//            }
+        };
         //@}
 
         using initial_state = serving;
@@ -252,7 +310,16 @@ struct vending_def : public ::boost::msm::front::state_machine_def<vending_def> 
             tr< maintenance,    events::end_maintenance,    serving,        none,   or_< is_empty, prices_correct > >
         >{};
 
+        template < typename Event >
+        void
+        on_entry(Event const&, vending_fsm& fsm)
+        {
+            enclosing = &fsm;
+        }
+
+        vending_fsm* enclosing;
     };
+    using on = back_machine<on_>;
 
     using initial_state = off;
     struct transition_table : mpl_vector <
@@ -295,7 +362,7 @@ struct vending_def : public ::boost::msm::front::state_machine_def<vending_def> 
     }
 
     void
-    add_goods(events::load_goods&& entry)
+    add_goods(events::load_goods const& entry)
     {
         auto f = goods.find(entry.p_no);
         if (f == goods.end()) {
@@ -372,6 +439,21 @@ struct vending_def : public ::boost::msm::front::state_machine_def<vending_def> 
 };
 
 using vending_machine = ::boost::msm::back::state_machine<vending_def>;
+
+inline vending_machine&
+root_machine(vending_machine& m)
+{
+    return m;
+}
+
+template< typename T >
+vending_machine&
+root_machine(T& state)
+{
+    return root_machine(*state.enclosing);
+}
+
+
 
 }  /* namespace vending_msm */
 

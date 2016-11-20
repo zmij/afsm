@@ -33,9 +33,14 @@ MSM_ConstructWithData(::benchmark::State& state)
 void
 MSM_ProcessSingleEvent(::benchmark::State& state)
 {
-    vending_machine vm;
+    vending_machine vm{ goods_storage{
+        { 0, { 10, 15.0f } },
+        { 1, { 100, 5.0f } }
+    }};
+    vm.start();
+    vm.process_event(events::power_on{});
     while (state.KeepRunning()) {
-        vm.process_event(events::power_on{});
+        vm.process_event(events::money{100});
     }
 }
 
@@ -43,6 +48,7 @@ void
 MSM_OnOffEmpty(::benchmark::State& state) // With a default transition
 {
     vending_machine vm;
+    vm.start();
     while(state.KeepRunning()) {
         vm.process_event(events::power_on{});
         vm.process_event(events::power_off{});
@@ -56,6 +62,7 @@ MSM_OnOffLoaded(::benchmark::State& state) // Without a default transition
         { 0, { 10, 15.0f } },
         { 1, { 100, 5.0f } }
     }};
+    vm.start();
     while(state.KeepRunning()) {
         vm.process_event(events::power_on{});
         vm.process_event(events::power_off{});
@@ -69,6 +76,7 @@ MSM_BuyItem(::benchmark::State& state)
         { 0, { 1000000000, 15.0f } },
         { 1, { 1000000000, 5.0f } }
     }};
+    vm.start();
     vm.process_event(events::power_on{});
     while(state.KeepRunning()) {
         vm.process_event(events::money{3});

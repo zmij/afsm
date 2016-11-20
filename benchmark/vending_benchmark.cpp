@@ -32,9 +32,13 @@ AFSM_ConstructWithData(::benchmark::State& state)
 void
 AFSM_ProcessSingleEvent(::benchmark::State& state)
 {
-    vending_machine vm;
+    vending_machine vm{ goods_storage{
+        { 0, { 10, 15.0f } },
+        { 1, { 100, 5.0f } }
+    }};
+    vm.process_event(events::power_on{});
     while (state.KeepRunning()) {
-        vm.process_event(events::power_on{});
+        vm.process_event(events::money{100});
     }
 }
 
