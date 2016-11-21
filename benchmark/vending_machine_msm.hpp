@@ -8,17 +8,21 @@
 #ifndef VENDING_MACHINE_MSM_HPP_
 #define VENDING_MACHINE_MSM_HPP_
 
+#ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunused-local-typedef"
 #pragma clang diagnostic ignored "-Wunused-parameter"
 #pragma clang diagnostic ignored "-Wunused-variable"
+#endif
 
 #include <boost/msm/back/state_machine.hpp>
 #include <boost/msm/front/state_machine_def.hpp>
 #include <boost/msm/front/functor_row.hpp>
 #include <boost/msm/front/euml/operator.hpp>
 
+#ifdef __clang__
 #pragma clang diagnostic pop
+#endif
 
 #include <pushkin/meta/callable.hpp>
 #include <map>
@@ -205,7 +209,7 @@ struct vending_def : public ::boost::msm::front::state_machine_def<vending_def> 
             {
                 enclosing = &fsm;
             }
-            on*    enclosing;
+            on*    enclosing = nullptr;
         };
         using maintenance = back_machine<maintenance_>;
 
@@ -283,7 +287,7 @@ struct vending_def : public ::boost::msm::front::state_machine_def<vending_def> 
             {
                 enclosing = &fsm;
             }
-            on*    enclosing;
+            on*    enclosing = nullptr;
         };
         using serving = back_machine<serving_>;
 
@@ -319,7 +323,7 @@ struct vending_def : public ::boost::msm::front::state_machine_def<vending_def> 
             enclosing = &fsm;
         }
 
-        vending_fsm* enclosing;
+        vending_fsm* enclosing = nullptr;
     };
     using on = back_machine<on_>;
 
