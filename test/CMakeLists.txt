@@ -4,7 +4,7 @@
 #    @date May 26, 2016
 
 cmake_minimum_required(VERSION 2.6)
-
+if (NOT TARGET test-afsm-base)
 if (NOT GTEST_INCLUDE_DIRS)
     find_package(GTest REQUIRED)
 endif()
@@ -46,3 +46,4 @@ add_test(
     NAME test-afsm-base
     COMMAND test-afsm-base ${TEST_ARGS}
 )
+endif()

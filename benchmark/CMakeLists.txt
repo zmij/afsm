@@ -5,6 +5,7 @@
 
 cmake_minimum_required(VERSION 2.6)
 
+if (NOT TARGET benchmark-afsm)
 enable_testing()
 
 if (NOT GBENCH_FOUND)
@@ -54,4 +55,5 @@ if (Boost_FOUND)
         NAME benchmark-msm
         COMMAND benchmark-msm
     )
+endif()
 endif()
