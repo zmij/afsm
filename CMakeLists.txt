@@ -24,7 +24,7 @@ else()
 endif()
 
 option(BUILD_TESTS "Build test programs" ON)
-option(BUILD_BENCHMARKS "Build benchmarks" ON)
+option(BUILD_BENCHMARKS "Build benchmarks" OFF)
 option(BUILD_EXAMPLES "Build example programs" OFF)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
