@@ -12,11 +12,56 @@ namespace afsm {
 namespace def {
 namespace tags {
 
+/**
+ * Tag for state class.
+ * For internal use only.
+ */
 struct state {};
+/**
+ * Tag for state machine class.
+ * For internal use only.
+ */
 struct state_machine{};
 
+/**
+ * Tag for marking states with history.
+ */
 struct has_history {};
+/**
+ * Tag for marking states having common base class.
+ * For internal use.
+ */
 struct has_common_base {};
+
+/**
+ * Tag for marking state having common base.
+ */
+template < typename T >
+struct common_base : T, has_common_base {
+    using common_base_type      = T;
+    using common_base_tag_type  = common_base<common_base_type>;
+};
+
+template <>
+struct common_base<void> {
+    using common_base_type      = void;
+    using common_base_tag_type  = common_base<common_base_type>;
+};
+
+/**
+ * Tag for marking state having common virtual base.
+ */
+template < typename T >
+struct virtual_common_base : virtual T, has_common_base {
+    using common_base_type      = T;
+    using common_base_tag_type  = virtual_common_base<common_base_type>;
+};
+
+template <>
+struct virtual_common_base<void> {
+    using common_base_type      = void;
+    using common_base_tag_type  = virtual_common_base<common_base_type>;
+};
 
 struct allow_empty_enter_exit {};
 struct mandatory_empty_enter_exit {};

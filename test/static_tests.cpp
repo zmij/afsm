@@ -28,7 +28,7 @@ static_assert( traits::is_state<stateB>::value, "" );
 static_assert( traits::is_state<stateC>::value, "" );
 static_assert( !traits::has_history<stateA>::value, "" );
 
-struct stateD : state< stateD, void, tags::has_history > {};
+struct stateD : state< stateD, tags::has_history > {};
 static_assert( traits::is_state<stateD>::value, "" );
 static_assert( traits::has_history<stateD>::value, "" );
 

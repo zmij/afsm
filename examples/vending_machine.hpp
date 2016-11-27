@@ -184,7 +184,7 @@ struct vending_def : ::afsm::def::state_machine<vending_def> {
             //@{
             /** @name Substates */
             struct idle : state<idle> {};
-            struct active : state<active> {
+            struct active : state<active, history> {
                 template < typename FSM >
                 void
                 on_enter(events::money&& money, FSM&)
