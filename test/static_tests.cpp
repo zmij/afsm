@@ -96,6 +96,13 @@ struct my_fsm : state_machine<my_fsm> {
 static_assert(traits::is_state<my_fsm>::value, "");
 static_assert(traits::is_state_machine<my_fsm>::value, "");
 
+struct ortho_fsm : state_machine<ortho_fsm> {
+    using orthogonal_regions = type_tuple<>;
+};
+
+static_assert(!traits::has_orthogonal_regions<my_fsm>::value, "");
+static_assert(traits::has_orthogonal_regions<ortho_fsm>::value, "");
+
 }  /* namespace test */
 }  /* namespace def */
 }  /* namespace afsm */

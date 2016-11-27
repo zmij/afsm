@@ -57,6 +57,10 @@ template < typename T >
 struct allow_empty_transition_functions
     : ::std::is_base_of< tags::allow_empty_enter_exit, T > {};
 
+template < typename T >
+struct has_orthogonal_regions
+    : ::std::integral_constant<bool, !::std::is_same< typename T::orthogonal_regions, void >::value> {};
+
 namespace detail {
 template < typename T, bool HasCommonBase >
 struct inner_states_def {

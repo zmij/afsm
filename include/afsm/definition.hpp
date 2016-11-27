@@ -201,6 +201,7 @@ struct state_machine : state< StateMachine, Tags... >, tags::state_machine {
     using transitions           = void;
     using deferred_events       = void;
     using activity              = void;
+    using orthogonal_regions    = void;
 
     template <typename SourceState, typename Event, typename TargetState,
             typename Action = none, typename Guard = none>
