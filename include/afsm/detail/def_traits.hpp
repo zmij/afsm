@@ -57,6 +57,39 @@ template < typename T >
 struct allow_empty_transition_functions
     : ::std::is_base_of< tags::allow_empty_enter_exit, T > {};
 
+namespace detail {
+template < typename T, bool HasCommonBase >
+struct inner_states_def {
+    using definition_type   = T;
+    using common_base_tag   = typename definition_type::common_base_tag_type;
+
+    template < typename U, typename ... Tags >
+    using state             = def::state<U, common_base_tag, Tags...>;
+    template < typename U, typename ... Tags >
+    using terminal_state    = def::terminal_state<U, common_base_tag, Tags...>;
+    template < typename U, typename ... Tags >
+    using state_machine     = def::state_machine<U, common_base_tag, Tags...>;
+};
+
+template < typename T >
+struct inner_states_def<T, false> {
+    using definition_type   = T;
+    using common_base_type  = void;
+
+    template < typename U, typename ... Tags >
+    using state             = def::state<U, Tags...>;
+    template < typename U, typename ... Tags >
+    using terminal_state    = def::terminal_state<U, Tags...>;
+    template < typename U, typename ... Tags >
+    using state_machine     = def::state_machine<U, Tags...>;
+};
+
+}  /* namespace detail */
+
+template < typename T >
+struct inner_states_definitions
+        : detail::inner_states_def<T, has_common_base<T>::value> {};
+
 }  /* namespace traits */
 }  /* namespace def */
 }  /* namespace afsm */
