@@ -246,6 +246,11 @@ struct inner_states< transition_table<T...> > {
     using type = typename transition_table<T...>::inner_states;
 };
 
+template < typename ... T >
+struct inner_states< ::psst::meta::type_tuple<T...> > {
+    using type = ::psst::meta::type_tuple<T...>;
+};
+
 template < typename T >
 struct has_transitions : ::std::false_type {};
 template < typename ... T >
