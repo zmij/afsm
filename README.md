@@ -16,6 +16,7 @@ The `afsm` library was inspired by [`::boost::msm`](http://www.boost.org/doc/lib
   * [Transition guards (conditions)](https://github.com/zmij/afsm/wiki/Transition-Guards)
   * [State history](https://github.com/zmij/afsm/wiki/History)
   * [Event deferring](https://github.com/zmij/afsm/wiki/Event-Deferring)
+  * [Orthogonal regions](https://github.com/zmij/afsm/wiki/Orthogonal-Regions)
 * Compile-time checks
 * Thread safety
 * Exception safety
@@ -28,7 +29,6 @@ The `afsm` library was inspired by [`::boost::msm`](http://www.boost.org/doc/lib
 ### Planned features
 
 * [Event priority](https://github.com/zmij/afsm/issues/7)
-* [Orthogonal regions](https://github.com/zmij/afsm/issues/6)
 * [Recursive state machine](https://github.com/zmij/afsm/issues/8)
 
 
