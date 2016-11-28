@@ -201,6 +201,7 @@ struct state_machine_def : state_def< StateMachine, Tags... >, tags::state_machi
     using transitions           = void;
     using deferred_events       = void;
     using activity              = void;
+    using orthogonal_regions    = void;
 
     template <typename SourceState, typename Event, typename TargetState,
             typename Action = none, typename Guard = none>
@@ -243,6 +244,11 @@ struct inner_states {
 template < typename ... T >
 struct inner_states< transition_table<T...> > {
     using type = typename transition_table<T...>::inner_states;
+};
+
+template < typename ... T >
+struct inner_states< ::psst::meta::type_tuple<T...> > {
+    using type = ::psst::meta::type_tuple<T...>;
 };
 
 template < typename T >
@@ -321,9 +327,13 @@ struct recursive_handled_events<void> {
 
 template < typename T >
 struct recursive_handled_events< state_machine<T> > {
-    using type = typename ::psst::meta::unique<
-                typename handled_events< typename T::internal_transitions >::type,
-                typename recursive_handled_events< typename T::transitions >::type
+    using type =
+            typename ::psst::meta::unique<
+                typename ::psst::meta::unique<
+                    typename handled_events< typename T::internal_transitions >::type,
+                    typename recursive_handled_events< typename T::transitions >::type
+                >::type,
+                typename recursive_handled_events< typename T::orthogonal_regions >::type
             >::type;
 };
 
@@ -403,7 +413,10 @@ struct contains_substate< T, SubState, true >
     : ::std::conditional<
         ::psst::meta::any_match<
             contains_predicate<SubState>::template type,
-            typename inner_states< typename T::transitions >::type >::value,
+            typename ::psst::meta::unique<
+                typename inner_states< typename T::transitions >::type,
+                typename inner_states< typename T::orthogonal_regions >::type
+            >::type >::value,
         ::std::true_type,
         ::std::false_type
     >::type {};
