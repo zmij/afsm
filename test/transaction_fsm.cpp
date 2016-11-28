@@ -386,7 +386,7 @@ struct connection_fsm_def : def::state_machine<connection_fsm_def,
         }
     };
 
-    struct transaction : inner_machine<transaction> {
+    struct transaction : state_machine<transaction> {
         using transaction_fsm = ::afsm::inner_state_machine<transaction, connection_fsm>;
 
         transaction()
@@ -433,7 +433,7 @@ struct connection_fsm_def : def::state_machine<connection_fsm_def,
             >;
         };
 
-        struct simple_query : inner_machine<simple_query> {
+        struct simple_query : state_machine<simple_query> {
             using simple_query_fsm = ::afsm::inner_state_machine<simple_query, transaction_fsm>;
             ::std::string
             name() const override
@@ -481,7 +481,7 @@ struct connection_fsm_def : def::state_machine<connection_fsm_def,
             >;
         };
 
-        struct extended_query : inner_machine<extended_query> {
+        struct extended_query : state_machine<extended_query> {
             using extended_query_fsm = ::afsm::inner_state_machine<extended_query, transaction_fsm>;
             ::std::string
             name() const override

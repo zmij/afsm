@@ -158,9 +158,9 @@ struct transition_table {
 };
 
 template < typename StateType, typename ... Tags >
-struct state : tags::state, Tags... {
+struct state_def : tags::state, Tags... {
     using state_type            = StateType;
-    using base_state_type       = state<state_type, Tags...>;
+    using base_state_type       = state_def<state_type, Tags...>;
     using internal_transitions  = void;
     using transitions           = void;
     using deferred_events       = void;
@@ -193,9 +193,9 @@ struct terminal_state : tags::state, Tags... {
 };
 
 template < typename StateMachine, typename ... Tags >
-struct state_machine : state< StateMachine, Tags... >, tags::state_machine {
+struct state_machine_def : state_def< StateMachine, Tags... >, tags::state_machine {
     using state_machine_type    = StateMachine;
-    using base_state_type       = state_machine< state_machine_type, Tags... >;
+    using base_state_type       = state_machine_def< state_machine_type, Tags... >;
     using initial_state         = void;
     using internal_transitions  = void;
     using transitions           = void;
@@ -214,7 +214,7 @@ struct state_machine : state< StateMachine, Tags... >, tags::state_machine {
     template < typename T, typename ... TTags >
     using terminal_state = typename inner_states_definition::template terminal_state<T, TTags ...>;
     template < typename T, typename ... TTags >
-    using inner_machine = typename inner_states_definition::template state_machine<T, TTags...>;
+    using state_machine = typename inner_states_definition::template state_machine<T, TTags...>;
 
     using none = afsm::none;
     template < typename Predicate >
