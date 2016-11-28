@@ -83,7 +83,7 @@ struct human_def : ::afsm::def::state_machine< human_def, common_base_tag > {
         >;
     };
 
-    struct awake : inner_machine<awake> {
+    struct awake : state_machine<awake> {
         using fsm_type = ::afsm::inner_state_machine< awake, human_def::fsm_type >;
 
         template < typename Event >

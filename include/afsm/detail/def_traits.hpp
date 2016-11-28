@@ -64,7 +64,7 @@ struct inner_states_def {
     using common_base_tag   = typename definition_type::common_base_tag_type;
 
     template < typename U, typename ... Tags >
-    using state             = def::state<U, common_base_tag, Tags...>;
+    using state             = def::state_def<U, common_base_tag, Tags...>;
     template < typename U, typename ... Tags >
     using terminal_state    = def::terminal_state<U, common_base_tag, Tags...>;
     template < typename U, typename ... Tags >
@@ -77,7 +77,7 @@ struct inner_states_def<T, false> {
     using common_base_type  = void;
 
     template < typename U, typename ... Tags >
-    using state             = def::state<U, Tags...>;
+    using state             = def::state_def<U, Tags...>;
     template < typename U, typename ... Tags >
     using terminal_state    = def::terminal_state<U, Tags...>;
     template < typename U, typename ... Tags >
