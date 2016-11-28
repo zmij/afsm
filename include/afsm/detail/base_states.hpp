@@ -11,6 +11,7 @@
 #include <afsm/definition.hpp>
 #include <afsm/detail/helpers.hpp>
 #include <afsm/detail/transitions.hpp>
+#include <afsm/detail/orthogonal_regions.hpp>
 
 #include <pushkin/meta/functions.hpp>
 
@@ -205,7 +206,7 @@ public:
     using transition_tuple  = afsm::transitions::state_transition_table<
             front_machine_type, state_machine_definition_type, size_type >;
     using inner_states_tuple = typename transition_tuple::inner_states_tuple;
-
+public:
     state_machine_base_impl(front_machine_type* fsm)
         : state_type{},
           transitions_{*fsm}
@@ -450,16 +451,233 @@ protected:
 };
 
 template < typename T, typename Mutex, typename FrontMachine >
-struct state_machine_base : ::std::conditional<
-        def::traits::has_common_base<T>::value,
-        state_machine_base_with_base< T, Mutex, FrontMachine >,
-        state_machine_base_impl< T, Mutex, FrontMachine >
-    >::type {
+class orthogonal_state_machine : public state_base<T> {
 public:
-    using state_machine_impl_type = typename ::std::conditional<
+    using state_machine_definition_type = T;
+    using state_type                    = state_base<T>;
+    using machine_type                  = orthogonal_state_machine<T, Mutex, FrontMachine>;
+    using front_machine_type            = FrontMachine;
+    static_assert(def::traits::is_state_machine<T>::value,
+            "Front state machine can be created only with a descendant of afsm::def::state_machine");
+    using orthogonal_regions            = typename state_machine_definition_type::orthogonal_regions;
+    using handled_events                = typename def::detail::recursive_handled_events< orthogonal_regions >::type;
+    using regions_def                   = typename def::detail::inner_states< orthogonal_regions >::type;
+
+    static constexpr ::std::size_t region_count = regions_def::size;
+
+    using mutex_type                    = Mutex;
+    using size_type                     = typename detail::size_type<mutex_type>::type;
+    using regions_table                 = afsm::orthogonal::regions_table<front_machine_type, state_machine_definition_type, size_type>;
+    using regions_tuple                 = typename regions_table::regions_tuple;
+public:
+    orthogonal_state_machine(front_machine_type* fsm)
+        : state_type{},
+          regions_{*fsm}
+    {}
+    orthogonal_state_machine(front_machine_type* fsm, orthogonal_state_machine const& rhs)
+        : state_type{static_cast<state_type const&>(rhs)},
+          regions_{*fsm, rhs.regions_}
+    {}
+    orthogonal_state_machine(front_machine_type* fsm, orthogonal_state_machine&& rhs)
+        : state_type{static_cast<state_type&&>(rhs)},
+          regions_{*fsm, rhs.regions_}
+    {}
+
+    orthogonal_state_machine(orthogonal_state_machine const& rhs) = delete;
+    orthogonal_state_machine(orthogonal_state_machine&& rhs) = delete;
+
+    void
+    swap(orthogonal_state_machine& rhs) noexcept
+    {
+        using ::std::swap;
+        static_cast<state_type&>(*this).swap(rhs);
+        regions_.swap(rhs.regions_);
+    }
+
+    orthogonal_state_machine&
+    operator = (orthogonal_state_machine const& rhs) = delete;
+    orthogonal_state_machine&
+    operator = (orthogonal_state_machine&& rhs) = delete;
+
+    template < typename StateDef >
+    bool
+    is_in_state() const
+    {
+        return is_in_state<StateDef>(state_containment_type<StateDef, regions_def>{});
+    }
+
+    template < ::std::size_t N>
+    typename ::std::tuple_element< N, regions_tuple >::type&
+    get_state()
+    { return regions_.template get_state<N>(); }
+    template < ::std::size_t N>
+    typename ::std::tuple_element< N, regions_tuple >::type const&
+    get_state() const
+    { return regions_.template get_state<N>(); }
+
+    template < typename StateDef >
+    typename ::std::tuple_element< ::psst::meta::index_of<StateDef, regions_def>::value,
+            regions_tuple >::type&
+    get_state()
+    {
+        using index_of_state = ::psst::meta::index_of<StateDef, regions_def>;
+        static_assert(index_of_state::found,
+                "Type is not a definition of inner state");
+        return regions_.template get_state< index_of_state::value >();
+    }
+    template < typename StateDef >
+    typename ::std::tuple_element< ::psst::meta::index_of<StateDef, regions_def>::value,
+            regions_tuple >::type const&
+    get_state() const
+    {
+        using index_of_state = ::psst::meta::index_of<StateDef, regions_def>;
+        static_assert(index_of_state::found,
+                "Type is not a definition of inner state");
+        return regions_.template get_state< index_of_state::value >();
+    }
+
+    template < typename Event >
+    void
+    state_enter(Event&& event)
+    {
+        regions_.enter(::std::forward<Event>(event));
+    }
+    template < typename Event >
+    void
+    state_exit(Event&& event)
+    {
+        regions_.exit(::std::forward<Event>(event));
+    }
+protected:
+    template < typename ... Args >
+    explicit
+    orthogonal_state_machine(front_machine_type* fsm, Args&& ... args)
+        : state_type(::std::forward<Args>(args)...),
+          regions_{*fsm}
+    {}
+
+    template < typename FSM, typename Event >
+    actions::event_process_result
+    process_event_impl(FSM& enclosing_fsm, Event&& event,
+            detail::process_type< actions::event_process_result::process > const&)
+    {
+        using event_type = typename ::std::decay<Event>::type;
+        using can_handle_in_state = ::std::integral_constant<bool,
+                actions::is_in_state_action<state_type, event_type>::value>;
+        auto res = regions_.process_event(::std::forward<Event>(event));
+        if (res == actions::event_process_result::refuse) {
+        // Internal transitions
+            res = process_event_impl(enclosing_fsm,
+                ::std::forward<Event>(event), can_handle_in_state{});
+        }
+        return res;
+    }
+    template < typename FSM, typename Event >
+    constexpr actions::event_process_result
+    process_event_impl(FSM&, Event&&,
+        detail::process_type<actions::event_process_result::defer> const&) const
+    {
+        return actions::event_process_result::defer;
+    }
+    template < typename FSM, typename Event >
+    constexpr actions::event_process_result
+    process_event_impl(FSM&, Event&&,
+        detail::process_type<actions::event_process_result::refuse> const&) const
+    {
+        return actions::event_process_result::refuse;
+    }
+    //@{
+    /** @name Dispatch of in-state events */
+    template < typename FSM, typename Event >
+    actions::event_process_result
+    process_event_impl(FSM& enclosing_fsm, Event&& event,
+        ::std::true_type const& /* Is in-state event */)
+    {
+        return actions::handle_in_state_event(::std::forward<Event>(event), enclosing_fsm, *this);
+    }
+    template < typename FSM, typename Event >
+    actions::event_process_result
+    process_event_impl(FSM&, Event&&,
+            ::std::false_type const& /* Is not an in-state event */ )
+    {
+        return actions::event_process_result::refuse;
+    }
+    //@}
+    /**
+     * Constant false for states not contained by this state machine
+     * @param
+     * @return
+     */
+    template < typename StateDef >
+    bool
+    is_in_state(containment_type< state_containment::none > const&) const
+    {
+        return false;
+    }
+    /**
+     * Is in substate of an inner state
+     * @param
+     * @return
+     */
+    template < typename StateDef >
+    bool
+    is_in_state(containment_type< state_containment::substate > const&) const
+    {
+        using immediate_states =
+            typename ::psst::meta::find_if<
+                def::contains_substate_predicate<StateDef>::template type,
+                regions_def >::type;
+        return is_in_substate<StateDef>(immediate_states{});
+    }
+
+    template < typename StateDef, typename ... ImmediateSubStates >
+    bool
+    is_in_substate( ::psst::meta::type_tuple<ImmediateSubStates...> const& ) const
+    {
+        return ::psst::meta::any_of({
+                (this->template is_in_state<ImmediateSubStates>() &&
+                 this->template get_state< ImmediateSubStates >().
+                            template is_in_state<StateDef>()) ...
+        });
+    }
+    /**
+     * In in an immediately inner state. All immediate states are regions
+     * and are always active.
+     * @param Template tag switch
+     * @return
+     */
+    template < typename StateDef >
+    bool
+    is_in_state(containment_type< state_containment::immediate > const&) const
+    {
+        return true;
+    }
+protected:
+    regions_table       regions_;
+};
+
+template < typename T, typename Mutex, typename FrontMachine >
+constexpr ::std::size_t orthogonal_state_machine<T, Mutex, FrontMachine>::region_count;
+
+template < typename T, typename Mutex, typename FrontMachine >
+struct state_machine_base : ::std::conditional<
+        def::traits::has_orthogonal_regions<T>::value,
+        orthogonal_state_machine<T, Mutex, FrontMachine>, // TODO Check common base
+        typename ::std::conditional<
             def::traits::has_common_base<T>::value,
             state_machine_base_with_base< T, Mutex, FrontMachine >,
             state_machine_base_impl< T, Mutex, FrontMachine >
+        >::type
+    >::type {
+public:
+    using state_machine_impl_type = typename ::std::conditional<
+            def::traits::has_orthogonal_regions<T>::value,
+            orthogonal_state_machine<T, Mutex, FrontMachine>,
+            typename ::std::conditional<
+                def::traits::has_common_base<T>::value,
+                state_machine_base_with_base< T, Mutex, FrontMachine >,
+                state_machine_base_impl< T, Mutex, FrontMachine >
+            >::type
         >::type;
     state_machine_base(FrontMachine* fsm)
         : state_machine_impl_type{fsm} {}

@@ -303,7 +303,7 @@ private:
             lock_guard lock{mutex_};
             ++queue_size_;
             observer_wrapper::enqueue_event(*this, ::std::forward<Event>(event));
-            Event evt = event;
+            Event evt{::std::forward<Event>(event)};
             queued_events_.emplace_back([&, evt]() mutable {
                 return process_event_dispatch(::std::move(evt));
             });
@@ -344,7 +344,7 @@ private:
     {
         lock_guard lock{deferred_mutex_};
         observer_wrapper::defer_event(*this, ::std::forward<Event>(event));
-        Event evt = event;
+        Event evt{::std::forward<Event>(event)};
         deferred_events_.emplace_back([&, evt]() mutable {
             return process_event_dispatch(::std::move(evt));
         });

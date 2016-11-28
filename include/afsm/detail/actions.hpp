@@ -13,13 +13,43 @@
 #include <array>
 
 namespace afsm {
+
+namespace detail {
+
+template < ::std::size_t StateIndex >
+struct set_enclosing_fsm {
+    static constexpr ::std::size_t state_index = StateIndex;
+
+    template < typename FSM, typename ... T >
+    static void
+    set(FSM& fsm, ::std::tuple<T...>& states)
+    {
+        set_enclosing_fsm<StateIndex - 1>::set(fsm, states);
+        ::std::get<state_index>(states).enclosing_fsm(fsm);
+    }
+};
+
+template <>
+struct set_enclosing_fsm<0> {
+    static constexpr ::std::size_t state_index = 0;
+
+    template < typename FSM, typename ... T >
+    static void
+    set(FSM& fsm, ::std::tuple<T...>& states)
+    {
+        ::std::get<state_index>(states).enclosing_fsm(fsm);
+    }
+};
+
+}  /* namespace detail */
+
 namespace actions {
 
 enum class event_process_result {
     refuse,
-    process,
-    process_in_state,    /**< Process with in-state transition */
     defer,
+    process_in_state,    /**< Process with in-state transition */
+    process,
 };
 
 /**

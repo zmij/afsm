@@ -11,13 +11,18 @@
 namespace afsm {
 namespace def {
 
-template < typename T, typename CommonBase = void, typename ... Tags >
-struct state;
-template < typename T, typename CommonBase = void  >
+template < typename T, typename ... Tags >
+struct state_def;
+template < typename StateType, typename ... Tags >
+using state = state_def< StateType, Tags... >;
+
+template < typename T, typename ... Tags  >
 struct terminal_state;
 
-template < typename T, typename CommonBase = void, typename ... Tags >
-struct state_machine;
+template < typename T, typename ... Tags >
+struct state_machine_def;
+template < typename T, typename ... Tags >
+using state_machine = state_machine_def<T, Tags...>;
 
 template < typename SourceState, typename Event, typename TargetState,
         typename Action = none, typename Guard = none >

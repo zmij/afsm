@@ -22,6 +22,7 @@ set(
     static_tests.cpp
     state_machine_with_internal_transitions.cpp
     fsm_parts_test.cpp
+    orthogonal_states_test.cpp
     transaction_fsm.cpp
     common_base_test.cpp
     vending_machine_test.cpp

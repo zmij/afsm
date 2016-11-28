@@ -158,9 +158,9 @@ struct transition_table {
 };
 
 template < typename StateType, typename ... Tags >
-struct state< StateType, void, Tags ... > : tags::state, Tags... {
+struct state_def : tags::state, Tags... {
     using state_type            = StateType;
-    using base_state_type       = state<state_type, void, Tags...>;
+    using base_state_type       = state_def<state_type, Tags...>;
     using internal_transitions  = void;
     using transitions           = void;
     using deferred_events       = void;
@@ -182,53 +182,39 @@ struct state< StateType, void, Tags ... > : tags::state, Tags... {
     using type_tuple = ::psst::meta::type_tuple<T...>;
 };
 
-template < typename StateType, typename CommonBase, typename ... Tags >
-struct state : state<StateType, void, Tags...>, CommonBase, tags::has_common_base {
+template < typename StateType, typename ... Tags >
+struct terminal_state : tags::state, Tags... {
     using state_type            = StateType;
-    using base_state_type       = state<state_type, CommonBase, Tags...>;
-    using internal_transitions  = void;
-    using transitions           = void;
-    using deferred_events       = void;
-    using activity              = void;
-    using common_base           = CommonBase;
-};
-
-template < typename StateType >
-struct terminal_state< StateType, void > : tags::state {
-    using state_type            = StateType;
-    using base_state_type       = terminal_state<state_type, void>;
+    using base_state_type       = terminal_state<state_type, Tags ...>;
     using internal_transitions  = void;
     using transitions           = void;
     using deferred_events       = void;
     using activity              = void;
 };
 
-template < typename StateType, typename CommonBase >
-struct terminal_state : terminal_state<StateType, void>, CommonBase {
-    using state_type            = StateType;
-    using base_state_type       = terminal_state<state_type, void>;
-};
-
-template < typename StateMachine, typename CommonBase, typename ... Tags >
-struct state_machine : state< StateMachine, CommonBase, Tags... >,
-        tags::state_machine {
+template < typename StateMachine, typename ... Tags >
+struct state_machine_def : state_def< StateMachine, Tags... >, tags::state_machine {
     using state_machine_type    = StateMachine;
-    using base_state_type       = state_machine< state_machine_type, CommonBase, Tags... >;
+    using base_state_type       = state_machine_def< state_machine_type, Tags... >;
     using initial_state         = void;
     using internal_transitions  = void;
     using transitions           = void;
     using deferred_events       = void;
     using activity              = void;
+    using orthogonal_regions    = void;
 
     template <typename SourceState, typename Event, typename TargetState,
             typename Action = none, typename Guard = none>
     using tr = transition<SourceState, Event, TargetState, Action, Guard>;
 
-    template < typename T, typename Base = CommonBase, typename ... TTags>
-    using state = def::state<T, Base, TTags...>;
+    using inner_states_definition = traits::inner_states_definitions<state<StateMachine, Tags...>>;
 
-    template < typename T, typename Base = CommonBase >
-    using terminal_state = def::terminal_state<T, Base>;
+    template < typename T, typename ... TTags>
+    using state = typename inner_states_definition::template state<T, TTags...>;
+    template < typename T, typename ... TTags >
+    using terminal_state = typename inner_states_definition::template terminal_state<T, TTags ...>;
+    template < typename T, typename ... TTags >
+    using state_machine = typename inner_states_definition::template state_machine<T, TTags...>;
 
     using none = afsm::none;
     template < typename Predicate >
@@ -258,6 +244,11 @@ struct inner_states {
 template < typename ... T >
 struct inner_states< transition_table<T...> > {
     using type = typename transition_table<T...>::inner_states;
+};
+
+template < typename ... T >
+struct inner_states< ::psst::meta::type_tuple<T...> > {
+    using type = ::psst::meta::type_tuple<T...>;
 };
 
 template < typename T >
@@ -336,9 +327,13 @@ struct recursive_handled_events<void> {
 
 template < typename T >
 struct recursive_handled_events< state_machine<T> > {
-    using type = typename ::psst::meta::unique<
-                typename handled_events< typename T::internal_transitions >::type,
-                typename recursive_handled_events< typename T::transitions >::type
+    using type =
+            typename ::psst::meta::unique<
+                typename ::psst::meta::unique<
+                    typename handled_events< typename T::internal_transitions >::type,
+                    typename recursive_handled_events< typename T::transitions >::type
+                >::type,
+                typename recursive_handled_events< typename T::orthogonal_regions >::type
             >::type;
 };
 
@@ -418,7 +413,10 @@ struct contains_substate< T, SubState, true >
     : ::std::conditional<
         ::psst::meta::any_match<
             contains_predicate<SubState>::template type,
-            typename inner_states< typename T::transitions >::type >::value,
+            typename ::psst::meta::unique<
+                typename inner_states< typename T::transitions >::type,
+                typename inner_states< typename T::orthogonal_regions >::type
+            >::type >::value,
         ::std::true_type,
         ::std::false_type
     >::type {};

@@ -325,7 +325,8 @@ struct connection_observer : ::afsm::detail::null_observer {
     }
 };
 
-struct connection_fsm_def : def::state_machine<connection_fsm_def, state_name> {
+struct connection_fsm_def : def::state_machine<connection_fsm_def,
+                                def::tags::common_base<state_name>> {
     using connection_fsm =
             ::afsm::state_machine<
                  connection_fsm_def, ::std::mutex, connection_observer>;
@@ -385,7 +386,7 @@ struct connection_fsm_def : def::state_machine<connection_fsm_def, state_name> {
         }
     };
 
-    struct transaction : state_machine<transaction, state_name> {
+    struct transaction : state_machine<transaction> {
         using transaction_fsm = ::afsm::inner_state_machine<transaction, connection_fsm>;
 
         transaction()
@@ -432,7 +433,7 @@ struct connection_fsm_def : def::state_machine<connection_fsm_def, state_name> {
             >;
         };
 
-        struct simple_query : state_machine<simple_query, state_name> {
+        struct simple_query : state_machine<simple_query> {
             using simple_query_fsm = ::afsm::inner_state_machine<simple_query, transaction_fsm>;
             ::std::string
             name() const override
@@ -480,7 +481,7 @@ struct connection_fsm_def : def::state_machine<connection_fsm_def, state_name> {
             >;
         };
 
-        struct extended_query : state_machine<extended_query, state_name> {
+        struct extended_query : state_machine<extended_query> {
             using extended_query_fsm = ::afsm::inner_state_machine<extended_query, transaction_fsm>;
             ::std::string
             name() const override

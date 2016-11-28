@@ -28,7 +28,7 @@ static_assert( traits::is_state<stateB>::value, "" );
 static_assert( traits::is_state<stateC>::value, "" );
 static_assert( !traits::has_history<stateA>::value, "" );
 
-struct stateD : state< stateD, void, tags::has_history > {};
+struct stateD : state< stateD, tags::has_history > {};
 static_assert( traits::is_state<stateD>::value, "" );
 static_assert( traits::has_history<stateD>::value, "" );
 
@@ -95,6 +95,17 @@ struct my_fsm : state_machine<my_fsm> {
 
 static_assert(traits::is_state<my_fsm>::value, "");
 static_assert(traits::is_state_machine<my_fsm>::value, "");
+static_assert(!traits::has_orthogonal_regions<my_fsm>::value, "");
+
+struct ortho_fsm : state_machine<ortho_fsm> {
+    struct region_a : state<region_a> {};
+    struct region_b : state<region_b> {};
+    using orthogonal_regions = type_tuple<region_a, region_b>;
+};
+
+static_assert(traits::is_state<ortho_fsm>::value, "");
+static_assert(traits::is_state_machine<ortho_fsm>::value, "");
+static_assert(traits::has_orthogonal_regions<ortho_fsm>::value, "");
 
 }  /* namespace test */
 }  /* namespace def */
