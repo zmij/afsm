@@ -327,9 +327,13 @@ struct recursive_handled_events<void> {
 
 template < typename T >
 struct recursive_handled_events< state_machine<T> > {
-    using type = typename ::psst::meta::unique<
-                typename handled_events< typename T::internal_transitions >::type,
-                typename recursive_handled_events< typename T::transitions >::type
+    using type =
+            typename ::psst::meta::unique<
+                typename ::psst::meta::unique<
+                    typename handled_events< typename T::internal_transitions >::type,
+                    typename recursive_handled_events< typename T::transitions >::type
+                >::type,
+                typename recursive_handled_events< typename T::orthogonal_regions >::type
             >::type;
 };
 
@@ -409,7 +413,10 @@ struct contains_substate< T, SubState, true >
     : ::std::conditional<
         ::psst::meta::any_match<
             contains_predicate<SubState>::template type,
-            typename inner_states< typename T::transitions >::type >::value,
+            typename ::psst::meta::unique<
+                typename inner_states< typename T::transitions >::type,
+                typename inner_states< typename T::orthogonal_regions >::type
+            >::type >::value,
         ::std::true_type,
         ::std::false_type
     >::type {};

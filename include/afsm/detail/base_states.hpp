@@ -468,7 +468,7 @@ public:
     using mutex_type                    = Mutex;
     using size_type                     = typename detail::size_type<mutex_type>::type;
     using regions_table                 = afsm::orthogonal::regions_table<front_machine_type, state_machine_definition_type, size_type>;
-    using inner_states_tuple            = typename regions_table::regions_tuple;
+    using regions_tuple                 = typename regions_table::regions_tuple;
 public:
     orthogonal_state_machine(front_machine_type* fsm)
         : state_type{},
@@ -503,10 +503,38 @@ public:
     bool
     is_in_state() const
     {
-        // TODO Implement me
-        return false;
+        return is_in_state<StateDef>(state_containment_type<StateDef, regions_def>{});
     }
-    // TODO Implement get_state function templates
+
+    template < ::std::size_t N>
+    typename ::std::tuple_element< N, regions_tuple >::type&
+    get_state()
+    { return regions_.template get_state<N>(); }
+    template < ::std::size_t N>
+    typename ::std::tuple_element< N, regions_tuple >::type const&
+    get_state() const
+    { return regions_.template get_state<N>(); }
+
+    template < typename StateDef >
+    typename ::std::tuple_element< ::psst::meta::index_of<StateDef, regions_def>::value,
+            regions_tuple >::type&
+    get_state()
+    {
+        using index_of_state = ::psst::meta::index_of<StateDef, regions_def>;
+        static_assert(index_of_state::found,
+                "Type is not a definition of inner state");
+        return regions_.template get_state< index_of_state::value >();
+    }
+    template < typename StateDef >
+    typename ::std::tuple_element< ::psst::meta::index_of<StateDef, regions_def>::value,
+            regions_tuple >::type const&
+    get_state() const
+    {
+        using index_of_state = ::psst::meta::index_of<StateDef, regions_def>;
+        static_assert(index_of_state::found,
+                "Type is not a definition of inner state");
+        return regions_.template get_state< index_of_state::value >();
+    }
 
     template < typename Event >
     void
@@ -575,6 +603,55 @@ protected:
         return actions::event_process_result::refuse;
     }
     //@}
+    /**
+     * Constant false for states not contained by this state machine
+     * @param
+     * @return
+     */
+    template < typename StateDef >
+    bool
+    is_in_state(containment_type< state_containment::none > const&) const
+    {
+        return false;
+    }
+    /**
+     * Is in substate of an inner state
+     * @param
+     * @return
+     */
+    template < typename StateDef >
+    bool
+    is_in_state(containment_type< state_containment::substate > const&) const
+    {
+        using immediate_states =
+            typename ::psst::meta::find_if<
+                def::contains_substate_predicate<StateDef>::template type,
+                regions_def >::type;
+        return is_in_substate<StateDef>(immediate_states{});
+    }
+
+    template < typename StateDef, typename ... ImmediateSubStates >
+    bool
+    is_in_substate( ::psst::meta::type_tuple<ImmediateSubStates...> const& ) const
+    {
+        return ::psst::meta::any_of({
+                (this->template is_in_state<ImmediateSubStates>() &&
+                 this->template get_state< ImmediateSubStates >().
+                            template is_in_state<StateDef>()) ...
+        });
+    }
+    /**
+     * In in an immediately inner state. All immediate states are regions
+     * and are always active.
+     * @param Template tag switch
+     * @return
+     */
+    template < typename StateDef >
+    bool
+    is_in_state(containment_type< state_containment::immediate > const&) const
+    {
+        return true;
+    }
 protected:
     regions_table       regions_;
 };

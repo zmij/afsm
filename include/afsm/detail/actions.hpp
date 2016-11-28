@@ -47,9 +47,9 @@ namespace actions {
 
 enum class event_process_result {
     refuse,
-    process,
-    process_in_state,    /**< Process with in-state transition */
     defer,
+    process_in_state,    /**< Process with in-state transition */
+    process,
 };
 
 /**
