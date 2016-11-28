@@ -52,7 +52,7 @@ add_subdirectory(cmake)
 
 if (BUILD_TESTS)
     enable_testing()
-    if (NOT PSST_ANSI_COLORS_INCLUDE_DIR)
+    if (NOT PSST_ANSI_COLORS_FOUND)
     add_subdirectory(lib/ansi-colors)
     endif()
 
