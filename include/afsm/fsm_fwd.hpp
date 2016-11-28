@@ -25,6 +25,9 @@ class inner_state_machine;
 template < typename T, typename Mutex = none, typename Observer = none,
         template<typename> class ObserverWrapper = detail::observer_wrapper >
 class state_machine;
+template < typename T, typename Mutex = none, typename Observer = none,
+        template<typename> class ObserverWrapper = detail::observer_wrapper >
+class priority_state_machine;
 
 }  /* namespace afsm */
 

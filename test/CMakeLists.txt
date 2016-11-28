@@ -24,6 +24,7 @@ set(
     fsm_parts_test.cpp
     orthogonal_states_test.cpp
     transaction_fsm.cpp
+    transaction_priority_fsm.cpp
     common_base_test.cpp
     vending_machine_test.cpp
 )
