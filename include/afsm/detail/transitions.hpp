@@ -141,7 +141,7 @@ struct state_exit_impl {
     void
     operator()(State& state, Event const& event, FSM& fsm) const
     {
-        state.state_exit(event);
+        state.state_exit(event, fsm);
         state.on_exit(event, fsm);
     }
 };
@@ -149,9 +149,9 @@ struct state_exit_impl {
 template < typename FSM, typename State, typename Event >
 struct state_exit_impl< FSM, State, Event, false > {
     void
-    operator()(State& state, Event const& event, FSM&) const
+    operator()(State& state, Event const& event, FSM& fsm) const
     {
-        state.state_exit(event);
+        state.state_exit(event, fsm);
     }
 };
 
@@ -167,7 +167,7 @@ struct state_enter_impl {
     operator()(State& state, Event&& event, FSM& fsm) const
     {
         state.on_enter(::std::forward<Event>(event), fsm);
-        state.state_enter(::std::forward<Event>(event));
+        state.state_enter(::std::forward<Event>(event), fsm);
     }
 };
 
@@ -175,9 +175,9 @@ template < typename FSM, typename State >
 struct state_enter_impl< FSM, State, false > {
     template < typename Event >
     void
-    operator()(State& state, Event&& event, FSM&) const
+    operator()(State& state, Event&& event, FSM& fsm) const
     {
-        state.state_enter(::std::forward<Event>(event));
+        state.state_enter(::std::forward<Event>(event), fsm);
     }
 };
 
@@ -496,7 +496,6 @@ public:
         ttable[current_state()](*this, none{});
     }
 
-    // TODO Change signature to Event, FSM
     template < typename Event >
     void
     enter(Event&& event)
@@ -508,7 +507,6 @@ public:
         initial_enter{}(initial, ::std::forward<Event>(event), *fsm_);
         check_default_transition();
     }
-    // TODO Change signature to Event, FSM
     template < typename Event >
     void
     exit(Event&& event)
@@ -739,14 +737,12 @@ public:
         return top().process_event(::std::forward<Event>(event));
     }
 
-    // TODO Change signature to Event, FSM
     template < typename Event >
     void
     enter(Event&& event)
     {
         top().enter(::std::forward<Event>(event));
     }
-    // TODO Change signature to Event, FSM
     template < typename Event >
     void
     exit(Event&& event)

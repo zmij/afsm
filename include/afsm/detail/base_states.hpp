@@ -105,12 +105,12 @@ struct state_base_impl : T {
         using ::std::swap;
         swap(static_cast<T&>(*this), static_cast<T&>(rhs));
     }
-    template < typename Event >
+    template < typename Event, typename FSM >
     void
-    state_enter(Event&&) {}
-    template < typename Event >
+    state_enter(Event&&, FSM&) {}
+    template < typename Event, typename FSM >
     void
-    state_exit(Event&&) {}
+    state_exit(Event&&, FSM&) {}
 protected:
     template< typename ... Args >
     state_base_impl(Args&& ... args)
@@ -152,14 +152,12 @@ struct state_base_impl<T, true> : T {
         swap(static_cast<T&>(*this), static_cast<T&>(rhs));
     }
 
-    // TODO Change signature to Event, FSM
-    template < typename Event >
+    template < typename Event, typename FSM >
     void
-    state_enter(Event&&) {}
-    // TODO Change signature to Event, FSM
-    template < typename Event >
+    state_enter(Event&&, FSM&) {}
+    template < typename Event, typename FSM >
     void
-    state_exit(Event&&) {}
+    state_exit(Event&&, FSM&) {}
 protected:
     template< typename ... Args >
     state_base_impl(Args&& ... args)
@@ -170,23 +168,21 @@ template < typename T >
 struct pushdown_state : state_base_impl<T, false> {
     using pushdown_machine_type = typename T::pushdown_machine_type;
 
-    // FIXME Move to state_enter member
     template < typename Event, typename FSM >
     void
-    on_enter(Event&& event, FSM& fsm)
+    state_enter(Event&& event, FSM& fsm)
     {
         root_machine(fsm).template get_state< pushdown_machine_type >().pushdown(::std::forward<Event>(event));
     }
 };
 
 template < typename T >
-struct popup_state : state_base_impl<T, true> {
+struct popup_state : state_base_impl<T, true> { // TODO Check if the state is terminal by tags
     using pushdown_machine_type = typename T::pushdown_machine_type;
 
-    // FIXME Move to state_enter member
     template < typename Event, typename FSM >
     void
-    on_enter(Event&& event, FSM& fsm)
+    state_enter(Event&& event, FSM& fsm)
     {
         root_machine(fsm).template get_state< pushdown_machine_type >().popup(::std::forward<Event>(event));
     }
@@ -369,17 +365,15 @@ public:
     current_state() const
     { return transitions_.current_state(); }
 
-    // TODO Change signature to Event, FSM
-    template < typename Event >
+    template < typename Event, typename FSM >
     void
-    state_enter(Event&& event)
+    state_enter(Event&& event, FSM&)
     {
         transitions_.enter( ::std::forward<Event>(event) );
     }
-    // TODO Change signature to Event, FSM
-    template < typename Event >
+    template < typename Event, typename FSM >
     void
-    state_exit(Event&& event)
+    state_exit(Event&& event, FSM&)
     {
         transitions_.exit( ::std::forward<Event>(event) );
     }
@@ -690,17 +684,15 @@ public:
         return static_cast<front_machine_type const&>(*this);
     }
 
-    // TODO Change signature to Event, FSM
-    template < typename Event >
+    template < typename Event, typename FSM >
     void
-    state_enter(Event&& event)
+    state_enter(Event&& event, FSM&)
     {
         regions_.enter(::std::forward<Event>(event));
     }
-    // TODO Change signature to Event, FSM
-    template < typename Event >
+    template < typename Event, typename FSM >
     void
-    state_exit(Event&& event)
+    state_exit(Event&& event, FSM&)
     {
         regions_.exit(::std::forward<Event>(event));
     }
