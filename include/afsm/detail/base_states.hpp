@@ -36,6 +36,7 @@ struct event_process_selector
 
 enum class state_containment {
     none,
+    self,
     immediate,
     substate
 };
@@ -43,16 +44,26 @@ enum class state_containment {
 template < state_containment C >
 using containment_type = ::std::integral_constant<state_containment, C>;
 
-template < typename StateDef, typename InnerStates >
+using state_containment_none        = containment_type< state_containment::none >;
+using state_containment_self        = containment_type< state_containment::self >;
+using state_containment_immediate   = containment_type< state_containment::immediate >;
+using state_containment_substate    = containment_type< state_containment::substate >;
+
+template < typename StateDef, typename MachineDef, typename InnerStates >
 struct state_containment_type :
-        ::std::conditional< ::psst::meta::contains<StateDef, InnerStates>::value,
-             containment_type< state_containment::immediate >,
-             typename ::std::conditional<
-                 ::psst::meta::any_match<
-                     def::contains_substate_predicate<StateDef>::template type, InnerStates >::value,
-                     containment_type< state_containment::substate >,
-                     containment_type< state_containment::none >
-             >::type
+        ::std::conditional<
+            ::std::is_same< MachineDef, StateDef >::value,
+            state_containment_self,
+            typename ::std::conditional <
+                ::psst::meta::contains<StateDef, InnerStates>::value,
+                state_containment_immediate,
+                typename ::std::conditional<
+                    ::psst::meta::any_match<
+                        def::contains_substate_predicate<StateDef>::template type, InnerStates >::value,
+                        state_containment_substate,
+                        state_containment_none
+                >::type
+            >::type
         >::type {};
 
 template < typename T, bool isTerminal >
@@ -306,7 +317,7 @@ public:
     bool
     is_in_state() const
     {
-        return is_in_state<StateDef>(state_containment_type<StateDef, inner_states_def>{});
+        return is_in_state<StateDef>(state_containment_type<StateDef, state_machine_definition_type, inner_states_def>{});
     }
 
     template < ::std::size_t N>
@@ -324,7 +335,7 @@ public:
         contains_substate<StateDef>::value, substate_type<StateDef>>::type&
     get_state()
     {
-        return get_state<StateDef>(state_containment_type<StateDef, inner_states_def>{});
+        return get_state<StateDef>(state_containment_type<StateDef, state_machine_definition_type, inner_states_def>{});
     }
     template < typename StateDef >
     typename ::std::enable_if<
@@ -332,7 +343,21 @@ public:
         contains_substate<StateDef>::value, substate_type<StateDef>>::type const&
     get_state() const
     {
-        return get_state<StateDef>(state_containment_type<StateDef, inner_states_def>{});
+        return get_state<StateDef>(state_containment_type<StateDef, state_machine_definition_type, inner_states_def>{});
+    }
+    template < typename StateDef >
+    typename ::std::enable_if<
+        ::std::is_same<state_machine_definition_type, StateDef>::value, front_machine_type>::type&
+    get_state()
+    {
+        return static_cast<front_machine_type&>(*this);
+    }
+    template < typename StateDef >
+    typename ::std::enable_if<
+        ::std::is_same<state_machine_definition_type, StateDef>::value, front_machine_type>::type const&
+    get_state() const
+    {
+        return static_cast<front_machine_type const&>(*this);
     }
 
     ::std::size_t
@@ -413,7 +438,7 @@ protected:
     /** @name Get Substates */
     template < typename StateDef >
     substate_type<StateDef>&
-    get_state(containment_type< state_containment::immediate > const&)
+    get_state(state_containment_immediate const&)
     {
         using index_of_state = ::psst::meta::index_of<StateDef, inner_states_def>;
         static_assert(index_of_state::found,
@@ -422,7 +447,7 @@ protected:
     }
     template < typename StateDef >
     substate_type<StateDef> const&
-    get_state(containment_type< state_containment::immediate > const&) const
+    get_state(state_containment_immediate const&) const
     {
         using index_of_state = ::psst::meta::index_of<StateDef, inner_states_def>;
         static_assert(index_of_state::found,
@@ -431,14 +456,14 @@ protected:
     }
     template < typename StateDef >
     substate_type<StateDef>&
-    get_state(containment_type< state_containment::substate > const&)
+    get_state(state_containment_substate const&)
     {
         using search = detail::substate_type<front_machine_type, StateDef>;
         return get_state< typename search::front >().template get_state<StateDef>();
     }
     template < typename StateDef >
     substate_type<StateDef> const&
-    get_state(containment_type< state_containment::substate > const&) const
+    get_state(state_containment_substate const&) const
     {
         using search = detail::substate_type<front_machine_type, StateDef>;
         return get_state< typename search::front >().template get_state<StateDef>();
@@ -453,10 +478,17 @@ protected:
      */
     template < typename StateDef >
     bool
-    is_in_state(containment_type< state_containment::none > const&) const
-    {
-        return false;
-    }
+    is_in_state(state_containment_none const&) const
+    { return false; }
+    /**
+     * Constant true for self
+     * @param
+     * @return
+     */
+    template < typename StateDef >
+    bool
+    is_in_state(state_containment_self const&) const
+    { return true; }
     /**
      * Is in substate of an inner state
      * @param
@@ -464,7 +496,7 @@ protected:
      */
     template < typename StateDef >
     bool
-    is_in_state(containment_type< state_containment::substate > const&) const
+    is_in_state(state_containment_substate const&) const
     {
         using immediate_states =
             typename ::psst::meta::find_if<
@@ -490,7 +522,7 @@ protected:
      */
     template < typename StateDef >
     bool
-    is_in_state(containment_type< state_containment::immediate > const&) const
+    is_in_state(state_containment_immediate const&) const
     {
         using index_of_state = ::psst::meta::index_of<StateDef, inner_states_def>;
         static_assert(index_of_state::found,
@@ -608,7 +640,7 @@ public:
     bool
     is_in_state() const
     {
-        return is_in_state<StateDef>(state_containment_type<StateDef, regions_def>{});
+        return is_in_state<StateDef>(state_containment_type<StateDef, state_machine_definition_type, regions_def>{});
     }
 
     template < ::std::size_t N>
@@ -622,17 +654,33 @@ public:
 
     template < typename StateDef >
     typename ::std::enable_if<
+        !::std::is_same<state_machine_definition_type, StateDef>::value &&
         contains_substate<StateDef>::value, substate_type<StateDef>>::type&
     get_state()
     {
-        return get_state<StateDef>(state_containment_type<StateDef, regions_def>{});
+        return get_state<StateDef>(state_containment_type<StateDef, state_machine_definition_type, regions_def>{});
     }
     template < typename StateDef >
     typename ::std::enable_if<
+        !::std::is_same<state_machine_definition_type, StateDef>::value &&
         contains_substate<StateDef>::value, substate_type<StateDef>>::type const&
     get_state() const
     {
-        return get_state<StateDef>(state_containment_type<StateDef, regions_def>{});
+        return get_state<StateDef>(state_containment_type<StateDef, state_machine_definition_type, regions_def>{});
+    }
+    template < typename StateDef >
+    typename ::std::enable_if<
+        ::std::is_same<state_machine_definition_type, StateDef>::value, front_machine_type>::type&
+    get_state()
+    {
+        return static_cast<front_machine_type&>(*this);
+    }
+    template < typename StateDef >
+    typename ::std::enable_if<
+        ::std::is_same<state_machine_definition_type, StateDef>::value, front_machine_type>::type const&
+    get_state() const
+    {
+        return static_cast<front_machine_type const&>(*this);
     }
 
     template < typename Event >
@@ -706,7 +754,7 @@ protected:
     /** @name Get Substates */
     template < typename StateDef >
     substate_type<StateDef>&
-    get_state(containment_type< state_containment::immediate > const&)
+    get_state(state_containment_immediate const&)
     {
         using index_of_state = ::psst::meta::index_of<StateDef, regions_def>;
         static_assert(index_of_state::found,
@@ -715,7 +763,7 @@ protected:
     }
     template < typename StateDef >
     substate_type<StateDef> const&
-    get_state(containment_type< state_containment::immediate > const&) const
+    get_state(state_containment_immediate const&) const
     {
         using index_of_state = ::psst::meta::index_of<StateDef, regions_def>;
         static_assert(index_of_state::found,
@@ -724,14 +772,14 @@ protected:
     }
     template < typename StateDef >
     substate_type<StateDef>&
-    get_state(containment_type< state_containment::substate > const&)
+    get_state(state_containment_substate const&)
     {
         using search = detail::substate_type<front_machine_type, StateDef>;
         return get_state< typename search::front >().template get_state<StateDef>();
     }
     template < typename StateDef >
     substate_type<StateDef> const&
-    get_state(containment_type< state_containment::substate > const&) const
+    get_state(state_containment_substate const&) const
     {
         using search = detail::substate_type<front_machine_type, StateDef>;
         return get_state< typename search::front >().template get_state<StateDef>();
@@ -746,10 +794,17 @@ protected:
      */
     template < typename StateDef >
     bool
-    is_in_state(containment_type< state_containment::none > const&) const
-    {
-        return false;
-    }
+    is_in_state(state_containment_none const&) const
+    { return false; }
+    /**
+     * Constant true for self
+     * @param
+     * @return
+     */
+    template < typename StateDef >
+    bool
+    is_in_state(state_containment_self const&) const
+    { return true; }
     /**
      * Is in substate of an inner state
      * @param
@@ -757,7 +812,7 @@ protected:
      */
     template < typename StateDef >
     bool
-    is_in_state(containment_type< state_containment::substate > const&) const
+    is_in_state(state_containment_substate const&) const
     {
         using immediate_states =
             typename ::psst::meta::find_if<
@@ -784,7 +839,7 @@ protected:
      */
     template < typename StateDef >
     bool
-    is_in_state(containment_type< state_containment::immediate > const&) const
+    is_in_state(state_containment_immediate const&) const
     {
         return true;
     }

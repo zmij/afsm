@@ -329,20 +329,24 @@ static_assert(
     ::std::is_base_of< detail::containment_type< detail::state_containment::immediate >,
      detail::state_containment_type<
              connection_fsm_def::connecting,
+             connection_fsm_def,
              connection_fsm::inner_states_def>>::value, "");
 
 static_assert(
     detail::state_containment_type<
         connection_fsm_def::connecting,
+        connection_fsm_def,
         connection_fsm::inner_states_def>::value == detail::state_containment::immediate, "");
 static_assert(
     detail::state_containment_type<
         connection_fsm_def::transaction::idle,
+        connection_fsm_def,
         connection_fsm::inner_states_def>::value == detail::state_containment::substate, "");
 static_assert(
     detail::state_containment_type<
         connection_fsm_def,
-        connection_fsm::inner_states_def>::value == detail::state_containment::none, "");
+        connection_fsm_def,
+        connection_fsm::inner_states_def>::value == detail::state_containment::self, "");
 
 namespace {
 void
@@ -384,6 +388,7 @@ TEST(TranFSM, AllEvents)
     connection_fsm fsm;
     fsm.make_observer();
 
+    ::std::cerr << fsm.get_state< connection_fsm_def >().name() << "\n";
     ::std::cerr << fsm.get_state< connection_fsm::transaction >().name() << "\n";
     ::std::cerr << fsm.get_state< connection_fsm::transaction::simple_query >().name() << "\n";
 

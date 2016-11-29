@@ -147,6 +147,7 @@ TEST(Pushdown, OneDown)
 {
     json_parser_fsm fsm;
 
+    EXPECT_TRUE(fsm.is_in_state<json_parser_def>());
     EXPECT_TRUE(fsm.is_in_state<json_parser_fsm::start>());
     //EXPECT_TRUE(done(fsm.process_event(events::bool_literal{})));
 }

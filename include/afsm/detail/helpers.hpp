@@ -101,8 +101,17 @@ struct substate_type_impl {
     using front     = typename ::psst::meta::front<path>::type;
 };
 
+template < typename FSM, typename State, bool IsSelf >
+struct substate_type_self {
+    using type      = FSM;
+};
+
 template < typename FSM, typename State >
-struct substate_type_impl<FSM, State, false> {};
+struct substate_type_self<FSM, State, false > {};
+
+template < typename FSM, typename State >
+struct substate_type_impl<FSM, State, false>
+    : substate_type_self <FSM, State, ::std::is_base_of<State, FSM>::value> {};
 
 template < typename FSM, typename State >
 struct substate_type
