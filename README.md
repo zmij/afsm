@@ -17,19 +17,20 @@ The `afsm` library was inspired by [`::boost::msm`](http://www.boost.org/doc/lib
   * [State history](https://github.com/zmij/afsm/wiki/History)
   * [Event deferring](https://github.com/zmij/afsm/wiki/Event-Deferring)
   * [Orthogonal regions](https://github.com/zmij/afsm/wiki/Orthogonal-Regions)
+* Statechart extensions
+  * Optional [event priority](https://github.com/zmij/afsm/wiki/Event-Priority)
+  * Optional [common base](https://github.com/zmij/afsm/wiki/Common-Base) for states and easy definition of dispatching common interface calls to current state
 * Compile-time checks
 * Thread safety
 * Exception safety
 * No vtables (unless common base feature is used)
-* Optional common base for states and easy definition of dispatching calls to current state
 * Header only
 * Relatively fast compile time
 * No external dependencies except STL
 
 ### Planned features
 
-* [Event priority](https://github.com/zmij/afsm/issues/7)
-* [Recursive state machine](https://github.com/zmij/afsm/issues/8)
+* [Pushdown automata](https://github.com/zmij/afsm/issues/8)
 
 
 ## Synopsis
