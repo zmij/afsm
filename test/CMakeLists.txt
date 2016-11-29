@@ -14,11 +14,14 @@ endif()
 
 # Add your package dependencies for test here
 
-include_directories(${GTEST_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/../examples)
+include_directories(${GTEST_INCLUDE_DIRS}
+    ${CMAKE_CURRENT_SOURCE_DIR}/../examples
+    ${CMAKE_CURRENT_SOURCE_DIR}/../lib/ansi-colors/include)
 
 set(
     test_program_SRCS
     # Add your sources here
+    ${CMAKE_CURRENT_SOURCE_DIR}/../lib/ansi-colors/src/ansi_colors.cpp
     static_tests.cpp
     state_machine_with_internal_transitions.cpp
     fsm_parts_test.cpp
@@ -32,8 +35,6 @@ target_link_libraries(
     test-afsm-base
     ${GTEST_BOTH_LIBRARIES}
     ${CMAKE_THREAD_LIBS_INIT}
-    # Add your libraries here
-    ${PSST_ANSI_COLORS_LIB}
 )
 
 if (GTEST_XML_OUTPUT)
