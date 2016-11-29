@@ -434,14 +434,14 @@ protected:
     get_state(containment_type< state_containment::substate > const&)
     {
         using search = detail::substate_type<front_machine_type, StateDef>;
-        return get_state< typename search::front >().get_state<StateDef>();
+        return get_state< typename search::front >().template get_state<StateDef>();
     }
     template < typename StateDef >
     substate_type<StateDef> const&
     get_state(containment_type< state_containment::substate > const&) const
     {
         using search = detail::substate_type<front_machine_type, StateDef>;
-        return get_state< typename search::front >().get_state<StateDef>();
+        return get_state< typename search::front >().template get_state<StateDef>();
     }
     //@}
     //@{
@@ -727,14 +727,14 @@ protected:
     get_state(containment_type< state_containment::substate > const&)
     {
         using search = detail::substate_type<front_machine_type, StateDef>;
-        return get_state< typename search::front >().get_state<StateDef>();
+        return get_state< typename search::front >().template get_state<StateDef>();
     }
     template < typename StateDef >
     substate_type<StateDef> const&
     get_state(containment_type< state_containment::substate > const&) const
     {
         using search = detail::substate_type<front_machine_type, StateDef>;
-        return get_state< typename search::front >().get_state<StateDef>();
+        return get_state< typename search::front >().template get_state<StateDef>();
     }
     //@}
     //@{
