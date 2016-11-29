@@ -53,12 +53,6 @@ add_subdirectory(lib/ansi-colors)
 
 if (BUILD_TESTS)
     enable_testing()
-    if (NOT PSST_ANSI_COLORS_INCLUDE_DIR)
-    add_subdirectory(lib/ansi-colors)
-    endif()
-
-    include_directories(${PSST_ANSI_COLORS_INCLUDE_DIR})
-    link_directories(${PSST_ANSI_COLORS_LINK_DIR})
     add_subdirectory(test)
 endif()
 if (BUILD_BENCHMARKS)
