@@ -8,6 +8,7 @@
 #ifndef AFSM_DETAIL_HELPERS_HPP_
 #define AFSM_DETAIL_HELPERS_HPP_
 
+#include <afsm/definition.hpp>
 #include <type_traits>
 #include <mutex>
 #include <atomic>
@@ -35,6 +36,16 @@ struct front_state_type
         >::type
     > {};
 
+template < typename T, typename ... Y, typename FSM >
+struct front_state_type<::psst::meta::type_tuple<T, Y...>, FSM>
+    : front_state_type<
+          ::psst::meta::type_tuple<Y...>,
+          typename front_state_type< T, FSM >::type > {};
+
+template < typename T, typename FSM >
+struct front_state_type<::psst::meta::type_tuple<T>, FSM>
+    : front_state_type<T, FSM> {};
+
 template < typename FSM, typename T >
 struct front_state_tuple;
 
@@ -49,9 +60,8 @@ struct front_state_tuple< FSM, void> {
 
 template < typename FSM, typename ... T>
 struct front_state_tuple< FSM, ::psst::meta::type_tuple<T...> > {
-    using type = ::std::tuple<
-            typename front_state_type<T, FSM>::type ... >;
-    using index_tuple = typename ::psst::meta::index_builder< sizeof ... (T) >::type;
+    using type          = ::std::tuple< typename front_state_type<T, FSM>::type ... >;
+    using index_tuple   = typename ::psst::meta::index_builder< sizeof ... (T) >::type;
 
     static type
     construct(FSM& fsm)
@@ -82,6 +92,21 @@ private:
             fsm, ::std::move(::std::get< Indexes >(rhs))}...);
     }
 };
+
+template < typename FSM, typename State, bool Contains >
+struct substate_type_impl {
+    using full_path = typename def::state_path<FSM, State>::type;
+    using path      = typename ::psst::meta::pop_front<full_path>::type;
+    using type      = typename front_state_type<path, FSM>::type;
+    using front     = typename ::psst::meta::front<path>::type;
+};
+
+template < typename FSM, typename State >
+struct substate_type_impl<FSM, State, false> {};
+
+template < typename FSM, typename State >
+struct substate_type
+    : substate_type_impl<FSM, State, def::contains_substate<FSM, State>::value>{};
 
 struct no_lock {
     no_lock(none&) {}

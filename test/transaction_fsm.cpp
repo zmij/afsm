@@ -384,6 +384,9 @@ TEST(TranFSM, AllEvents)
     connection_fsm fsm;
     fsm.make_observer();
 
+    ::std::cerr << fsm.get_state< connection_fsm::transaction >().name() << "\n";
+    ::std::cerr << fsm.get_state< connection_fsm::transaction::simple_query >().name() << "\n";
+
     EXPECT_EQ(event_process_result::process, fsm.process_event(events::connect{}));
     EXPECT_TRUE(fsm.is_in_state<connection_fsm_def::connecting>());
     EXPECT_EQ(event_process_result::process, fsm.process_event(events::complete{}));
