@@ -151,9 +151,12 @@ struct state_base_impl<T, true> : T {
         using ::std::swap;
         swap(static_cast<T&>(*this), static_cast<T&>(rhs));
     }
+
+    // TODO Change signature to Event, FSM
     template < typename Event >
     void
     state_enter(Event&&) {}
+    // TODO Change signature to Event, FSM
     template < typename Event >
     void
     state_exit(Event&&) {}
@@ -167,11 +170,12 @@ template < typename T >
 struct pushdown_state : state_base_impl<T, false> {
     using pushdown_machine_type = typename T::pushdown_machine_type;
 
+    // FIXME Move to state_enter member
     template < typename Event, typename FSM >
     void
     on_enter(Event&& event, FSM& fsm)
     {
-        root_machine(fsm).template get_state< pushdown_machine_type >().push(::std::forward<Event>(event));
+        root_machine(fsm).template get_state< pushdown_machine_type >().pushdown(::std::forward<Event>(event));
     }
 };
 
@@ -179,11 +183,12 @@ template < typename T >
 struct popup_state : state_base_impl<T, true> {
     using pushdown_machine_type = typename T::pushdown_machine_type;
 
+    // FIXME Move to state_enter member
     template < typename Event, typename FSM >
     void
     on_enter(Event&& event, FSM& fsm)
     {
-        root_machine(fsm).template get_state< pushdown_machine_type >().pop(::std::forward<Event>(event));
+        root_machine(fsm).template get_state< pushdown_machine_type >().popup(::std::forward<Event>(event));
     }
 };
 
@@ -364,12 +369,14 @@ public:
     current_state() const
     { return transitions_.current_state(); }
 
+    // TODO Change signature to Event, FSM
     template < typename Event >
     void
     state_enter(Event&& event)
     {
         transitions_.enter( ::std::forward<Event>(event) );
     }
+    // TODO Change signature to Event, FSM
     template < typename Event >
     void
     state_exit(Event&& event)
@@ -683,12 +690,14 @@ public:
         return static_cast<front_machine_type const&>(*this);
     }
 
+    // TODO Change signature to Event, FSM
     template < typename Event >
     void
     state_enter(Event&& event)
     {
         regions_.enter(::std::forward<Event>(event));
     }
+    // TODO Change signature to Event, FSM
     template < typename Event >
     void
     state_exit(Event&& event)

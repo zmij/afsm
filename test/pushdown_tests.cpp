@@ -143,13 +143,54 @@ static_assert(::std::is_same<
         >
     >::value, "");
 
-TEST(Pushdown, OneDown)
+TEST(Pushdown, ToTheEnd)
 {
     json_parser_fsm fsm;
 
     EXPECT_TRUE(fsm.is_in_state<json_parser_def>());
     EXPECT_TRUE(fsm.is_in_state<json_parser_fsm::start>());
-    //EXPECT_TRUE(done(fsm.process_event(events::bool_literal{})));
+    EXPECT_TRUE(done(fsm.process_event(events::bool_literal{})));
+    EXPECT_TRUE(fsm.is_in_state<json_parser_fsm::end>());
+}
+
+TEST(Pushdown, PushPopState)
+{
+    json_parser_fsm fsm;
+
+    EXPECT_TRUE(fsm.is_in_state<json_parser_def>());
+    EXPECT_TRUE(fsm.is_in_state<json_parser_fsm::start>());
+    EXPECT_TRUE(done(fsm.process_event(events::start_array{})));
+    EXPECT_TRUE(fsm.is_in_state<json_parser_fsm::start>());
+    EXPECT_EQ(2, fsm.stack_size());
+    EXPECT_TRUE(done(fsm.process_event(events::null_literal{})));
+    EXPECT_EQ(1, fsm.stack_size());
+    EXPECT_TRUE(fsm.is_in_state<json_parser_fsm::array>());
+    EXPECT_TRUE(done(fsm.process_event(events::end_array{})));
+    EXPECT_TRUE(fsm.is_in_state<json_parser_fsm::end>());
+}
+
+TEST(Pushdown, PushTwo)
+{
+    json_parser_fsm fsm;
+
+    EXPECT_TRUE(fsm.is_in_state<json_parser_def>());
+    EXPECT_TRUE(fsm.is_in_state<json_parser_fsm::start>());
+    EXPECT_TRUE(done(fsm.process_event(events::start_array{})));
+    EXPECT_TRUE(fsm.is_in_state<json_parser_fsm::start>());
+    EXPECT_EQ(2, fsm.stack_size());
+
+    EXPECT_TRUE(done(fsm.process_event(events::start_array{})));
+    EXPECT_TRUE(fsm.is_in_state<json_parser_fsm::start>());
+    EXPECT_EQ(3, fsm.stack_size());
+    EXPECT_TRUE(done(fsm.process_event(events::null_literal{})));
+    EXPECT_EQ(2, fsm.stack_size());
+    EXPECT_TRUE(fsm.is_in_state<json_parser_fsm::array>());
+    EXPECT_TRUE(done(fsm.process_event(events::end_array{})));
+
+    EXPECT_EQ(1, fsm.stack_size());
+    EXPECT_TRUE(fsm.is_in_state<json_parser_fsm::array>());
+    EXPECT_TRUE(done(fsm.process_event(events::end_array{})));
+    EXPECT_TRUE(fsm.is_in_state<json_parser_fsm::end>());
 }
 
 }  /* namespace test */

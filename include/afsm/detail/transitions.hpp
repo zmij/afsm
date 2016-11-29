@@ -496,6 +496,7 @@ public:
         ttable[current_state()](*this, none{});
     }
 
+    // TODO Change signature to Event, FSM
     template < typename Event >
     void
     enter(Event&& event)
@@ -507,6 +508,7 @@ public:
         initial_enter{}(initial, ::std::forward<Event>(event), *fsm_);
         check_default_transition();
     }
+    // TODO Change signature to Event, FSM
     template < typename Event >
     void
     exit(Event&& event)
@@ -737,12 +739,14 @@ public:
         return top().process_event(::std::forward<Event>(event));
     }
 
+    // TODO Change signature to Event, FSM
     template < typename Event >
     void
     enter(Event&& event)
     {
         top().enter(::std::forward<Event>(event));
     }
+    // TODO Change signature to Event, FSM
     template < typename Event >
     void
     exit(Event&& event)
@@ -852,13 +856,13 @@ struct transition_manipulator< FSM, FSM_DEF, Size, true > {
     // Push/pop ops
     template < typename Event >
     void
-    push(Event&& event)
+    pushdown(Event&& event)
     {
         transitions_.push(::std::forward<Event>(event));
     }
     template < typename Event >
     void
-    pop(Event&& event)
+    popup(Event&& event)
     {
         transitions_.pop(::std::forward<Event>(event));
     }
