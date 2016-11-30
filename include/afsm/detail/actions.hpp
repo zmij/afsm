@@ -114,6 +114,23 @@ public:
     static constexpr bool value = decltype( test<Action>(nullptr) )::value;
 };
 
+template <typename FSM, typename Event>
+struct handles_reject {
+private:
+    static FSM&         fsm;
+    static Event&       event;
+
+    template < typename U >
+    static ::std::true_type
+    test( decltype( ::std::declval<U>().reject_event(::std::move(event), fsm) ) const * );
+
+    template < typename U >
+    static ::std::false_type
+    test(...);
+public:
+    static constexpr bool value = decltype( test<FSM>(nullptr) )::value;
+};
+
 template <typename Event, typename Transition>
 struct handles_event
     : ::std::conditional<

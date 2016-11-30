@@ -10,6 +10,7 @@
 
 #include <afsm/detail/base_states.hpp>
 #include <afsm/detail/observer.hpp>
+#include <afsm/detail/reject_policies.hpp>
 #include <deque>
 #include <queue>
 
@@ -269,7 +270,9 @@ private:
             case event_process_result::refuse:
                 // The event cannot be processed in current state
                 observer_wrapper::reject_event(*this, ::std::forward<Event>(event));
-                break;
+                return reject_event_impl(::std::forward<Event>(event),
+                        ::std::integral_constant<bool,
+                        actions::detail::handles_reject<T, Event>::value>{});
             default:
                 break;
         }
@@ -286,6 +289,20 @@ private:
                 typename state_machine::deferred_events>::value
             != actions::event_process_result::refuse,
             "Event type is not handled by this state machine" );
+        return actions::event_process_result::refuse;
+    }
+
+    template < typename Event >
+    actions::event_process_result
+    reject_event_impl(Event&& event, ::std::true_type const&)
+    {
+        return this->T::reject_event(::std::forward<Event>(event), *this);
+    }
+
+    template < typename Event >
+    actions::event_process_result
+    reject_event_impl(Event&&, ::std::false_type const&)
+    {
         return actions::event_process_result::refuse;
     }
 
