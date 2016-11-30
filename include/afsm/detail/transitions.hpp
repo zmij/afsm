@@ -807,6 +807,11 @@ struct transition_container< FSM, FSM_DEF, Size, true > {
         return transitions_.stack_size();
     }
 
+protected:
+    template < typename T >
+    friend struct ::afsm::detail::pushdown_state;
+    template < typename T >
+    friend struct ::afsm::detail::popup_state;
     // Push/pop ops
     template < typename Event >
     void
