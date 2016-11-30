@@ -310,20 +310,24 @@ static_assert(
     ::std::is_base_of< detail::containment_type< detail::state_containment::immediate >,
      detail::state_containment_type<
              connection_pri_fsm_def::connecting,
+             connection_pri_fsm_def,
              connection_fsm::inner_states_def>>::value, "");
 
 static_assert(
     detail::state_containment_type<
         connection_pri_fsm_def::connecting,
+        connection_pri_fsm_def,
         connection_fsm::inner_states_def>::value == detail::state_containment::immediate, "");
 static_assert(
     detail::state_containment_type<
         connection_pri_fsm_def::transaction::idle,
+        connection_pri_fsm_def,
         connection_fsm::inner_states_def>::value == detail::state_containment::substate, "");
 static_assert(
     detail::state_containment_type<
         connection_pri_fsm_def,
-        connection_fsm::inner_states_def>::value == detail::state_containment::none, "");
+        connection_pri_fsm_def,
+        connection_fsm::inner_states_def>::value == detail::state_containment::self, "");
 
 namespace {
 void

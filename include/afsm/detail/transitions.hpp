@@ -10,6 +10,10 @@
 
 #include <afsm/detail/actions.hpp>
 
+#include <deque>
+#include <memory>
+#include <algorithm>
+
 #include <iostream>
 
 namespace afsm {
@@ -137,7 +141,7 @@ struct state_exit_impl {
     void
     operator()(State& state, Event const& event, FSM& fsm) const
     {
-        state.state_exit(event);
+        state.state_exit(event, fsm);
         state.on_exit(event, fsm);
     }
 };
@@ -145,9 +149,9 @@ struct state_exit_impl {
 template < typename FSM, typename State, typename Event >
 struct state_exit_impl< FSM, State, Event, false > {
     void
-    operator()(State& state, Event const& event, FSM&) const
+    operator()(State& state, Event const& event, FSM& fsm) const
     {
-        state.state_exit(event);
+        state.state_exit(event, fsm);
     }
 };
 
@@ -163,7 +167,7 @@ struct state_enter_impl {
     operator()(State& state, Event&& event, FSM& fsm) const
     {
         state.on_enter(::std::forward<Event>(event), fsm);
-        state.state_enter(::std::forward<Event>(event));
+        state.state_enter(::std::forward<Event>(event), fsm);
     }
 };
 
@@ -171,9 +175,9 @@ template < typename FSM, typename State >
 struct state_enter_impl< FSM, State, false > {
     template < typename Event >
     void
-    operator()(State& state, Event&& event, FSM&) const
+    operator()(State& state, Event&& event, FSM& fsm) const
     {
-        state.state_enter(::std::forward<Event>(event));
+        state.state_enter(::std::forward<Event>(event), fsm);
     }
 };
 
@@ -417,7 +421,11 @@ public:
       {}
 
     state_transition_table(state_transition_table const&) = delete;
-    state_transition_table(state_transition_table&&) = delete;
+    state_transition_table(state_transition_table&& rhs)
+        : fsm_{rhs.fsm_},
+          current_state_{ (::std::size_t)rhs.current_state_ },
+          states_{ ::std::move(rhs.states_) }
+    {}
     state_transition_table&
     operator = (state_transition_table const&) = delete;
     state_transition_table&
@@ -429,8 +437,15 @@ public:
         using ::std::swap;
         swap(current_state_, rhs.current_state_);
         swap(states_, rhs.states_);
-        ::afsm::detail::set_enclosing_fsm< size - 1 >::set(*fsm_, states_);
-        ::afsm::detail::set_enclosing_fsm< size - 1 >::set(*rhs.fsm_, rhs.states_);
+        set_fsm(*fsm_);
+        rhs.set_fsm(*rhs.fsm_);
+    }
+
+    void
+    set_fsm(fsm_type& fsm)
+    {
+        fsm_ = &fsm;
+        ::afsm::detail::set_enclosing_fsm< size - 1 >::set(fsm, states_);
     }
 
     inner_states_tuple&
@@ -600,6 +615,231 @@ private:
     fsm_type*           fsm_;
     size_type           current_state_;
     inner_states_tuple  states_;
+};
+
+template < typename FSM, typename FSM_DEF, typename Size >
+class state_transition_stack {
+public:
+    using state_table_type  = state_transition_table<FSM, FSM_DEF, Size>;
+    using this_type         = state_transition_stack<FSM, FSM_DEF, Size>;
+
+    using fsm_type                      = typename state_table_type::fsm_type;
+    using state_machine_definition_type = typename state_table_type::state_machine_definition_type;
+    using size_type                     = typename state_table_type::size_type;
+    using inner_states_tuple            = typename state_table_type::inner_states_tuple;
+
+    using stack_constructor_type        = afsm::detail::stack_constructor<FSM, state_table_type>;
+public:
+    state_transition_stack(fsm_type& fsm)
+        : fsm_{&fsm},
+          state_stack_{ stack_constructor_type::construct(fsm) }
+    {}
+    state_transition_stack(fsm_type& fsm, state_transition_stack const& rhs)
+        : fsm_{&fsm},
+          state_stack_{ stack_constructor_type::copy_construct(fsm, rhs.state_stack_) }
+    {}
+    state_transition_stack(fsm_type& fsm, state_transition_stack&& rhs)
+        : fsm_{&fsm},
+          state_stack_{ stack_constructor_type::move_construct(fsm, ::std::move(rhs.state_stack_)) }
+    {}
+
+    state_transition_stack(state_transition_stack const&) = delete;
+    state_transition_stack(state_transition_stack&&) = delete;
+    state_transition_stack&
+    operator = (state_transition_stack const&) = delete;
+    state_transition_stack&
+    operator = (state_transition_stack&&) = delete;
+
+    void
+    swap(state_transition_stack& rhs)
+    {
+        using ::std::swap;
+        swap(state_stack_, rhs.state_stack_);
+        set_fsm(*fsm_);
+        rhs.set_fsm(*rhs.fsm_);
+    }
+
+    void
+    set_fsm(fsm_type& fsm)
+    {
+        fsm_ = &fsm;
+        for (auto& item : state_stack_) {
+            item.set_fsm(fsm);
+        }
+    }
+
+    inner_states_tuple&
+    states()
+    { return top().states(); }
+    inner_states_tuple const&
+    states() const
+    { return top().states(); }
+
+    template < ::std::size_t N >
+    typename ::std::tuple_element< N, inner_states_tuple >::type&
+    get_state()
+    { return top().template get_state<N>(); }
+    template < ::std::size_t N >
+    typename ::std::tuple_element< N, inner_states_tuple >::type const&
+    get_state() const
+    { return top().template get_state<N>(); }
+
+    ::std::size_t
+    current_state() const
+    { return top().current_state(); }
+
+    template < typename Event >
+    actions::event_process_result
+    process_event(Event&& event)
+    {
+        return top().process_event(::std::forward<Event>(event));
+    }
+
+    template < typename Event >
+    void
+    enter(Event&& event)
+    {
+        top().enter(::std::forward<Event>(event));
+    }
+    template < typename Event >
+    void
+    exit(Event&& event)
+    {
+        top().exit(::std::forward<Event>(event));
+    }
+
+    template < typename Event >
+    void
+    push(Event&& event)
+    {
+        state_stack_.emplace_back( *fsm_ );
+        enter(::std::forward<Event>(event));
+    }
+
+    template < typename Event >
+    void
+    pop(Event&& event)
+    {
+        if (state_stack_.size() > 1) {
+            exit(::std::forward<Event>(event));
+            state_stack_.pop_back();
+        }
+    }
+
+    ::std::size_t
+    stack_size() const
+    {
+        return state_stack_.size();
+    }
+
+    template < typename T >
+    T&
+    cast_current_state()
+    {
+        return top().template cast_current_state<T>();
+    }
+    template < typename T >
+    T const&
+    cast_current_state() const
+    {
+        return top().template cast_current_state<T>();
+    }
+private:
+    using stack_type = typename stack_constructor_type::type;
+
+    state_table_type&
+    top()
+    { return state_stack_.back(); }
+    state_table_type const&
+    top() const
+    { return state_stack_.back(); }
+private:
+    fsm_type*           fsm_;
+    stack_type          state_stack_;
+};
+
+template < typename FSM, typename FSM_DEF, typename Size, bool HasPusdowns >
+struct transition_container_selector {
+    using type = state_transition_table<FSM, FSM_DEF, Size>;
+};
+
+template <typename FSM, typename FSM_DEF, typename Size>
+struct transition_container_selector<FSM, FSM_DEF, Size, true> {
+    using type = state_transition_stack<FSM, FSM_DEF, Size>;
+};
+
+namespace detail {
+
+template < typename FSM, typename FSM_DEF, typename Size, bool HasPushdowns >
+struct transition_container {
+    using transitions_tuple = typename transition_container_selector<FSM, FSM_DEF, Size, HasPushdowns>::type;
+
+    transition_container(FSM* fsm)
+        : transitions_{*fsm}
+    {}
+    transition_container(FSM* fsm, transition_container const& rhs)
+        : transitions_{*fsm, rhs.transitions_}
+    {}
+    transition_container(FSM* fsm, transition_container&& rhs)
+        : transitions_{*fsm, ::std::move(rhs.transitions_)}
+    {}
+protected:
+    transitions_tuple   transitions_;
+};
+
+template < typename FSM, typename FSM_DEF, typename Size >
+struct transition_container< FSM, FSM_DEF, Size, true > {
+    using transitions_tuple = typename transition_container_selector<FSM, FSM_DEF, Size, true>::type;
+
+    transition_container(FSM* fsm)
+        : transitions_{*fsm}
+    {}
+    transition_container(FSM* fsm, transition_container const& rhs)
+        : transitions_{*fsm, rhs.transitions_}
+    {}
+    transition_container(FSM* fsm, transition_container&& rhs)
+        : transitions_{*fsm, ::std::move(rhs.transitions_)}
+    {}
+
+    ::std::size_t
+    stack_size() const
+    {
+        return transitions_.stack_size();
+    }
+
+    // Push/pop ops
+    template < typename Event >
+    void
+    pushdown(Event&& event)
+    {
+        transitions_.push(::std::forward<Event>(event));
+    }
+    template < typename Event >
+    void
+    popup(Event&& event)
+    {
+        transitions_.pop(::std::forward<Event>(event));
+    }
+protected:
+    transitions_tuple  transitions_;
+};
+}  /* namespace detail */
+
+template < typename FSM, typename FSM_DEF, typename Size >
+struct transition_container
+    : detail::transition_container<FSM, FSM_DEF, Size,
+          def::has_pushdown_stack<FSM_DEF>::value> {
+    using base_type = detail::transition_container<FSM, FSM_DEF, Size,
+                            def::has_pushdown_stack<FSM_DEF>::value>;
+    using transitions_tuple = typename base_type::transitions_tuple;
+
+    transition_container( FSM* fsm ) : base_type{fsm} {}
+    transition_container(FSM* fsm, transition_container const& rhs)
+        : base_type{fsm, rhs} {}
+    transition_container(FSM* fsm, transition_container&& rhs)
+        : base_type{fsm, ::std::move(rhs)} {}
+protected:
+    using base_type::transitions_;
 };
 
 }  /* namespace transitions */

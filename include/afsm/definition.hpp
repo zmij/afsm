@@ -192,6 +192,26 @@ struct terminal_state : tags::state, Tags... {
     using activity              = void;
 };
 
+template < typename StateType, typename Machine, typename ... Tags >
+struct pushdown : tags::state, tags::pushdown<Machine>, Tags... {
+    using state_type            = StateType;
+    using base_state_type       = pushdown<StateType, Machine, Tags...>;
+    using internal_transitions  = void;
+    using transitions           = void;
+    using deferred_events       = void;
+    using activity              = void;
+};
+
+template < typename StateType, typename Machine, typename ... Tags >
+struct popup : tags::state, tags::popup<Machine>, Tags... {
+    using state_type            = StateType;
+    using base_state_type       = popup<StateType, Machine, Tags...>;
+    using internal_transitions  = void;
+    using transitions           = void;
+    using deferred_events       = void;
+    using activity              = void;
+};
+
 template < typename StateMachine, typename ... Tags >
 struct state_machine_def : state_def< StateMachine, Tags... >, tags::state_machine {
     using state_machine_type    = StateMachine;
@@ -215,6 +235,10 @@ struct state_machine_def : state_def< StateMachine, Tags... >, tags::state_machi
     using terminal_state = typename inner_states_definition::template terminal_state<T, TTags ...>;
     template < typename T, typename ... TTags >
     using state_machine = typename inner_states_definition::template state_machine<T, TTags...>;
+    template < typename T, typename M, typename ... TTags>
+    using push          = typename inner_states_definition::template push<T, M, TTags...>;
+    template < typename T, typename M, typename ... TTags>
+    using pop           = typename inner_states_definition::template pop<T, M, TTags...>;
 
     using none = afsm::none;
     template < typename Predicate >
@@ -386,6 +410,10 @@ struct is_default_unguarded_transition
     >::type {};
 
 }  /* namespace detail */
+
+//----------------------------------------------------------------------------
+//  Metafunction to check if a machine contains a given state
+//----------------------------------------------------------------------------
 template < typename T, typename SubState >
 struct contains_substate;
 
@@ -416,7 +444,8 @@ struct contains_substate< T, SubState, true >
             typename ::psst::meta::unique<
                 typename inner_states< typename T::transitions >::type,
                 typename inner_states< typename T::orthogonal_regions >::type
-            >::type >::value,
+            >::type
+        >::value,
         ::std::true_type,
         ::std::false_type
     >::type {};
@@ -432,6 +461,258 @@ struct contains_substate_predicate {
     template < typename T >
     using type = contains_substate<T, SubState>;
 };
+
+//----------------------------------------------------------------------------
+//  Metafunction to calculate a path from a machine to a substate
+//----------------------------------------------------------------------------
+template < typename Machine, typename State >
+struct state_path;
+
+namespace detail {
+
+template < typename T, typename U >
+struct state_state_path {
+    using type = ::psst::meta::type_tuple<>;
+};
+
+template < typename T >
+struct state_state_path<T, T> {
+    using type = ::psst::meta::type_tuple<T>;
+};
+
+template < typename Machine, typename State, bool IsMachine >
+struct state_path : state_state_path<Machine, State> {};
+
+template < typename Machine, typename State, bool Contains >
+struct machine_state_path {
+    using type = ::psst::meta::type_tuple<>;
+};
+
+template < typename Machine, typename State >
+struct machine_state_path<Machine, State, true> {
+    using type = typename ::psst::meta::combine<
+            typename Machine::state_machine_type,
+            typename def::state_path<
+                typename ::psst::meta::front<
+                    typename ::psst::meta::find_if<
+                        contains_predicate<State>::template type,
+                        typename ::psst::meta::unique<
+                            typename inner_states< typename Machine::transitions >::type,
+                            typename inner_states< typename Machine::orthogonal_regions >::type
+                        >::type
+                    >::type
+                >::type,
+                State
+            >::type
+        >::type;
+};
+
+template < typename Machine, typename State >
+struct state_path<Machine, State, true>
+    : ::std::conditional<
+        ::std::is_same<Machine, State>::value,
+        state_state_path<Machine, State>,
+        machine_state_path<Machine, State,
+            def::contains_substate<Machine, State>::value>
+    >::type {};
+
+}  /* namespace detail */
+
+template < typename Machine, typename State >
+struct state_path
+    : detail::state_path<Machine, State, traits::is_state_machine<Machine>::value> {};
+
+//----------------------------------------------------------------------------
+//  Metafunction to check if a machine contains pushdown states
+//----------------------------------------------------------------------------
+template < typename T >
+struct contains_pushdowns;
+
+namespace detail {
+
+template < typename T >
+struct contains_pushdowns_recursively :
+    ::std::conditional<
+        traits::is_pushdown<T>::value,
+        ::std::true_type,
+        typename def::contains_pushdowns<T>::type
+    >::type {};
+
+template < typename T, bool IsMachine >
+struct containts_pushdowns : ::std::false_type {};
+
+template < typename T >
+struct containts_pushdowns<T, true>
+    : ::std::conditional<
+        ::psst::meta::any_match<
+             contains_pushdowns_recursively,
+             typename ::psst::meta::unique<
+                 typename inner_states< typename T::transitions >::type,
+                 typename inner_states< typename T::orthogonal_regions >::type
+             >::type
+         >::value,
+        ::std::true_type,
+        ::std::false_type
+    >::type {};
+
+}  /* namespace detail */
+
+template < typename T >
+struct contains_pushdowns
+    : detail::containts_pushdowns<T, traits::is_state_machine<T>::value>{};
+
+//----------------------------------------------------------------------------
+//  Metafunction to check if a machine contains popup states
+//----------------------------------------------------------------------------
+template < typename T >
+struct contains_popups;
+
+namespace detail {
+
+template < typename T >
+struct contains_popups_recursively :
+    ::std::conditional<
+        traits::is_popup<T>::value,
+        ::std::true_type,
+        typename def::contains_popups<T>::type
+    >::type {};
+
+template < typename T, bool IsMachine >
+struct containts_popups : ::std::false_type {};
+
+template < typename T >
+struct containts_popups<T, true>
+    : ::std::conditional<
+        ::psst::meta::any_match<
+             contains_popups_recursively,
+             typename ::psst::meta::unique<
+                 typename inner_states< typename T::transitions >::type,
+                 typename inner_states< typename T::orthogonal_regions >::type
+             >::type
+         >::value,
+        ::std::true_type,
+        ::std::false_type
+    >::type {};
+
+}  /* namespace detail */
+
+template < typename T >
+struct contains_popups
+    : detail::containts_popups<T, traits::is_state_machine<T>::value>{};
+
+//----------------------------------------------------------------------------
+//  Metafunction to check if a machine is pushed by a substate
+//----------------------------------------------------------------------------
+template < typename T >
+struct is_pushed;
+template < typename T, typename Machine>
+struct state_pushes;
+
+namespace detail {
+
+template < typename Machine >
+struct pushes_predicate {
+    template < typename T >
+    using type = def::state_pushes<T, Machine>;
+};
+
+
+template < typename T, typename Machine, bool IsMachine >
+struct state_pushes
+    : ::std::integral_constant<bool, traits::pushes<T, Machine>::value> {};
+template < typename T, typename Machine >
+struct state_pushes<T, Machine, true>
+    : ::std::integral_constant<bool,
+        ::psst::meta::any_match<
+             pushes_predicate<Machine>::template type,
+            typename ::psst::meta::unique<
+                typename inner_states< typename T::transitions >::type,
+                typename inner_states< typename T::orthogonal_regions >::type
+            >::type
+        >::value
+    >{};
+
+template < typename Machine, bool IsMachine >
+struct is_pushed : ::std::false_type {};
+
+template < typename Machine >
+struct is_pushed<Machine, true>
+    : ::std::integral_constant<bool,
+        ::psst::meta::any_match<
+            pushes_predicate<Machine>::template type,
+            typename ::psst::meta::unique<
+                typename inner_states< typename Machine::transitions >::type,
+                typename inner_states< typename Machine::orthogonal_regions >::type
+            >::type
+        >::value
+    > {};
+
+}  /* namespace detail */
+
+template < typename T >
+struct is_pushed : detail::is_pushed<T, traits::is_state_machine<T>::value> {};
+template < typename T, typename Machine >
+struct state_pushes
+    : detail::state_pushes<T, Machine, traits::is_state_machine<T>::value> {};
+
+//----------------------------------------------------------------------------
+//  Metafunction to check if a machine is popped by a substate
+//----------------------------------------------------------------------------
+template < typename T >
+struct is_popped;
+template < typename T, typename Machine>
+struct state_pops;
+
+namespace detail {
+
+template < typename Machine >
+struct pops_predicate {
+    template < typename T >
+    using type = def::state_pops<T, Machine>;
+};
+
+
+template < typename T, typename Machine, bool IsMachine >
+struct state_pops
+    : ::std::integral_constant<bool, traits::pops<T, Machine>::value> {};
+template < typename T, typename Machine >
+struct state_pops<T, Machine, true>
+    : ::std::integral_constant<bool,
+        ::psst::meta::any_match<
+             pops_predicate<Machine>::template type,
+            typename ::psst::meta::unique<
+                typename inner_states< typename T::transitions >::type,
+                typename inner_states< typename T::orthogonal_regions >::type
+            >::type
+        >::value
+    >{};
+
+template < typename Machine, bool IsMachine >
+struct is_popped : ::std::false_type {};
+
+template < typename Machine >
+struct is_popped<Machine, true>
+    : ::std::integral_constant<bool,
+        ::psst::meta::any_match<
+            pops_predicate<Machine>::template type,
+            typename ::psst::meta::unique<
+                typename inner_states< typename Machine::transitions >::type,
+                typename inner_states< typename Machine::orthogonal_regions >::type
+            >::type
+        >::value
+    > {};
+
+}  /* namespace detail */
+
+template < typename T >
+struct is_popped : detail::is_popped<T, traits::is_state_machine<T>::value> {};
+template < typename T, typename Machine >
+struct state_pops
+    : detail::state_pops<T, Machine, traits::is_state_machine<T>::value> {};
+
+template < typename T >
+struct has_pushdown_stack
+    : ::std::integral_constant<bool, is_pushed<T>::value && is_popped<T>::value> {};
 
 }  /* namespace def */
 }  /* namespace afsm */

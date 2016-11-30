@@ -46,6 +46,38 @@ struct is_state_machine
     : ::std::is_base_of< tags::state_machine, T > {};
 
 template < typename T >
+struct is_pushdown
+    : ::std::is_base_of< tags::pushdown_state, T > {};
+template < typename T >
+struct is_popup
+    : ::std::is_base_of< tags::popup_state, T > {};
+
+namespace detail {
+
+template < typename T, typename Machine, bool IsPush >
+struct pushes : ::std::false_type {};
+
+template < typename T, typename Machine >
+struct pushes<T, Machine, true>
+    : ::std::integral_constant<bool,
+        ::std::is_same<typename T::pushdown_machine_type, Machine>::value> {};
+
+template < typename T, typename Machine, bool IsPop >
+struct pops : ::std::false_type {};
+
+template < typename T, typename Machine >
+struct pops<T, Machine, true>
+    : ::std::integral_constant<bool,
+        ::std::is_same<typename T::pushdown_machine_type, Machine>::value> {};
+
+}  /* namespace detail */
+
+template < typename T, typename Machine >
+struct pushes : detail::pushes<T, Machine, is_pushdown<T>::value> {};
+template < typename T, typename Machine >
+struct pops : detail::pops<T, Machine, is_popup<T>::value> {};
+
+template < typename T >
 struct has_common_base
     : ::std::is_base_of< tags::has_common_base, T > {};
 
@@ -73,6 +105,10 @@ struct inner_states_def {
     using terminal_state    = def::terminal_state<U, common_base_tag, Tags...>;
     template < typename U, typename ... Tags >
     using state_machine     = def::state_machine<U, common_base_tag, Tags...>;
+    template < typename U, typename M, typename ... Tags >
+    using push              = def::pushdown<U, M, common_base_tag, Tags...>;
+    template < typename U, typename M, typename ... Tags >
+    using pop               = def::popup<U, M, common_base_tag, Tags...>;
 };
 
 template < typename T >
@@ -86,6 +122,10 @@ struct inner_states_def<T, false> {
     using terminal_state    = def::terminal_state<U, Tags...>;
     template < typename U, typename ... Tags >
     using state_machine     = def::state_machine<U, Tags...>;
+    template < typename U, typename M, typename ... Tags >
+    using push              = def::pushdown<U, M, Tags...>;
+    template < typename U, typename M, typename ... Tags >
+    using pop               = def::popup<U, M, Tags...>;
 };
 
 }  /* namespace detail */

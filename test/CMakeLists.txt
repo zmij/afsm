@@ -30,6 +30,7 @@ set(
     transaction_priority_fsm.cpp
     common_base_test.cpp
     vending_machine_test.cpp
+    pushdown_tests.cpp
 )
 add_executable(test-afsm-base ${test_program_SRCS})
 target_link_libraries(

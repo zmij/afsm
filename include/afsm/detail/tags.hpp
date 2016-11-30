@@ -63,6 +63,19 @@ struct virtual_common_base<void> {
     using common_base_tag_type  = virtual_common_base<common_base_type>;
 };
 
+struct pushdown_state {};
+struct popup_state {};
+
+template < typename T >
+struct pushdown : pushdown_state {
+    using pushdown_machine_type = T;
+};
+
+template < typename T >
+struct popup : popup_state {
+    using pushdown_machine_type = T;
+};
+
 struct allow_empty_enter_exit {};
 struct mandatory_empty_enter_exit {};
 

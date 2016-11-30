@@ -36,6 +36,7 @@ struct event_process_selector
 
 enum class state_containment {
     none,
+    self,
     immediate,
     substate
 };
@@ -43,16 +44,26 @@ enum class state_containment {
 template < state_containment C >
 using containment_type = ::std::integral_constant<state_containment, C>;
 
-template < typename StateDef, typename InnerStates >
+using state_containment_none        = containment_type< state_containment::none >;
+using state_containment_self        = containment_type< state_containment::self >;
+using state_containment_immediate   = containment_type< state_containment::immediate >;
+using state_containment_substate    = containment_type< state_containment::substate >;
+
+template < typename StateDef, typename MachineDef, typename InnerStates >
 struct state_containment_type :
-        ::std::conditional< ::psst::meta::contains<StateDef, InnerStates>::value,
-             containment_type< state_containment::immediate >,
-             typename ::std::conditional<
-                 ::psst::meta::any_match<
-                     def::contains_substate_predicate<StateDef>::template type, InnerStates >::value,
-                     containment_type< state_containment::substate >,
-                     containment_type< state_containment::none >
-             >::type
+        ::std::conditional<
+            ::std::is_same< MachineDef, StateDef >::value,
+            state_containment_self,
+            typename ::std::conditional <
+                ::psst::meta::contains<StateDef, InnerStates>::value,
+                state_containment_immediate,
+                typename ::std::conditional<
+                    ::psst::meta::any_match<
+                        def::contains_substate_predicate<StateDef>::template type, InnerStates >::value,
+                        state_containment_substate,
+                        state_containment_none
+                >::type
+            >::type
         >::type {};
 
 template < typename T, bool isTerminal >
@@ -94,6 +105,12 @@ struct state_base_impl : T {
         using ::std::swap;
         swap(static_cast<T&>(*this), static_cast<T&>(rhs));
     }
+    template < typename Event, typename FSM >
+    void
+    state_enter(Event&&, FSM&) {}
+    template < typename Event, typename FSM >
+    void
+    state_exit(Event&&, FSM&) {}
 protected:
     template< typename ... Args >
     state_base_impl(Args&& ... args)
@@ -134,6 +151,13 @@ struct state_base_impl<T, true> : T {
         using ::std::swap;
         swap(static_cast<T&>(*this), static_cast<T&>(rhs));
     }
+
+    template < typename Event, typename FSM >
+    void
+    state_enter(Event&&, FSM&) {}
+    template < typename Event, typename FSM >
+    void
+    state_exit(Event&&, FSM&) {}
 protected:
     template< typename ... Args >
     state_base_impl(Args&& ... args)
@@ -141,12 +165,52 @@ protected:
 };
 
 template < typename T >
-class state_base : public state_base_impl<T, def::traits::is_terminal_state<T>::value> {
+struct pushdown_state : state_base_impl<T, false> {
+    using pushdown_machine_type = typename T::pushdown_machine_type;
+
+    template < typename Event, typename FSM >
+    void
+    state_enter(Event&& event, FSM& fsm)
+    {
+        root_machine(fsm).template get_state< pushdown_machine_type >().pushdown(::std::forward<Event>(event));
+    }
+};
+
+template < typename T >
+struct popup_state : state_base_impl<T, true> { // TODO Check if the state is terminal by tags
+    using pushdown_machine_type = typename T::pushdown_machine_type;
+
+    template < typename Event, typename FSM >
+    void
+    state_enter(Event&& event, FSM& fsm)
+    {
+        root_machine(fsm).template get_state< pushdown_machine_type >().popup(::std::forward<Event>(event));
+    }
+};
+
+template < typename T >
+class state_base : public ::std::conditional<
+        def::traits::is_pushdown<T>::value,
+        pushdown_state<T>,
+        typename ::std::conditional<
+            def::traits::is_popup<T>::value,
+            popup_state<T>,
+            state_base_impl<T, def::traits::is_terminal_state<T>::value>
+        >::type
+    >::type {
 public:
     using state_definition_type = T;
     using state_type            = state_base<T>;
     using internal_transitions  = typename state_definition_type::internal_transitions;
-    using base_impl_type        = state_base_impl<T, def::traits::is_terminal_state<T>::value>;
+    using base_impl_type        = typename ::std::conditional<
+                    def::traits::is_pushdown<T>::value,
+                    pushdown_state<T>,
+                    typename ::std::conditional<
+                        def::traits::is_popup<T>::value,
+                        popup_state<T>,
+                        state_base_impl<T, def::traits::is_terminal_state<T>::value>
+                    >::type
+                >::type;
 public:
     state_base() : base_impl_type{} {}
     state_base(state_base const&) = default;
@@ -177,7 +241,9 @@ protected:
 };
 
 template < typename T, typename Mutex, typename FrontMachine >
-class state_machine_base_impl : public state_base<T> {
+class state_machine_base_impl : public state_base<T>,
+        public transitions::transition_container<FrontMachine, T,
+                typename detail::size_type<Mutex>::type> {
 public:
     using state_machine_definition_type = T;
     using state_type                    = state_base<T>;
@@ -203,22 +269,33 @@ public:
 
     using mutex_type        = Mutex;
     using size_type         = typename detail::size_type<mutex_type>::type;
-    using transition_tuple  = afsm::transitions::state_transition_table<
-            front_machine_type, state_machine_definition_type, size_type >;
+    using has_pushdowns     = def::has_pushdown_stack<state_machine_definition_type>;
+    using transition_container = afsm::transitions::transition_container_selector<
+            front_machine_type, state_machine_definition_type, size_type, has_pushdowns::value>;
+    using transition_tuple  = typename transition_container::type;
     using inner_states_tuple = typename transition_tuple::inner_states_tuple;
+
+    using container_base  =
+            afsm::transitions::transition_container<
+                    front_machine_type, state_machine_definition_type, size_type>;
+
+    template < typename State >
+    using substate_type     = typename detail::substate_type<front_machine_type, State>::type;
+    template < typename State >
+    using contains_substate = def::contains_substate<front_machine_type, State>;
 public:
     state_machine_base_impl(front_machine_type* fsm)
         : state_type{},
-          transitions_{*fsm}
+          container_base{fsm}
     {}
 
     state_machine_base_impl(front_machine_type* fsm, state_machine_base_impl const& rhs)
         : state_type{static_cast<state_type const&>(rhs)},
-          transitions_{*fsm, rhs.transitions_}
+          container_base{fsm, rhs}
     {}
     state_machine_base_impl(front_machine_type* fsm, state_machine_base_impl&& rhs)
         : state_type{static_cast<state_type&&>(rhs)},
-          transitions_{*fsm, ::std::move(rhs.transitions_)}
+          container_base{fsm, ::std::move(rhs)}
     {}
 
     state_machine_base_impl(state_machine_base_impl const& rhs) = delete;
@@ -241,7 +318,7 @@ public:
     bool
     is_in_state() const
     {
-        return is_in_state<StateDef>(state_containment_type<StateDef, inner_states_def>{});
+        return is_in_state<StateDef>(state_containment_type<StateDef, state_machine_definition_type, inner_states_def>{});
     }
 
     template < ::std::size_t N>
@@ -254,48 +331,59 @@ public:
     { return transitions_.template get_state<N>(); }
 
     template < typename StateDef >
-    typename ::std::tuple_element< ::psst::meta::index_of<StateDef, inner_states_def>::value,
-         inner_states_tuple >::type&
+    typename ::std::enable_if<
+        !::std::is_same<state_machine_definition_type, StateDef>::value &&
+        contains_substate<StateDef>::value, substate_type<StateDef>>::type&
     get_state()
     {
-        using index_of_state = ::psst::meta::index_of<StateDef, inner_states_def>;
-        static_assert(index_of_state::found,
-                "Type is not a definition of inner state");
-        return transitions_.template get_state< index_of_state::value >();
+        return get_state<StateDef>(state_containment_type<StateDef, state_machine_definition_type, inner_states_def>{});
     }
     template < typename StateDef >
-    typename ::std::tuple_element< ::psst::meta::index_of<StateDef, inner_states_def>::value,
-         inner_states_tuple >::type const&
+    typename ::std::enable_if<
+        !::std::is_same<state_machine_definition_type, StateDef>::value &&
+        contains_substate<StateDef>::value, substate_type<StateDef>>::type const&
     get_state() const
     {
-        using index_of_state = ::psst::meta::index_of<StateDef, inner_states_def>;
-        static_assert(index_of_state::found,
-                "Type is not a definition of inner state");
-        return transitions_.template get_state< index_of_state::value >();
+        return get_state<StateDef>(state_containment_type<StateDef, state_machine_definition_type, inner_states_def>{});
+    }
+    template < typename StateDef >
+    typename ::std::enable_if<
+        ::std::is_same<state_machine_definition_type, StateDef>::value, front_machine_type>::type&
+    get_state()
+    {
+        return static_cast<front_machine_type&>(*this);
+    }
+    template < typename StateDef >
+    typename ::std::enable_if<
+        ::std::is_same<state_machine_definition_type, StateDef>::value, front_machine_type>::type const&
+    get_state() const
+    {
+        return static_cast<front_machine_type const&>(*this);
     }
 
     ::std::size_t
     current_state() const
     { return transitions_.current_state(); }
 
-    template < typename Event >
+    template < typename Event, typename FSM >
     void
-    state_enter(Event&& event)
+    state_enter(Event&& event, FSM&)
     {
         transitions_.enter( ::std::forward<Event>(event) );
     }
-    template < typename Event >
+    template < typename Event, typename FSM >
     void
-    state_exit(Event&& event)
+    state_exit(Event&& event, FSM&)
     {
         transitions_.exit( ::std::forward<Event>(event) );
     }
+
 protected:
     template<typename ... Args>
     explicit
     state_machine_base_impl(front_machine_type* fsm, Args&& ... args)
         : state_type(::std::forward<Args>(args)...),
-          transitions_{*fsm}
+          container_base{fsm}
     {}
 
     template < typename FSM, typename Event >
@@ -347,6 +435,43 @@ protected:
         return actions::event_process_result::refuse;
     }
     //@}
+    //@{
+    /** @name Get Substates */
+    template < typename StateDef >
+    substate_type<StateDef>&
+    get_state(state_containment_immediate const&)
+    {
+        using index_of_state = ::psst::meta::index_of<StateDef, inner_states_def>;
+        static_assert(index_of_state::found,
+                "Type is not a definition of inner state");
+        return transitions_.template get_state< index_of_state::value >();
+    }
+    template < typename StateDef >
+    substate_type<StateDef> const&
+    get_state(state_containment_immediate const&) const
+    {
+        using index_of_state = ::psst::meta::index_of<StateDef, inner_states_def>;
+        static_assert(index_of_state::found,
+                "Type is not a definition of inner state");
+        return transitions_.template get_state< index_of_state::value >();
+    }
+    template < typename StateDef >
+    substate_type<StateDef>&
+    get_state(state_containment_substate const&)
+    {
+        using search = detail::substate_type<front_machine_type, StateDef>;
+        return get_state< typename search::front >().template get_state<StateDef>();
+    }
+    template < typename StateDef >
+    substate_type<StateDef> const&
+    get_state(state_containment_substate const&) const
+    {
+        using search = detail::substate_type<front_machine_type, StateDef>;
+        return get_state< typename search::front >().template get_state<StateDef>();
+    }
+    //@}
+    //@{
+    /** @name Is in state check */
     /**
      * Constant false for states not contained by this state machine
      * @param
@@ -354,10 +479,17 @@ protected:
      */
     template < typename StateDef >
     bool
-    is_in_state(containment_type< state_containment::none > const&) const
-    {
-        return false;
-    }
+    is_in_state(state_containment_none const&) const
+    { return false; }
+    /**
+     * Constant true for self
+     * @param
+     * @return
+     */
+    template < typename StateDef >
+    bool
+    is_in_state(state_containment_self const&) const
+    { return true; }
     /**
      * Is in substate of an inner state
      * @param
@@ -365,7 +497,7 @@ protected:
      */
     template < typename StateDef >
     bool
-    is_in_state(containment_type< state_containment::substate > const&) const
+    is_in_state(state_containment_substate const&) const
     {
         using immediate_states =
             typename ::psst::meta::find_if<
@@ -391,15 +523,16 @@ protected:
      */
     template < typename StateDef >
     bool
-    is_in_state(containment_type< state_containment::immediate > const&) const
+    is_in_state(state_containment_immediate const&) const
     {
         using index_of_state = ::psst::meta::index_of<StateDef, inner_states_def>;
         static_assert(index_of_state::found,
                     "Type is not a definition of inner state");
         return index_of_state::value == transitions_.current_state();
     }
+    //@}
 protected:
-    transition_tuple        transitions_;
+    using container_base::transitions_;
 };
 
 template < typename T, typename Mutex, typename FrontMachine >
@@ -451,7 +584,9 @@ protected:
 };
 
 template < typename T, typename Mutex, typename FrontMachine >
-class orthogonal_state_machine : public state_base<T> {
+class orthogonal_state_machine : public state_base<T>,
+        public orthogonal::region_container<FrontMachine, T,
+                typename detail::size_type<Mutex>::type> {
 public:
     using state_machine_definition_type = T;
     using state_type                    = state_base<T>;
@@ -467,20 +602,27 @@ public:
 
     using mutex_type                    = Mutex;
     using size_type                     = typename detail::size_type<mutex_type>::type;
-    using regions_table                 = afsm::orthogonal::regions_table<front_machine_type, state_machine_definition_type, size_type>;
-    using regions_tuple                 = typename regions_table::regions_tuple;
+
+    using container_base    =
+            orthogonal::region_container<front_machine_type, state_machine_definition_type, size_type>;
+    using region_tuple                  = typename container_base::region_tuple;
+
+    template < typename State >
+    using substate_type     = typename detail::substate_type<front_machine_type, State>::type;
+    template < typename State >
+    using contains_substate = def::contains_substate<front_machine_type, State>;
 public:
     orthogonal_state_machine(front_machine_type* fsm)
         : state_type{},
-          regions_{*fsm}
+          container_base{fsm}
     {}
     orthogonal_state_machine(front_machine_type* fsm, orthogonal_state_machine const& rhs)
         : state_type{static_cast<state_type const&>(rhs)},
-          regions_{*fsm, rhs.regions_}
+          container_base{fsm, rhs}
     {}
     orthogonal_state_machine(front_machine_type* fsm, orthogonal_state_machine&& rhs)
         : state_type{static_cast<state_type&&>(rhs)},
-          regions_{*fsm, rhs.regions_}
+          container_base{fsm, ::std::move(rhs)}
     {}
 
     orthogonal_state_machine(orthogonal_state_machine const& rhs) = delete;
@@ -503,48 +645,58 @@ public:
     bool
     is_in_state() const
     {
-        return is_in_state<StateDef>(state_containment_type<StateDef, regions_def>{});
+        return is_in_state<StateDef>(state_containment_type<StateDef, state_machine_definition_type, regions_def>{});
     }
 
     template < ::std::size_t N>
-    typename ::std::tuple_element< N, regions_tuple >::type&
+    typename ::std::tuple_element< N, region_tuple >::type&
     get_state()
     { return regions_.template get_state<N>(); }
     template < ::std::size_t N>
-    typename ::std::tuple_element< N, regions_tuple >::type const&
+    typename ::std::tuple_element< N, region_tuple >::type const&
     get_state() const
     { return regions_.template get_state<N>(); }
 
     template < typename StateDef >
-    typename ::std::tuple_element< ::psst::meta::index_of<StateDef, regions_def>::value,
-            regions_tuple >::type&
+    typename ::std::enable_if<
+        !::std::is_same<state_machine_definition_type, StateDef>::value &&
+        contains_substate<StateDef>::value, substate_type<StateDef>>::type&
     get_state()
     {
-        using index_of_state = ::psst::meta::index_of<StateDef, regions_def>;
-        static_assert(index_of_state::found,
-                "Type is not a definition of inner state");
-        return regions_.template get_state< index_of_state::value >();
+        return get_state<StateDef>(state_containment_type<StateDef, state_machine_definition_type, regions_def>{});
     }
     template < typename StateDef >
-    typename ::std::tuple_element< ::psst::meta::index_of<StateDef, regions_def>::value,
-            regions_tuple >::type const&
+    typename ::std::enable_if<
+        !::std::is_same<state_machine_definition_type, StateDef>::value &&
+        contains_substate<StateDef>::value, substate_type<StateDef>>::type const&
     get_state() const
     {
-        using index_of_state = ::psst::meta::index_of<StateDef, regions_def>;
-        static_assert(index_of_state::found,
-                "Type is not a definition of inner state");
-        return regions_.template get_state< index_of_state::value >();
+        return get_state<StateDef>(state_containment_type<StateDef, state_machine_definition_type, regions_def>{});
+    }
+    template < typename StateDef >
+    typename ::std::enable_if<
+        ::std::is_same<state_machine_definition_type, StateDef>::value, front_machine_type>::type&
+    get_state()
+    {
+        return static_cast<front_machine_type&>(*this);
+    }
+    template < typename StateDef >
+    typename ::std::enable_if<
+        ::std::is_same<state_machine_definition_type, StateDef>::value, front_machine_type>::type const&
+    get_state() const
+    {
+        return static_cast<front_machine_type const&>(*this);
     }
 
-    template < typename Event >
+    template < typename Event, typename FSM >
     void
-    state_enter(Event&& event)
+    state_enter(Event&& event, FSM&)
     {
         regions_.enter(::std::forward<Event>(event));
     }
-    template < typename Event >
+    template < typename Event, typename FSM >
     void
-    state_exit(Event&& event)
+    state_exit(Event&& event, FSM&)
     {
         regions_.exit(::std::forward<Event>(event));
     }
@@ -553,7 +705,7 @@ protected:
     explicit
     orthogonal_state_machine(front_machine_type* fsm, Args&& ... args)
         : state_type(::std::forward<Args>(args)...),
-          regions_{*fsm}
+          container_base{fsm}
     {}
 
     template < typename FSM, typename Event >
@@ -603,6 +755,43 @@ protected:
         return actions::event_process_result::refuse;
     }
     //@}
+    //@{
+    /** @name Get Substates */
+    template < typename StateDef >
+    substate_type<StateDef>&
+    get_state(state_containment_immediate const&)
+    {
+        using index_of_state = ::psst::meta::index_of<StateDef, regions_def>;
+        static_assert(index_of_state::found,
+                "Type is not a definition of inner state");
+        return regions_.template get_state< index_of_state::value >();
+    }
+    template < typename StateDef >
+    substate_type<StateDef> const&
+    get_state(state_containment_immediate const&) const
+    {
+        using index_of_state = ::psst::meta::index_of<StateDef, regions_def>;
+        static_assert(index_of_state::found,
+                "Type is not a definition of inner state");
+        return regions_.template get_state< index_of_state::value >();
+    }
+    template < typename StateDef >
+    substate_type<StateDef>&
+    get_state(state_containment_substate const&)
+    {
+        using search = detail::substate_type<front_machine_type, StateDef>;
+        return get_state< typename search::front >().template get_state<StateDef>();
+    }
+    template < typename StateDef >
+    substate_type<StateDef> const&
+    get_state(state_containment_substate const&) const
+    {
+        using search = detail::substate_type<front_machine_type, StateDef>;
+        return get_state< typename search::front >().template get_state<StateDef>();
+    }
+    //@}
+    //@{
+    /** @name Is in state checks */
     /**
      * Constant false for states not contained by this state machine
      * @param
@@ -610,10 +799,17 @@ protected:
      */
     template < typename StateDef >
     bool
-    is_in_state(containment_type< state_containment::none > const&) const
-    {
-        return false;
-    }
+    is_in_state(state_containment_none const&) const
+    { return false; }
+    /**
+     * Constant true for self
+     * @param
+     * @return
+     */
+    template < typename StateDef >
+    bool
+    is_in_state(state_containment_self const&) const
+    { return true; }
     /**
      * Is in substate of an inner state
      * @param
@@ -621,7 +817,7 @@ protected:
      */
     template < typename StateDef >
     bool
-    is_in_state(containment_type< state_containment::substate > const&) const
+    is_in_state(state_containment_substate const&) const
     {
         using immediate_states =
             typename ::psst::meta::find_if<
@@ -648,12 +844,13 @@ protected:
      */
     template < typename StateDef >
     bool
-    is_in_state(containment_type< state_containment::immediate > const&) const
+    is_in_state(state_containment_immediate const&) const
     {
         return true;
     }
+    //@}
 protected:
-    regions_table       regions_;
+    using container_base::regions_;
 };
 
 template < typename T, typename Mutex, typename FrontMachine >

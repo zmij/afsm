@@ -39,6 +39,9 @@ struct contains<T> : ::std::false_type {};
 template < typename T, typename ... Y >
 struct contains< T, type_tuple<Y...> > : contains<T, Y...> {};
 
+/**
+ * Metafunction to determine if a variadic pack is empty
+ */
 template < typename ... T >
 struct is_empty : ::std::false_type {};
 template <>
@@ -52,6 +55,17 @@ struct is_empty< type_tuple<T...> >
         ::std::false_type,
         ::std::true_type
     >::type {};
+
+template < typename ... T >
+struct front;
+
+template < typename T, typename ... Y >
+struct front<T, Y...> {
+    using type = T;
+};
+
+template < typename ... T >
+struct front< type_tuple<T...> > : front<T...> {};
 
 namespace detail {
 
@@ -140,6 +154,22 @@ template < typename T, typename ... Y >
 struct push_front<type_tuple<Y...>, T > {
     using type = type_tuple<T, Y...>;
 };
+
+template < typename ... T >
+struct pop_front;
+
+template < typename T, typename ... Y >
+struct pop_front<T, Y...> {
+    using type = type_tuple<Y...>;
+};
+
+template <>
+struct pop_front<> {
+    using type = type_tuple<>;
+};
+
+template < typename ... T >
+struct pop_front< type_tuple<T...> > : pop_front<T...> {};
 
 template < typename T, typename ... Y>
 struct remove_type;

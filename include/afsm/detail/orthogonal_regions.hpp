@@ -123,7 +123,11 @@ public:
     {}
 
     regions_table(regions_table const&) = delete;
-    regions_table(regions_table&&) = delete;
+    regions_table(regions_table&& rhs)
+        : fsm_{rhs.fsm_},
+          regions_{::std::move(rhs.regions_)}
+    {
+    }
     regions_table&
     operator = (regions_table const&) = delete;
     regions_table&
@@ -134,8 +138,15 @@ public:
     {
         using ::std::swap;
         swap(regions_, rhs.regions_);
-        ::afsm::detail::set_enclosing_fsm< size - 1 >::set(*fsm_, regions_);
-        ::afsm::detail::set_enclosing_fsm< size - 1 >::set(*rhs.fsm_, rhs.regions_);
+        set_fsm(*fsm_);
+        rhs.set_fsm(*rhs.fsm_);
+    }
+
+    void
+    set_fsm(fsm_type& fsm)
+    {
+        fsm_ = &fsm;
+        ::afsm::detail::set_enclosing_fsm<size - 1>::set(fsm, regions_);
     }
 
     regions_tuple&
@@ -178,6 +189,213 @@ public:
 private:
     fsm_type*           fsm_;
     regions_tuple       regions_;
+};
+
+template < typename FSM, typename FSM_DEF, typename Size >
+class regions_stack {
+public:
+    using region_table_type     = regions_table<FSM, FSM_DEF, Size>;
+    using this_type             = regions_stack<FSM, FSM_DEF, Size>;
+
+    using fsm_type                      = typename region_table_type::fsm_type;
+    using state_machine_definition_type = typename region_table_type::state_machine_definition_type;
+    using size_type                     = typename region_table_type::size_type;
+    using regions_tuple                 = typename region_table_type::regions_tuple;
+
+    using stack_constructor_type        = afsm::detail::stack_constructor<FSM, region_table_type>;
+public:
+    regions_stack(fsm_type& fsm)
+        : fsm_{&fsm},
+          state_stack_{ stack_constructor_type::construct(fsm) }
+    {}
+    regions_stack(fsm_type& fsm, regions_stack const& rhs)
+        : fsm_{&fsm},
+          state_stack_{ stack_constructor_type::copy_construct(fsm, rhs.state_stack_) }
+    {}
+    regions_stack(fsm_type& fsm, regions_stack&& rhs)
+        : fsm_{&fsm},
+          state_stack_{ stack_constructor_type::move_construct(fsm, ::std::move(rhs.state_stack_)) }
+    {}
+
+    regions_stack(regions_stack const&) = delete;
+    regions_stack(regions_stack&&) = delete;
+    regions_stack&
+    operator = (regions_stack const&) = delete;
+    regions_stack&
+    operator = (regions_stack&&) = delete;
+
+    void
+    swap(regions_stack& rhs)
+    {
+        using ::std::swap;
+        swap(state_stack_, rhs.state_stack_);
+        set_fsm(*fsm_);
+        rhs.set_fsm(*rhs.fsm_);
+    }
+
+    void
+    set_fsm(fsm_type& fsm)
+    {
+        fsm_ = &fsm;
+        for (auto& item : state_stack_) {
+            item.set_fsm(fsm);
+        }
+    }
+
+    regions_tuple&
+    states()
+    { return top().states(); }
+    regions_tuple const&
+    states() const
+    { return top().states(); }
+
+    template < ::std::size_t N >
+    typename ::std::tuple_element< N, regions_tuple >::type&
+    get_state()
+    { return top().template get_state<N>(); }
+    template < ::std::size_t N >
+    typename ::std::tuple_element< N, regions_tuple >::type const&
+    get_state() const
+    { return top().template get_state<N>(); }
+
+    template < typename Event >
+    actions::event_process_result
+    process_event(Event&& event)
+    {
+        return top().process_event(::std::forward<Event>(event));
+    }
+
+    template < typename Event >
+    void
+    enter(Event&& event)
+    {
+        top().enter(::std::forward<Event>(event));
+    }
+    template < typename Event >
+    void
+    exit(Event&& event)
+    {
+        top().exit(::std::forward<Event>(event));
+    }
+
+    template < typename Event >
+    void
+    push(Event&& event)
+    {
+        state_stack_.emplace_back( *fsm_ );
+        enter(::std::forward<Event>(event));
+    }
+
+    template < typename Event >
+    void
+    pop(Event&& event)
+    {
+        if (state_stack_.size() > 1) {
+            exit(::std::forward<Event>(event));
+            state_stack_.pop_back();
+        }
+    }
+
+    ::std::size_t
+    stack_size() const
+    {
+        return state_stack_.size();
+    }
+private:
+    using stack_type                    = typename stack_constructor_type::type;
+
+    region_table_type&
+    top()
+    { return state_stack_.back(); }
+    region_table_type const&
+    top() const
+    { return state_stack_.back(); }
+private:
+    fsm_type        *fsm_;
+    stack_type      state_stack_;
+};
+
+template < typename FSM, typename FSM_DEF, typename Size, bool HasPushdowns >
+struct region_container_selector {
+    using type = regions_table<FSM, FSM_DEF, Size>;
+};
+
+template < typename FSM, typename FSM_DEF, typename Size >
+struct region_container_selector<FSM, FSM_DEF, Size, true> {
+    using type = regions_stack<FSM, FSM_DEF, Size>;
+};
+
+namespace detail {
+
+template < typename FSM, typename FSM_DEF, typename Size, bool HasPushdowns >
+struct region_container {
+    using region_tuple = typename region_container_selector<FSM, FSM_DEF, Size, HasPushdowns>::type;
+
+    region_container(FSM* fsm)
+        : regions_{*fsm}
+    {}
+    region_container(FSM* fsm, region_container const& rhs)
+        : regions_{*fsm, rhs.regions_}
+    {}
+    region_container(FSM* fsm, region_container&& rhs)
+        : regions_{*fsm, ::std::move(rhs.regions_)}
+    {}
+protected:
+    region_tuple regions_;
+};
+
+template < typename FSM, typename FSM_DEF, typename Size >
+struct region_container<FSM, FSM_DEF, Size, true> {
+    using region_tuple = typename region_container_selector<FSM, FSM_DEF, Size, true>::type;
+
+    region_container(FSM* fsm)
+        : regions_{*fsm}
+    {}
+    region_container(FSM* fsm, region_container const& rhs)
+        : regions_{*fsm, rhs.regions_}
+    {}
+    region_container(FSM* fsm, region_container&& rhs)
+        : regions_{*fsm, ::std::move(rhs.regions_)}
+    {}
+
+    ::std::size_t
+    stack_size() const
+    { return regions_.stack_size(); }
+
+    // Push/pop ops
+    template < typename Event >
+    void
+    pushdown(Event&& event)
+    {
+        regions_.push(::std::forward<Event>(event));
+    }
+    template < typename Event >
+    void
+    popup(Event&& event)
+    {
+        regions_.pop(::std::forward<Event>(event));
+    }
+protected:
+    region_tuple regions_;
+};
+
+}  /* namespace detail */
+
+template < typename FSM, typename FSM_DEF, typename Size >
+struct region_container
+    : detail::region_container<FSM, FSM_DEF, Size,
+          def::has_pushdown_stack<FSM_DEF>::value> {
+    using base_type = detail::region_container<FSM, FSM_DEF, Size,
+            def::has_pushdown_stack<FSM_DEF>::value>;
+    using region_tuple = typename base_type::region_tuple;
+
+    region_container(FSM* fsm) : base_type{fsm} {}
+    region_container(FSM* fsm, region_container const& rhs)
+        : base_type{fsm, rhs} {}
+    region_container(FSM* fsm, region_container&& rhs)
+        : base_type{fsm, ::std::move(rhs)} {}
+protected:
+    using base_type::regions_;
 };
 
 }  /* namespace orthogonal */

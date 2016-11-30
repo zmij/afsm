@@ -63,13 +63,6 @@ public:
     void
     enclosing_fsm(enclosing_fsm_type& fsm)
     { fsm_ = &fsm; }
-
-    template < typename Event >
-    void
-    state_enter(Event&&) {}
-    template < typename Event >
-    void
-    state_exit(Event&&) {}
 protected: // For tests
     template < ::std::size_t StateIndex >
     friend struct actions::detail::process_event_handler;
