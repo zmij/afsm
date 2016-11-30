@@ -242,7 +242,7 @@ protected:
 
 template < typename T, typename Mutex, typename FrontMachine >
 class state_machine_base_impl : public state_base<T>,
-        public transitions::transition_manipulator<FrontMachine, T,
+        public transitions::transition_container<FrontMachine, T,
                 typename detail::size_type<Mutex>::type> {
 public:
     using state_machine_definition_type = T;
@@ -270,13 +270,13 @@ public:
     using mutex_type        = Mutex;
     using size_type         = typename detail::size_type<mutex_type>::type;
     using has_pushdowns     = def::has_pushdown_stack<state_machine_definition_type>;
-    using transition_container = afsm::transitions::transition_container<
+    using transition_container = afsm::transitions::transition_container_selector<
             front_machine_type, state_machine_definition_type, size_type, has_pushdowns::value>;
     using transition_tuple  = typename transition_container::type;
     using inner_states_tuple = typename transition_tuple::inner_states_tuple;
 
     using container_base  =
-            afsm::transitions::transition_manipulator<
+            afsm::transitions::transition_container<
                     front_machine_type, state_machine_definition_type, size_type>;
 
     template < typename State >
@@ -584,7 +584,9 @@ protected:
 };
 
 template < typename T, typename Mutex, typename FrontMachine >
-class orthogonal_state_machine : public state_base<T> {
+class orthogonal_state_machine : public state_base<T>,
+        public orthogonal::region_container<FrontMachine, T,
+                typename detail::size_type<Mutex>::type> {
 public:
     using state_machine_definition_type = T;
     using state_type                    = state_base<T>;
@@ -600,8 +602,10 @@ public:
 
     using mutex_type                    = Mutex;
     using size_type                     = typename detail::size_type<mutex_type>::type;
-    using regions_table                 = afsm::orthogonal::regions_table<front_machine_type, state_machine_definition_type, size_type>;
-    using regions_tuple                 = typename regions_table::regions_tuple;
+
+    using container_base    =
+            orthogonal::region_container<front_machine_type, state_machine_definition_type, size_type>;
+    using region_tuple                  = typename container_base::region_tuple;
 
     template < typename State >
     using substate_type     = typename detail::substate_type<front_machine_type, State>::type;
@@ -610,15 +614,15 @@ public:
 public:
     orthogonal_state_machine(front_machine_type* fsm)
         : state_type{},
-          regions_{*fsm}
+          container_base{fsm}
     {}
     orthogonal_state_machine(front_machine_type* fsm, orthogonal_state_machine const& rhs)
         : state_type{static_cast<state_type const&>(rhs)},
-          regions_{*fsm, rhs.regions_}
+          container_base{fsm, rhs}
     {}
     orthogonal_state_machine(front_machine_type* fsm, orthogonal_state_machine&& rhs)
         : state_type{static_cast<state_type&&>(rhs)},
-          regions_{*fsm, rhs.regions_}
+          container_base{fsm, ::std::move(rhs)}
     {}
 
     orthogonal_state_machine(orthogonal_state_machine const& rhs) = delete;
@@ -645,11 +649,11 @@ public:
     }
 
     template < ::std::size_t N>
-    typename ::std::tuple_element< N, regions_tuple >::type&
+    typename ::std::tuple_element< N, region_tuple >::type&
     get_state()
     { return regions_.template get_state<N>(); }
     template < ::std::size_t N>
-    typename ::std::tuple_element< N, regions_tuple >::type const&
+    typename ::std::tuple_element< N, region_tuple >::type const&
     get_state() const
     { return regions_.template get_state<N>(); }
 
@@ -701,7 +705,7 @@ protected:
     explicit
     orthogonal_state_machine(front_machine_type* fsm, Args&& ... args)
         : state_type(::std::forward<Args>(args)...),
-          regions_{*fsm}
+          container_base{fsm}
     {}
 
     template < typename FSM, typename Event >
@@ -846,7 +850,7 @@ protected:
     }
     //@}
 protected:
-    regions_table       regions_;
+    using container_base::regions_;
 };
 
 template < typename T, typename Mutex, typename FrontMachine >

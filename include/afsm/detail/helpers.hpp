@@ -12,6 +12,8 @@
 #include <type_traits>
 #include <mutex>
 #include <atomic>
+#include <deque>
+#include <algorithm>
 
 namespace afsm {
 namespace detail {
@@ -116,6 +118,44 @@ struct substate_type_impl<FSM, State, false>
 template < typename FSM, typename State >
 struct substate_type
     : substate_type_impl<FSM, State, def::contains_substate<FSM, State>::value>{};
+
+template < typename FSM, typename StateTable >
+struct stack_constructor {
+    using state_table_type  = StateTable;
+    using stack_item        = state_table_type;
+    using type              = ::std::deque<stack_item>;
+    static constexpr ::std::size_t size = state_table_type::size;
+
+    static type
+    construct(FSM& fsm)
+    {
+        type res;
+        res.emplace_back(state_table_type{fsm});
+        return res;
+    }
+    static type
+    copy_construct(FSM& fsm, type const& rhs)
+    {
+        type res;
+        ::std::transform(rhs.begin(), rhs.end(), ::std::back_inserter(res),
+            [fsm](stack_item const& item)
+            {
+                return stack_item{ fsm, item };
+            });
+        return res;
+    }
+    static type
+    move_construct(FSM& fsm, type&& rhs)
+    {
+        type res;
+        ::std::transform(rhs.begin(), rhs.end(), ::std::back_inserter(res),
+            [fsm](stack_item&& item)
+            {
+                return stack_item{fsm, ::std::move(item) };
+            });
+        return res;
+    }
+};
 
 struct no_lock {
     no_lock(none&) {}

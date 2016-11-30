@@ -617,48 +617,6 @@ private:
     inner_states_tuple  states_;
 };
 
-namespace detail {
-
-template < typename FSM, typename StateTable >
-struct stack_constructor {
-    using state_table_type  = StateTable;
-    using stack_item        = state_table_type;
-    using type              = ::std::deque<stack_item>;
-    static constexpr ::std::size_t size = state_table_type::size;
-
-    static type
-    construct(FSM& fsm)
-    {
-        type res;
-        res.emplace_back(state_table_type{fsm});
-        return res;
-    }
-    static type
-    copy_construct(FSM& fsm, type const& rhs)
-    {
-        type res;
-        ::std::transform(rhs.begin(), rhs.end(), ::std::back_inserter(res),
-            [fsm](stack_item const& item)
-            {
-                return stack_item{ fsm, item };
-            });
-        return res;
-    }
-    static type
-    move_construct(FSM& fsm, type&& rhs)
-    {
-        type res;
-        ::std::transform(rhs.begin(), rhs.end(), ::std::back_inserter(res),
-            [fsm](stack_item&& item)
-            {
-                return stack_item{fsm, ::std::move(item) };
-            });
-        return res;
-    }
-};
-
-}  /* namespace detail */
-
 template < typename FSM, typename FSM_DEF, typename Size >
 class state_transition_stack {
 public:
@@ -670,7 +628,7 @@ public:
     using size_type                     = typename state_table_type::size_type;
     using inner_states_tuple            = typename state_table_type::inner_states_tuple;
 
-    using stack_constructor_type        = detail::stack_constructor<FSM, state_table_type>;
+    using stack_constructor_type        = afsm::detail::stack_constructor<FSM, state_table_type>;
 public:
     state_transition_stack(fsm_type& fsm)
         : fsm_{&fsm},
@@ -801,28 +759,28 @@ private:
 };
 
 template < typename FSM, typename FSM_DEF, typename Size, bool HasPusdowns >
-struct transition_container {
+struct transition_container_selector {
     using type = state_transition_table<FSM, FSM_DEF, Size>;
 };
 
 template <typename FSM, typename FSM_DEF, typename Size>
-struct transition_container<FSM, FSM_DEF, Size, true> {
+struct transition_container_selector<FSM, FSM_DEF, Size, true> {
     using type = state_transition_stack<FSM, FSM_DEF, Size>;
 };
 
 namespace detail {
 
 template < typename FSM, typename FSM_DEF, typename Size, bool HasPushdowns >
-struct transition_manipulator {
-    using transitions_tuple = typename transition_container<FSM, FSM_DEF, Size, HasPushdowns>::type;
+struct transition_container {
+    using transitions_tuple = typename transition_container_selector<FSM, FSM_DEF, Size, HasPushdowns>::type;
 
-    transition_manipulator(FSM* fsm)
+    transition_container(FSM* fsm)
         : transitions_{*fsm}
     {}
-    transition_manipulator(FSM* fsm, transition_manipulator const& rhs)
+    transition_container(FSM* fsm, transition_container const& rhs)
         : transitions_{*fsm, rhs.transitions_}
     {}
-    transition_manipulator(FSM* fsm, transition_manipulator&& rhs)
+    transition_container(FSM* fsm, transition_container&& rhs)
         : transitions_{*fsm, ::std::move(rhs.transitions_)}
     {}
 protected:
@@ -830,16 +788,16 @@ protected:
 };
 
 template < typename FSM, typename FSM_DEF, typename Size >
-struct transition_manipulator< FSM, FSM_DEF, Size, true > {
-    using transitions_tuple = typename transition_container<FSM, FSM_DEF, Size, true>::type;
+struct transition_container< FSM, FSM_DEF, Size, true > {
+    using transitions_tuple = typename transition_container_selector<FSM, FSM_DEF, Size, true>::type;
 
-    transition_manipulator(FSM* fsm)
+    transition_container(FSM* fsm)
         : transitions_{*fsm}
     {}
-    transition_manipulator(FSM* fsm, transition_manipulator const& rhs)
+    transition_container(FSM* fsm, transition_container const& rhs)
         : transitions_{*fsm, rhs.transitions_}
     {}
-    transition_manipulator(FSM* fsm, transition_manipulator&& rhs)
+    transition_container(FSM* fsm, transition_container&& rhs)
         : transitions_{*fsm, ::std::move(rhs.transitions_)}
     {}
 
@@ -868,17 +826,17 @@ protected:
 }  /* namespace detail */
 
 template < typename FSM, typename FSM_DEF, typename Size >
-struct transition_manipulator
-    : detail::transition_manipulator<FSM, FSM_DEF, Size,
+struct transition_container
+    : detail::transition_container<FSM, FSM_DEF, Size,
           def::has_pushdown_stack<FSM_DEF>::value> {
-    using base_type = detail::transition_manipulator<FSM, FSM_DEF, Size,
+    using base_type = detail::transition_container<FSM, FSM_DEF, Size,
                             def::has_pushdown_stack<FSM_DEF>::value>;
     using transitions_tuple = typename base_type::transitions_tuple;
 
-    transition_manipulator( FSM* fsm ) : base_type{fsm} {}
-    transition_manipulator(FSM* fsm, transition_manipulator const& rhs)
+    transition_container( FSM* fsm ) : base_type{fsm} {}
+    transition_container(FSM* fsm, transition_container const& rhs)
         : base_type{fsm, rhs} {}
-    transition_manipulator(FSM* fsm, transition_manipulator&& rhs)
+    transition_container(FSM* fsm, transition_container&& rhs)
         : base_type{fsm, ::std::move(rhs)} {}
 protected:
     using base_type::transitions_;
