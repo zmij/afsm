@@ -31,6 +31,10 @@ add_definitions("-std=c++11")
 add_definitions(-Wall -Werror -Wextra -pedantic -Weffc++)
 
 # Add subdirectories here
+
+add_subdirectory(include)
+add_subdirectory(cmake)
+
 if (BUILD_TESTS)
     enable_testing()
     add_subdirectory(test)
@@ -38,6 +42,6 @@ endif()
 
 get_directory_property(has_parent PARENT_DIRECTORY)
 if (has_parent)
-    set(${LIB_NAME}_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include CACHE
+    set(${LIB_NAME}_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include CACHE
         INTERNAL "Path to metapushkin libaray includes" )
 endif()

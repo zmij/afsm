@@ -55,7 +55,6 @@ demangle(::std::iostream& os)
             free(ret);
         }
     }
-    return os;
 }
 
 }  /* namespace util */
