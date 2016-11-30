@@ -164,18 +164,22 @@ struct json_parser_def : def::state_machine< json_parser_def > {
 
         using initial_state = start;
         using transitions = transition_table<
-            tr< start,  events::bool_literal,       end,    none,       none                >,
-            tr< start,  events::integer_literal,    end,    none,       none                >,
-            tr< start,  events::float_literal,      end,    none,       none                >,
-            tr< start,  events::string_literal,     end,    none,       none                >,
-            tr< start,  events::null_literal,       end,    none,       none                >,
+            /*  Start | Event                     | Next  | Action    | Guard               */
+            /*--------+---------------------------+-------+-----------+---------------------*/
+            tr< start , events::bool_literal      , end   , none      , none                >,
+            tr< start , events::integer_literal   , end   , none      , none                >,
+            tr< start , events::float_literal     , end   , none      , none                >,
+            tr< start , events::string_literal    , end   , none      , none                >,
+            tr< start , events::null_literal      , end   , none      , none                >,
 
-            tr< start,  events::start_array,        array,  none,       none                >,
-            tr< array,  events::end_array,          end,    none,       none                >,
-            tr< start,  events::end_array,          end,    dup_event,  in_first_element    >,
+            /*--------+---------------------------+-------+-----------+---------------------*/
+            tr< start , events::start_array       , array , none      , none                >,
+            tr< array , events::end_array         , end   , none      , none                >,
+            tr< start , events::end_array         , end   , dup_event , in_first_element    >,
 
-            tr< start,  events::start_object,       object, none,       none                >,
-            tr< object, events::end_object,         end,    none,       can_close_object    >
+            /*--------+---------------------------+-------+-----------+---------------------*/
+            tr< start , events::start_object      , object, none      , none                >,
+            tr< object, events::end_object        , end   , none      , can_close_object    >
         >;
 
         value_context   context_ = value_context::none;
