@@ -9,6 +9,7 @@
 #define AFSM_DETAIL_TRANSITIONS_HPP_
 
 #include <afsm/detail/actions.hpp>
+#include <afsm/detail/exception_safety_guarantees.hpp>
 
 #include <deque>
 #include <memory>
@@ -538,24 +539,84 @@ public:
 
         auto& source = ::std::get< source_index::value >(states_);
         auto& target = ::std::get< target_index::value >(states_);
+        return transit_state_impl(
+                ::std::forward<Event>(event), source, target,
+                 guard, action, exit, enter, clear,
+                 target_index::value,
+                 typename def::traits::exception_safety<state_machine_definition_type>::type{});
+    }
+    template < typename SourceState, typename TargetState,
+        typename Event, typename Guard, typename Action,
+        typename SourceExit, typename TargetEnter, typename SourceClear >
+    actions::event_process_result
+    transit_state_impl(Event&& event, SourceState& source, TargetState& target,
+            Guard guard, Action action, SourceExit exit,
+            TargetEnter enter, SourceClear clear,
+            ::std::size_t target_index,
+            def::tags::basic_exception_safety const&)
+    {
+        if (guard(*fsm_, source, event)) {
+            auto const& observer = root_machine(*fsm_);
+            exit(source, ::std::forward<Event>(event), *fsm_);
+            observer.state_exited(*fsm_, source, event);
+            action(::std::forward<Event>(event), *fsm_, source, target);
+            enter(target, ::std::forward<Event>(event), *fsm_);
+            observer.state_entered(*fsm_, target, event);
+            if (clear(*fsm_, source))
+                observer.state_cleared(*fsm_, source);
+            current_state_ = target_index;
+            observer.state_changed(*fsm_, source, target, event);
+            return actions::event_process_result::process;
+        }
+        return actions::event_process_result::refuse;
+    }
+    template < typename SourceState, typename TargetState,
+        typename Event, typename Guard, typename Action,
+        typename SourceExit, typename TargetEnter, typename SourceClear >
+    actions::event_process_result
+    transit_state_impl(Event&& event, SourceState& source, TargetState& target,
+            Guard guard, Action action, SourceExit exit,
+            TargetEnter enter, SourceClear clear,
+            ::std::size_t target_index,
+            def::tags::strong_exception_safety const&)
+    {
+        SourceState source_backup{source};
+        TargetState target_backup{target};
         try {
-            if (guard(*fsm_, source, event)) {
-                auto const& observer = root_machine(*fsm_);
-                exit(source, ::std::forward<Event>(event), *fsm_);
-                observer.state_exited(*fsm_, source, event);
-                action(::std::forward<Event>(event), *fsm_, source, target);
-                enter(target, ::std::forward<Event>(event), *fsm_);
-                observer.state_entered(*fsm_, target, event);
-                if (clear(*fsm_, source))
-                    observer.state_cleared(*fsm_, source);
-                current_state_ = target_index::value;
-                observer.state_changed(*fsm_, source, target, event);
-                return actions::event_process_result::process;
-            }
+            return transit_state_impl(
+                    ::std::forward<Event>(event), source, target,
+                     guard, action, exit, enter, clear,
+                     target_index,
+                     def::tags::basic_exception_safety{});
         } catch (...) {
-            // FIXME Do something ;)
+            using ::std::swap;
+            swap(source, source_backup);
+            swap(target, target_backup);
             throw;
         }
+    }
+    template < typename SourceState, typename TargetState,
+        typename Event, typename Guard, typename Action,
+        typename SourceExit, typename TargetEnter, typename SourceClear >
+    actions::event_process_result
+    transit_state_impl(Event&& event, SourceState& source, TargetState& target,
+            Guard guard, Action action, SourceExit exit,
+            TargetEnter enter, SourceClear clear,
+            ::std::size_t target_index,
+            def::tags::nothrow_guarantee const&)
+    {
+        SourceState source_backup{source};
+        TargetState target_backup{target};
+        try {
+            return transit_state_impl(
+                    ::std::forward<Event>(event), source, target,
+                     guard, action, exit, enter, clear,
+                     target_index,
+                     def::tags::basic_exception_safety{});
+        } catch (...) {}
+        using ::std::swap;
+        swap(source, source_backup);
+        swap(target, target_backup);
         return actions::event_process_result::refuse;
     }
     template < typename T >
