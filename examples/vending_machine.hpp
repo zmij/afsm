@@ -128,9 +128,9 @@ struct vending_def : ::afsm::def::state_machine<vending_def> {
             //@}
             //@{
             struct set_price {
-                template < typename FSM, typename SourceState, typename TargetState >
+                template < typename FSM >
                 void
-                operator()(events::set_price&& price, FSM& fsm, SourceState&, TargetState&) const
+                operator()(events::set_price&& price, FSM& fsm) const
                 {
                     root_machine(fsm).set_price(price.p_no, price.price);
                 }
@@ -173,9 +173,9 @@ struct vending_def : ::afsm::def::state_machine<vending_def> {
             //@{
             /** @name Actions */
             struct dispense {
-                template < typename FSM, typename SourceState, typename TargetState >
+                template < typename FSM >
                 void
-                operator()(events::select_item&& item, FSM& fsm, SourceState&, TargetState&) const
+                operator()(events::select_item&& item, FSM& fsm) const
                 {
                     root_machine(fsm).dispense_product(item.p_no);
                 }

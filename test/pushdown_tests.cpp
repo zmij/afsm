@@ -153,9 +153,9 @@ struct json_parser_def : def::state_machine< json_parser_def > {
         //@{
         /** @name Actions */
         struct dup_event {
-            template < typename Event, typename FSM, typename SourceState, typename TargetState >
+            template < typename Event, typename FSM >
             void
-            operator()(Event&& evt, FSM& fsm, SourceState&, TargetState&)
+            operator()(Event&& evt, FSM& fsm)
             {
                 root_machine(fsm).process_event(::std::forward<Event>(evt));
             }

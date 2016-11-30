@@ -107,6 +107,28 @@ static_assert(traits::is_state<ortho_fsm>::value, "");
 static_assert(traits::is_state_machine<ortho_fsm>::value, "");
 static_assert(traits::has_orthogonal_regions<ortho_fsm>::value, "");
 
+//----------------------------------------------------------------------------
+//  Actions etc.
+//----------------------------------------------------------------------------
+
+struct action_long {
+    template < typename Event, typename FSM, typename SourceState, typename TargetState >
+    void
+    operator()(Event&&, FSM&, SourceState&, TargetState&) {}
+};
+
+struct action_short {
+    template < typename Event, typename FSM >
+    void
+    operator()(Event&&, FSM&) {}
+};
+
+static_assert(actions::detail::action_long_signature<action_long, eventAB, none, stateA, stateB>::value, "");
+static_assert(!actions::detail::action_long_signature<action_short, eventAB, none, stateA, stateB>::value, "");
+
+static_assert(!actions::detail::action_short_signature<action_long, eventAB, none>::value, "");
+static_assert(actions::detail::action_short_signature<action_short, eventAB, none>::value, "");
+
 }  /* namespace test */
 }  /* namespace def */
 }  /* namespace afsm */

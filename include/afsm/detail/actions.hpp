@@ -79,7 +79,7 @@ namespace detail {
 
 template <typename Action, typename Event, typename FSM,
         typename SourceState, typename TargetState>
-struct action_is_callable {
+struct action_long_signature {
 private:
     static FSM&         fsm;
     static Event&       event;
@@ -89,6 +89,23 @@ private:
     template < typename U >
     static ::std::true_type
     test( decltype( ::std::declval<U>()(::std::move(event), fsm, source, target) ) const* );
+
+    template < typename U >
+    static ::std::false_type
+    test(...);
+public:
+    static constexpr bool value = decltype( test<Action>(nullptr) )::value;
+};
+
+template <typename Action, typename Event, typename FSM>
+struct action_short_signature {
+private:
+    static FSM&         fsm;
+    static Event&       event;
+
+    template < typename U >
+    static ::std::true_type
+    test( decltype( ::std::declval<U>()(::std::move(event), fsm) ) const* );
 
     template < typename U >
     static ::std::false_type
@@ -167,24 +184,52 @@ struct guard_check< FSM, State, Event, none > {
     { return true; }
 };
 
-template < typename Action, typename FSM,
-    typename SourceState, typename TargetState >
-struct action_invokation {
-
-    template < typename Event >
+template < typename Action, typename Event, typename FSM,
+    typename SourceState, typename TargetState, bool LongSignature >
+struct action_invocation_impl {
     void
     operator()(Event&& event, FSM& fsm, SourceState& source, TargetState& target) const
     {
-        static_assert(action_is_callable< Action, Event,
+        static_assert(action_long_signature< Action, Event,
                     FSM, SourceState, TargetState >::value,
                 "Action is not callable for this transition");
         Action{}(::std::forward<Event>(event), fsm, source, target);
     }
 };
 
+template < typename Action, typename Event, typename FSM,
+    typename SourceState, typename TargetState >
+struct action_invocation_impl<Action, Event, FSM, SourceState, TargetState, false> {
+    void
+    operator()(Event&& event, FSM& fsm, SourceState&, TargetState&) const
+    {
+        static_assert(action_short_signature< Action, Event,
+                    FSM >::value,
+                "Action is not callable for this transition");
+        Action{}(::std::forward<Event>(event), fsm);
+    }
+};
+
+
+template < typename Action, typename FSM,
+    typename SourceState, typename TargetState >
+struct action_invocation {
+    template < typename Event >
+    void
+    operator()(Event&& event, FSM& fsm, SourceState& source, TargetState& target) const
+    {
+        using invocation_type = action_invocation_impl<
+                                    Action, Event, FSM,
+                                    SourceState, TargetState,
+                                    action_long_signature<Action, Event, FSM,
+                                            SourceState, TargetState>::value>;
+        invocation_type{}(::std::forward<Event>(event), fsm, source, target);
+    }
+};
+
 template < typename FSM,
     typename SourceState, typename TargetState >
-struct action_invokation< none, FSM, SourceState, TargetState > {
+struct action_invocation< none, FSM, SourceState, TargetState > {
     template < typename Event >
     void
     operator()(Event&&, FSM&, SourceState&, TargetState&) const
@@ -193,8 +238,8 @@ struct action_invokation< none, FSM, SourceState, TargetState > {
 
 template < typename Action, typename Guard, typename FSM,
     typename SourceState, typename TargetState >
-struct guarded_action_invokation {
-    using invokation_type   = action_invokation< Action, FSM, SourceState, TargetState >;
+struct guarded_action_invocation {
+    using invocation_type   = action_invocation< Action, FSM, SourceState, TargetState >;
 
     template < typename Event >
     event_process_result
@@ -202,7 +247,7 @@ struct guarded_action_invokation {
     {
         using guard_type        = guard_check< FSM, SourceState, Event, Guard >;
         if (guard_type{}(fsm, source, ::std::forward<Event>(event))) {
-            invokation_type{}(::std::forward<Event>(event), fsm, source, target);
+            invocation_type{}(::std::forward<Event>(event), fsm, source, target);
             return event_process_result::process;
         }
         return event_process_result::refuse;
@@ -210,14 +255,14 @@ struct guarded_action_invokation {
 };
 
 template < ::std::size_t N, typename FSM, typename State, typename Transitions >
-struct nth_inner_invokation {
+struct nth_inner_invocation {
     static_assert(Transitions::size > N, "Transitions list is too small");
     using transition        = typename Transitions::template type<N>;
     using action_type       = typename transition::action_type;
     using guard_type        = typename transition::guard_type;
-    using invokation_type   = guarded_action_invokation<
+    using invocation_type   = guarded_action_invocation<
                 action_type, guard_type, FSM, State, State >;
-    using previous_action    = nth_inner_invokation<N - 1, FSM, State, Transitions>;
+    using previous_action    = nth_inner_invocation<N - 1, FSM, State, Transitions>;
 
     template < typename Event >
     event_process_result
@@ -225,29 +270,29 @@ struct nth_inner_invokation {
     {
         auto res = previous_action{}(::std::forward<Event>(event), fsm, state);
         if (res == event_process_result::refuse)
-            return invokation_type{}(::std::forward<Event>(event), fsm, state, state);
+            return invocation_type{}(::std::forward<Event>(event), fsm, state, state);
         return res;
     }
 };
 
 template < typename FSM, typename State, typename Transitions >
-struct nth_inner_invokation<0, FSM, State, Transitions> {
+struct nth_inner_invocation<0, FSM, State, Transitions> {
     static_assert(Transitions::size > 0, "Transitions list is empty");
     using transition        = typename Transitions::template type<0>;
     using action_type       = typename transition::action_type;
     using guard_type        = typename transition::guard_type;
-    using invokation_type   = guarded_action_invokation<
+    using invocation_type   = guarded_action_invocation<
                 action_type, guard_type, FSM, State, State >;
 
     template < typename Event >
     event_process_result
     operator()(Event&& event, FSM& fsm, State& state) const
     {
-        return invokation_type{}(::std::forward<Event>(event), fsm, state, state);
+        return invocation_type{}(::std::forward<Event>(event), fsm, state, state);
     }
 };
 
-struct no_in_state_invokation {
+struct no_in_state_invocation {
     template < typename FSM, typename State, typename Event >
     event_process_result
     operator()(Event&&, FSM&, State&) const
@@ -258,30 +303,30 @@ struct no_in_state_invokation {
 };
 
 template < typename FSM, typename State, typename Transition >
-struct unconditional_in_state_invokation {
+struct unconditional_in_state_invocation {
     using action_type = typename Transition::action_type;
     using guard_type  = typename Transition::guard_type;
-    using invokation_type = guarded_action_invokation<
+    using invocation_type = guarded_action_invocation<
                 action_type, guard_type, FSM, State, State >;
 
     template < typename Event >
     event_process_result
     operator()(Event&& event, FSM& fsm, State& state) const
     {
-        return invokation_type{}(::std::forward<Event>(event), fsm, state, state);
+        return invocation_type{}(::std::forward<Event>(event), fsm, state, state);
     }
 };
 
 template < typename FSM, typename State, typename Transitions >
-struct conditional_in_state_invokation {
+struct conditional_in_state_invocation {
     static constexpr ::std::size_t size = Transitions::size;
-    using invokation_type = nth_inner_invokation< size - 1, FSM, State, Transitions>;
+    using invocation_type = nth_inner_invocation< size - 1, FSM, State, Transitions>;
 
     template < typename Event >
     event_process_result
     operator()(Event&& event, FSM& fsm, State& state) const
     {
-        return invokation_type{}(::std::forward<Event>(event), fsm, state);
+        return invocation_type{}(::std::forward<Event>(event), fsm, state);
     }
 };
 
@@ -303,7 +348,7 @@ struct is_in_state_action <false, State, Event> {
 };
 
 template < bool hasActions, typename FSM, typename State, typename Event >
-struct in_state_action_invokation {
+struct in_state_action_invocation {
     using fsm_type          = FSM;
     using state_type        = State;
     using event_type        = Event;
@@ -318,9 +363,9 @@ struct in_state_action_invokation {
     static_assert( event_handlers::size > 0, "State doesn't handle event" );
     using handler_type      = typename ::std::conditional<
                 event_handlers::size == 1,
-                detail::unconditional_in_state_invokation<
+                detail::unconditional_in_state_invocation<
                     fsm_type, state_type, typename event_handlers::template type<0>>,
-                detail::conditional_in_state_invokation< fsm_type, state_type, event_handlers>
+                detail::conditional_in_state_invocation< fsm_type, state_type, event_handlers>
             >::type;
 
     template < typename Evt >
@@ -336,7 +381,7 @@ struct in_state_action_invokation {
 };
 
 template < typename FSM, typename State, typename Event >
-struct in_state_action_invokation<false, FSM, State, Event> {
+struct in_state_action_invocation<false, FSM, State, Event> {
     using fsm_type          = FSM;
     using state_type        = State;
     using event_type        = Event;
@@ -358,8 +403,8 @@ struct is_in_state_action : detail::is_in_state_action <
         State, Event >{};
 
 template < typename FSM, typename State, typename Event >
-struct in_state_action_invokation :
-        detail::in_state_action_invokation<
+struct in_state_action_invocation :
+        detail::in_state_action_invocation<
             !::std::is_same<typename State::internal_transitions, void>::value &&
             ::psst::meta::contains<Event, typename State::internal_events>::value,
             FSM, State, Event > {
@@ -370,7 +415,7 @@ event_process_result
 handle_in_state_event(Event&& event, FSM& fsm, State& state)
 {
     using decayed_event = typename ::std::decay<Event>::type;
-    return in_state_action_invokation< FSM, State, decayed_event >{}
+    return in_state_action_invocation< FSM, State, decayed_event >{}
         (::std::forward<Event>(event), fsm, state);
 }
 
@@ -407,7 +452,7 @@ public:
     using indexes_tuple     = typename ::psst::meta::index_builder< size >::type;
     using dispatch_tuple    = typename handlers_tuple<indexes_tuple>::type;
     template < typename Event >
-    using invokation_table  = ::std::array<
+    using invocation_table  = ::std::array<
             ::std::function< event_process_result(states_tuple&, Event&&) >, size >;
 public:
     explicit
@@ -425,10 +470,10 @@ public:
     }
 private:
     template < typename Event, ::std::size_t ... Indexes >
-    static invokation_table<Event> const&
+    static invocation_table<Event> const&
     state_table( ::psst::meta::indexes_tuple< Indexes... > const& )
     {
-        static invokation_table<Event> _table {{ process_event_handler<Indexes>{}... }};
+        static invocation_table<Event> _table {{ process_event_handler<Indexes>{}... }};
         return _table;
     }
 };

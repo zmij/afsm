@@ -32,24 +32,24 @@ struct human_interface {
 };
 
 struct dummy_action {
-    template< typename FSM, typename SourceState, typename TargetState >
+    template< typename FSM >
     void
-    operator()(wash const&, FSM&, SourceState&, TargetState&)
+    operator()(wash const&, FSM&)
     {
         ::std::cerr << "Brrr!\n";
     }
-    template< typename FSM, typename SourceState, typename TargetState >
+    template< typename FSM >
     void
-    operator()(do_work const&, FSM&, SourceState&, TargetState&)
+    operator()(do_work const&, FSM&)
     {
         ::std::cerr << "Enough work!\n";
     }
 };
 
 struct sleep_action {
-    template < typename FSM, typename SourceState, typename TargetState >
+    template < typename FSM >
     void
-    operator()(sleep const&, FSM& fsm, SourceState&, TargetState&) const
+    operator()(sleep const&, FSM& fsm) const
     {
         if (fsm.fatigue > 0)
             --fsm.fatigue;
@@ -57,9 +57,9 @@ struct sleep_action {
 };
 
 struct work_action {
-    template < typename FSM, typename SourceState, typename TargetState >
+    template < typename FSM >
     void
-    operator()(do_work const&, FSM& fsm, SourceState&, TargetState&) const
+    operator()(do_work const&, FSM& fsm) const
     {
         ::std::cerr << "Getting tired! " << ++fsm.fatigue << "\n";
     }

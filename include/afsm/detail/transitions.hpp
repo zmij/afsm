@@ -239,7 +239,7 @@ struct single_transition<FSM, StateTable,
     using guard_type        = actions::detail::guard_check<FSM, SourceState, Event, Guard>;
     using source_exit       = state_exit<fsm_type, source_state_type, Event>;
     using target_enter      = state_enter<fsm_type, target_state_type, Event>;
-    using action_type       = actions::detail::action_invokation<Action, FSM,
+    using action_type       = actions::detail::action_invocation<Action, FSM,
             SourceState, TargetState>;
     using state_clear_type  = state_clear<FSM, source_state_type>;
 
@@ -265,7 +265,7 @@ struct nth_transition {
     using transition            = typename Transitions::template type<N>;
     using event_type            = typename transition::event_type;
     using previous_transition   = nth_transition<N - 1, FSM, StateTable, Transitions>;
-    using transition_invokation = single_transition<FSM, StateTable, ::psst::meta::type_tuple<transition>>;
+    using transition_invocation = single_transition<FSM, StateTable, ::psst::meta::type_tuple<transition>>;
 
     template < typename Event >
     actions::event_process_result
@@ -273,7 +273,7 @@ struct nth_transition {
     {
         auto res = previous_transition{}(states, ::std::forward<Event>(event));
         if (res == actions::event_process_result::refuse) {
-            return transition_invokation{}(states, ::std::forward<Event>(event));
+            return transition_invocation{}(states, ::std::forward<Event>(event));
         }
         return res;
     }
@@ -284,13 +284,13 @@ struct nth_transition< 0, FSM, StateTable, Transitions > {
     static_assert(Transitions::size > 0, "Transition list is too small");
     using transition            = typename Transitions::template type<0>;
     using event_type            = typename transition::event_type;
-    using transition_invokation = single_transition<FSM, StateTable, ::psst::meta::type_tuple<transition>>;
+    using transition_invocation = single_transition<FSM, StateTable, ::psst::meta::type_tuple<transition>>;
 
     template < typename Event >
     actions::event_process_result
     operator()(StateTable& states, Event&& event) const
     {
-        return transition_invokation{}(states, ::std::forward<Event>(event));
+        return transition_invocation{}(states, ::std::forward<Event>(event));
     }
 };
 

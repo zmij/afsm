@@ -21,15 +21,15 @@ struct in_state {};
 
 struct outer_machine : def::state_machine<outer_machine> {
     struct inner_action {
-        template < typename FSM, typename SourceState, typename TargetState >
+        template < typename FSM >
         void
-        operator()(events::in_state const&, FSM&, SourceState&, TargetState&) const
+        operator()(events::in_state const&, FSM&) const
         {}
     };
     struct transit_action {
-        template < typename Event, typename FSM, typename SourceState, typename TargetState >
+        template < typename Event, typename FSM >
         void
-        operator()(Event const&, FSM&, SourceState&, TargetState&) const
+        operator()(Event const&, FSM&) const
         {}
     };
     struct state_a : def::state<state_a> {};
