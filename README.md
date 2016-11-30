@@ -20,8 +20,9 @@ The `afsm` library was inspired by [`::boost::msm`](http://www.boost.org/doc/lib
 * Statechart extensions
   * Optional [event priority](https://github.com/zmij/afsm/wiki/Event-Priority)
   * Optional [common base](https://github.com/zmij/afsm/wiki/Common-Base) for states and easy definition of dispatching common interface calls to current state
+  * [Pushdown automaton](https://github.com/zmij/afsm/wiki/Pushdown-Automaton)
 * Compile-time checks
-* Thread safety
+* [Thread safety](https://github.com/zmij/afsm/wiki/Thread-Safety)
 * Exception safety
 * No vtables (unless common base feature is used)
 * Header only
@@ -30,8 +31,7 @@ The `afsm` library was inspired by [`::boost::msm`](http://www.boost.org/doc/lib
 
 ### Planned features
 
-* [Pushdown automata](https://github.com/zmij/afsm/issues/8)
-
+* State machine persistense
 
 ## Synopsis
 
