@@ -197,19 +197,33 @@ TEST(Vending, HandledEvents)
                                 << "Handles off event";
     EXPECT_TRUE(vm.current_handled_events().count(&event<events::power_on>::id))
                                 << "Handles on event";
-    
-    // TODO Have a look at current available transitions
+
     EXPECT_FALSE(vm.current_handled_events().count(&event<events::power_off>::id))
                                 << "Handles off event";
 
+    // off -> on
     EXPECT_TRUE(done(vm.process_event(events::power_on{})))
                                 << "Vending machine turns on correctly";
     EXPECT_TRUE(vm.is_in_state< vending_def::on >())
                                 << "Vending machine is on";
-    
+
     EXPECT_TRUE(vm.current_handled_events().count(&event<events::start_maintenance>::id));
     EXPECT_FALSE(vm.current_handled_events().count(&event<events::end_maintenance>::id));
     EXPECT_TRUE(vm.current_handled_events().count(&event<events::money>::id));
+    EXPECT_FALSE(vm.current_handled_events().count(&event<events::withdraw_money>::id));
+    EXPECT_FALSE(vm.current_handled_events().count(&event<events::set_price>::id));
+
+    // serving -> maintenance
+    EXPECT_TRUE(done(vm.process_event(events::start_maintenance{vending_machine::factory_code})))
+                                << "Vending machine accepts factory code";
+    EXPECT_TRUE(vm.is_in_state< vending_def::on::maintenance >())
+                                << "Vending machine transits to maintenance mode";
+
+    EXPECT_FALSE(vm.current_handled_events().count(&event<events::start_maintenance>::id));
+    EXPECT_TRUE(vm.current_handled_events().count(&event<events::end_maintenance>::id));
+    EXPECT_FALSE(vm.current_handled_events().count(&event<events::money>::id));
+    EXPECT_TRUE(vm.current_handled_events().count(&event<events::withdraw_money>::id));
+    EXPECT_TRUE(vm.current_handled_events().count(&event<events::set_price>::id));
 }
 
 

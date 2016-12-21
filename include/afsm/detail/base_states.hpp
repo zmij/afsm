@@ -123,6 +123,12 @@ struct state_base_impl : T {
         static event_set evts_ = make_event_set(handled_events{});
         return evts_;
     }
+    static event_set const&
+    internal_handled_events()
+    {
+        static event_set evts_ = make_event_set(typename def::detail::handled_events< internal_transitions >::type{});
+        return evts_;
+    }
 protected:
     template< typename ... Args >
     state_base_impl(Args&& ... args)
@@ -170,6 +176,23 @@ struct state_base_impl<T, true> : T {
     template < typename Event, typename FSM >
     void
     state_exit(Event&&, FSM&) {}
+
+    event_set const&
+    current_handled_events() const
+    { return static_handled_events(); }
+
+    static event_set const&
+    static_handled_events()
+    {
+        static event_set evts_{};
+        return evts_;
+    }
+    static event_set const&
+    internal_handled_events()
+    {
+        static event_set evts_{};
+        return evts_;
+    }
 protected:
     template< typename ... Args >
     state_base_impl(Args&& ... args)
@@ -393,7 +416,10 @@ public:
     event_set
     current_handled_events() const
     {
-        return transitions_.current_handled_events();
+        auto const& intl = state_type::internal_handled_events();
+        auto res = transitions_.current_handled_events();
+        res.insert(intl.begin(), intl.end());
+        return res;
     }
 protected:
     template<typename ... Args>
