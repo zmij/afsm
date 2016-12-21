@@ -401,6 +401,7 @@ private:
             for (auto event = deferred.begin(); event != deferred.end(); ++event) {
                 if (handled_.count(event->second)) {
                     res = event->first();
+                    deferred.erase(event++);
                 } else if (deferred_.count(event->second)) {
                     // Move directly to the deferred queue
                     auto next = event;
@@ -410,11 +411,21 @@ private:
                         deferred, event, next);
                     deferred_event_ids_.insert(event->second);
                     event = next;
+                } else {
+                    deferred.erase(event++);
                 }
                 if (res == event_process_result::process)
                     break;
             }
-            deferred.clear();
+            for (auto event = deferred.begin(); event != deferred.end(); ++event) {
+                auto next = event;
+                while (next != deferred.end() && next->second == event->second)
+                    ++next;
+                deferred_events_.splice(deferred_events_.end(),
+                    deferred, event, next);
+                deferred_event_ids_.insert(event->second);
+                event = next;
+            }
             event_ids.clear();
             observer_wrapper::end_process_deferred_queue(*this);
             if (res == event_process_result::process) {

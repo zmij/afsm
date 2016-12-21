@@ -9,7 +9,7 @@
 #define AFSM_DETAIL_EVENT_IDENTITY_HPP_
 
 #include <type_traits>
-#include <unordered_set>
+#include <set>
 #include <pushkin/meta/type_tuple.hpp>
 
 namespace afsm {
@@ -33,8 +33,7 @@ struct event_identity {
     using type          = event<event_type>;
 };
 
-using event_set         = ::std::unordered_set< event_base::id_type const* >;
-using event_multiset    = ::std::unordered_multiset< event_base::id_type const* >;
+using event_set         = ::std::set< event_base::id_type const* >;
 
 template < typename ... T >
 event_set
