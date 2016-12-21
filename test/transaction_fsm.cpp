@@ -381,6 +381,41 @@ commit_transaction(connection_fsm& fsm)
 
 }  /* namespace  */
 
+TEST(TranFSM, StaticHandledEvents)
+{
+    connection_fsm fsm;
+
+    EXPECT_TRUE(
+        fsm.static_handled_events().count( &detail::event<events::connect>::id ))
+            << "Immediately handled event";
+    EXPECT_TRUE(
+        fsm.static_handled_events().count( &detail::event<events::terminate>::id ))
+            << "Immediately handled event";
+    EXPECT_TRUE(
+        fsm.static_handled_events().count( &detail::event<events::complete>::id ))
+            << "Immediately handled event";
+    EXPECT_TRUE(
+        fsm.static_handled_events().count( &detail::event<events::conn_error>::id ))
+            << "Immediately handled event";
+    EXPECT_TRUE(
+        fsm.static_handled_events().count( &detail::event<events::ready_for_query>::id ))
+            << "Immediately handled event";
+    EXPECT_TRUE(
+        fsm.static_handled_events().count( &detail::event<events::begin>::id ))
+            << "Immediately handled event";
+
+
+    EXPECT_FALSE(
+        fsm.static_handled_events().count( &detail::event<events::commit>::id ))
+            << "Event handled by a nested state";
+    EXPECT_FALSE(
+        fsm.static_handled_events().count( &detail::event<events::row_event>::id ))
+            << "Event handled by a nested state";
+    EXPECT_FALSE(
+        fsm.static_handled_events().count( &detail::event<events::command_complete>::id ))
+            << "Event handled by a nested state";
+}
+
 TEST(TranFSM, AllEvents)
 {
     using actions::event_process_result;
@@ -392,6 +427,9 @@ TEST(TranFSM, AllEvents)
     ::std::cerr << fsm.get_state< connection_fsm::transaction >().name() << "\n";
     ::std::cerr << fsm.get_state< connection_fsm::transaction::simple_query >().name() << "\n";
 
+    EXPECT_TRUE(fsm.current_handled_events().count(&detail::event<events::connect>::id));
+    EXPECT_TRUE(fsm.current_handled_events().count(&detail::event<events::complete>::id));
+
     EXPECT_EQ(event_process_result::process, fsm.process_event(events::connect{}));
     EXPECT_TRUE(fsm.is_in_state<connection_fsm_def::connecting>());
     EXPECT_EQ(event_process_result::process, fsm.process_event(events::complete{}));
@@ -401,7 +439,11 @@ TEST(TranFSM, AllEvents)
     EXPECT_EQ(event_process_result::process, fsm.process_event(events::ready_for_query{}));
     EXPECT_TRUE(fsm.is_in_state<connection_fsm_def::idle>());
 
+    EXPECT_FALSE(fsm.current_handled_events().count(&detail::event<events::execute>::id));
+
     begin_transaction(fsm);
+
+    EXPECT_TRUE(fsm.current_handled_events().count(&detail::event<events::execute>::id));
 
     // Simple query sequence
     EXPECT_EQ(event_process_result::process, fsm.process_event(events::execute{}));

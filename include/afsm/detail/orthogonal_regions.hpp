@@ -21,6 +21,7 @@ struct invoke_nth {
     using previous = invoke_nth<N - 1>;
     static constexpr ::std::size_t index = N;
     using event_handler_type = actions::detail::process_event_handler<index>;
+    using event_set          = ::afsm::detail::event_set;
 
     template < typename Regions, typename Event, typename FSM >
     static void
@@ -52,12 +53,23 @@ struct invoke_nth {
         auto res = previous::process_event(regions, ::std::forward<Event>(event));
         return ::std::max(res, event_handler_type{}(regions, ::std::forward<Event>(event)));
     }
+
+    template < typename Regions >
+    static void
+    collect_events( Regions const& regions, event_set& events )
+    {
+        previous::collect_events(regions, events);
+        auto const& region = ::std::get<index>(regions);
+        event_set evts = region.current_handled_events();
+        events.insert(evts.begin(), evts.end());
+    }
 };
 
 template <>
 struct invoke_nth< 0 > {
     static constexpr ::std::size_t index = 0;
     using event_handler_type = actions::detail::process_event_handler<index>;
+    using event_set          = ::afsm::detail::event_set;
 
     template < typename Regions, typename Event, typename FSM >
     static void
@@ -82,6 +94,14 @@ struct invoke_nth< 0 > {
     process_event(Regions& regions, Event&& event)
     {
         return event_handler_type{}(regions, ::std::forward<Event>(event));
+    }
+
+    template < typename Regions >
+    static void
+    collect_events( Regions const& regions, event_set& events )
+    {
+        auto const& region = ::std::get<index>(regions);
+        events.swap(region.current_handled_events());
     }
 };
 
@@ -108,6 +128,7 @@ public:
 
     using region_indexes                = typename ::psst::meta::index_builder<size>::type;
     using all_regions                   = detail::invoke_nth<size - 1>;
+    using event_set                     = ::afsm::detail::event_set;
 public:
     regions_table(fsm_type& fsm)
         : fsm_{&fsm},
@@ -172,6 +193,14 @@ public:
         // Pass event to all regions
         return all_regions::process_event(regions_, ::std::forward<Event>(event));
     }
+    event_set
+    current_handled_events() const
+    {
+        event_set evts;
+        all_regions::collect_events(regions_, evts);
+        return evts;
+    }
+
     template < typename Event >
     void
     enter(Event&& event)
@@ -203,6 +232,7 @@ public:
     using regions_tuple                 = typename region_table_type::regions_tuple;
 
     using stack_constructor_type        = afsm::detail::stack_constructor<FSM, region_table_type>;
+    using event_set                     = ::afsm::detail::event_set;
 public:
     regions_stack(fsm_type& fsm)
         : fsm_{&fsm},
@@ -263,6 +293,11 @@ public:
     process_event(Event&& event)
     {
         return top().process_event(::std::forward<Event>(event));
+    }
+    event_set
+    current_handled_events() const
+    {
+        return top().current_handled_events();
     }
 
     template < typename Event >

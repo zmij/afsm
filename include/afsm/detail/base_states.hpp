@@ -12,6 +12,7 @@
 #include <afsm/detail/helpers.hpp>
 #include <afsm/detail/transitions.hpp>
 #include <afsm/detail/orthogonal_regions.hpp>
+#include <afsm/detail/event_identity.hpp>
 
 #include <pushkin/meta/functions.hpp>
 
@@ -111,6 +112,17 @@ struct state_base_impl : T {
     template < typename Event, typename FSM >
     void
     state_exit(Event&&, FSM&) {}
+
+    event_set const&
+    current_handled_events() const
+    { return static_handled_events(); }
+
+    static event_set const&
+    static_handled_events()
+    {
+        static event_set evts_ = generate_set(handled_events{});
+        return evts_;
+    }
 protected:
     template< typename ... Args >
     state_base_impl(Args&& ... args)
@@ -378,6 +390,14 @@ public:
         transitions_.exit( ::std::forward<Event>(event) );
     }
 
+    event_set
+    current_handled_events() const
+    {
+        event_set res = transitions_.current_handled_events();
+        auto const& own = this->static_handled_events();
+        res.insert(own.begin(), own.end());
+        return own;
+    }
 protected:
     template<typename ... Args>
     explicit
@@ -699,6 +719,14 @@ public:
     state_exit(Event&& event, FSM&)
     {
         regions_.exit(::std::forward<Event>(event));
+    }
+    event_set
+    current_handled_events() const
+    {
+        event_set res = regions_.current_handled_events();
+        auto const& own = this->static_handled_events();
+        res.insert(own.begin(), own.end());
+        return own;
     }
 protected:
     template < typename ... Args >

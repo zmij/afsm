@@ -11,6 +11,27 @@
 namespace vending {
 
 using result = ::afsm::actions::event_process_result;
+template < typename T >
+using event = afsm::detail::event<T>;
+
+TEST(Vending, HandledEvents)
+{
+    vending_machine vm;
+
+    EXPECT_TRUE(vm.is_in_state< vending_def::off >())
+                                << "Vending machine is off";
+    EXPECT_TRUE(vm.static_handled_events().count(&event<events::power_on>::id))
+                                << "Handles on event";
+    EXPECT_TRUE(vm.static_handled_events().count(&event<events::power_off>::id))
+                                << "Handles off event";
+    EXPECT_TRUE(vm.current_handled_events().count(&event<events::power_on>::id))
+                                << "Handles on event";
+    // TODO Have a look at current available transitions
+    auto evts = vm.current_handled_events();
+    EXPECT_TRUE(vm.current_handled_events().count(&event<events::power_off>::id))
+                                << "Handles off event";
+
+}
 
 TEST(Vending, OnOff)
 {

@@ -11,6 +11,7 @@
 #include <afsm/detail/base_states.hpp>
 #include <afsm/detail/observer.hpp>
 #include <afsm/detail/reject_policies.hpp>
+#include <afsm/detail/event_identity.hpp>
 #include <deque>
 #include <queue>
 
@@ -197,7 +198,8 @@ public:
     using lock_guard        = typename detail::lock_guard_type<mutex_type>::type;
     using observer_wrapper  = ObserverWrapper<Observer>;
     using event_invokation  = ::std::function< actions::event_process_result() >;
-    using event_queue       = ::std::deque< event_invokation >;
+    using event_queue_item  = ::std::pair< event_invokation, detail::event_base::id_type const* >;
+    using event_queue       = ::std::deque< event_queue_item >;
 public:
     state_machine()
         : base_machine_type{this},
@@ -206,7 +208,8 @@ public:
           queued_events_{},
           queue_size_{0},
           deferred_mutex_{},
-          deferred_events_{}
+          deferred_events_{},
+          deferred_event_ids_{}
       {}
     template<typename ... Args>
     explicit
@@ -217,7 +220,8 @@ public:
           queued_events_{},
           queue_size_{0},
           deferred_mutex_{},
-          deferred_events_{}
+          deferred_events_{},
+          deferred_event_ids_{}
     {}
 
     template < typename Event >
@@ -310,6 +314,7 @@ private:
     void
     enqueue_event(Event&& event)
     {
+        using evt_identity = typename detail::event_identity<Event>::type;
         {
             lock_guard lock{mutex_};
             ++queue_size_;
@@ -317,7 +322,7 @@ private:
             Event evt{::std::forward<Event>(event)};
             queued_events_.emplace_back([&, evt]() mutable {
                 return process_event_dispatch(::std::move(evt));
-            });
+            }, &evt_identity::id);
         }
         // Process enqueued events in case we've been waiting for queue
         // mutex release
@@ -341,7 +346,7 @@ private:
                 event_queue postponed;
                 lock_and_swap_queue(postponed);
                 for (auto const& event : postponed) {
-                    event();
+                    event.first();
                 }
             }
             observer_wrapper::end_process_events_queue(*this);
@@ -353,20 +358,24 @@ private:
     void
     defer_event(Event&& event)
     {
+        using evt_identity = typename detail::event_identity<Event>::type;
         lock_guard lock{deferred_mutex_};
         observer_wrapper::defer_event(*this, ::std::forward<Event>(event));
         Event evt{::std::forward<Event>(event)};
         deferred_events_.emplace_back([&, evt]() mutable {
             return process_event_dispatch(::std::move(evt));
-        });
+        }, &evt_identity::id);
+        deferred_event_ids_.insert(&evt_identity::id);
     }
     void
     process_deferred_queue()
     {
         using actions::event_process_result;
         event_queue deferred;
+        detail::event_multiset event_ids;
         {
             lock_guard lock{deferred_mutex_};
+            // Check current handled events
             ::std::swap(deferred_events_, deferred);
         }
         while (!deferred.empty()) {
@@ -375,7 +384,7 @@ private:
             while (!deferred.empty()) {
                 auto event = deferred.front();
                 deferred.pop_front();
-                res = event();
+                res = event.first();
                 if (res == event_process_result::process)
                     break;
             }
@@ -401,6 +410,7 @@ private:
 
     mutex_type              deferred_mutex_;
     event_queue             deferred_events_;
+    detail::event_multiset  deferred_event_ids_;
 };
 
 //----------------------------------------------------------------------------
