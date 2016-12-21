@@ -19,7 +19,7 @@ endif()
 
 include_directories(${GBENCH_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/../examples)
 
-set(benchmark_SRCS vending_benchmark.cpp)
+set(benchmark_SRCS vending_benchmark.cpp defer_benchmark.cpp)
 add_executable(benchmark-afsm ${benchmark_SRCS})
 target_link_libraries(benchmark-afsm
     ${GBENCH_LIBRARIES}
