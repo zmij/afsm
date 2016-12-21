@@ -278,9 +278,9 @@ TEST(Pushdown, PushPopState)
     EXPECT_TRUE(fsm.is_in_state<json_parser_fsm::context::start>());
     EXPECT_TRUE(done(fsm.process_event(events::start_array{})));
     EXPECT_TRUE(fsm.is_in_state<json_parser_fsm::context::start>());
-    EXPECT_EQ(2, fsm.stack_size());
+    EXPECT_EQ(2UL, fsm.stack_size());
     EXPECT_TRUE(done(fsm.process_event(events::null_literal{})));
-    EXPECT_EQ(1, fsm.stack_size());
+    EXPECT_EQ(1UL, fsm.stack_size());
     EXPECT_TRUE(fsm.is_in_state<json_parser_fsm::context::array>());
     EXPECT_TRUE(done(fsm.process_event(events::end_array{})));
     EXPECT_TRUE(fsm.is_in_state<json_parser_fsm::context::end>());
@@ -294,31 +294,31 @@ TEST(Pushdown, PushTwo)
     EXPECT_TRUE(fsm.is_in_state<json_parser_fsm::context::start>());
     EXPECT_TRUE(done(fsm.process_event(events::start_array{})));
     EXPECT_TRUE(fsm.is_in_state<json_parser_fsm::context::start>());
-    EXPECT_EQ(2, fsm.stack_size());
+    EXPECT_EQ(2UL, fsm.stack_size());
 
     EXPECT_TRUE(done(fsm.process_event(events::start_array{})));
     EXPECT_TRUE(fsm.is_in_state<json_parser_fsm::context::start>());
-    EXPECT_EQ(3, fsm.stack_size());
+    EXPECT_EQ(3UL, fsm.stack_size());
     EXPECT_TRUE(done(fsm.process_event(events::null_literal{})));
-    EXPECT_EQ(2, fsm.stack_size());
+    EXPECT_EQ(2UL, fsm.stack_size());
     EXPECT_TRUE(fsm.is_in_state<json_parser_fsm::context::array>());
 
     EXPECT_TRUE(done(fsm.process_event(events::comma{})));
 
 
     EXPECT_TRUE(fsm.is_in_state<json_parser_fsm::context::start>());
-    EXPECT_EQ(3, fsm.stack_size());
+    EXPECT_EQ(3UL, fsm.stack_size());
 
     EXPECT_FALSE(ok(fsm.process_event(events::end_array{})))
             << "Cannot close array immediately after comma";
 
     EXPECT_TRUE(done(fsm.process_event(events::null_literal{})));
-    EXPECT_EQ(2, fsm.stack_size());
+    EXPECT_EQ(2UL, fsm.stack_size());
     EXPECT_TRUE(fsm.is_in_state<json_parser_fsm::context::array>());
 
     EXPECT_TRUE(done(fsm.process_event(events::end_array{})));
 
-    EXPECT_EQ(1, fsm.stack_size());
+    EXPECT_EQ(1UL, fsm.stack_size());
     EXPECT_TRUE(fsm.is_in_state<json_parser_fsm::context::array>());
     EXPECT_TRUE(done(fsm.process_event(events::end_array{})));
     EXPECT_TRUE(fsm.is_in_state<json_parser_fsm::context::end>());
@@ -332,10 +332,10 @@ TEST(Pushdown, EmptyArray)
     EXPECT_TRUE(fsm.is_in_state<json_parser_fsm::context::start>());
     EXPECT_TRUE(done(fsm.process_event(events::start_array{})));
     EXPECT_TRUE(fsm.is_in_state<json_parser_fsm::context::start>());
-    EXPECT_EQ(2, fsm.stack_size());
+    EXPECT_EQ(2UL, fsm.stack_size());
 
     EXPECT_TRUE(done(fsm.process_event(events::end_array{})));
-    EXPECT_EQ(1, fsm.stack_size());
+    EXPECT_EQ(1UL, fsm.stack_size());
     EXPECT_TRUE(fsm.is_in_state<json_parser_fsm::context::end>());
 }
 
@@ -354,11 +354,11 @@ TEST(Pushdown, PushObject)
     EXPECT_TRUE(done(fsm.process_event(events::colon{})));
 
     EXPECT_TRUE(fsm.is_in_state<json_parser_fsm::context::start>());
-    EXPECT_EQ(2, fsm.stack_size());
+    EXPECT_EQ(2UL, fsm.stack_size());
 
     EXPECT_FALSE(ok(fsm.process_event(events::end_object{})));
     EXPECT_TRUE(done(fsm.process_event(events::string_literal{})));
-    EXPECT_EQ(1, fsm.stack_size());
+    EXPECT_EQ(1UL, fsm.stack_size());
 
     EXPECT_TRUE(done(fsm.process_event(events::comma{})));
     EXPECT_TRUE(done(fsm.process_event(events::string_literal{})));
@@ -367,11 +367,11 @@ TEST(Pushdown, PushObject)
     EXPECT_TRUE(done(fsm.process_event(events::colon{})));
 
     EXPECT_TRUE(fsm.is_in_state<json_parser_fsm::context::start>());
-    EXPECT_EQ(2, fsm.stack_size());
+    EXPECT_EQ(2UL, fsm.stack_size());
 
     EXPECT_FALSE(ok(fsm.process_event(events::end_object{})));
     EXPECT_TRUE(done(fsm.process_event(events::string_literal{})));
-    EXPECT_EQ(1, fsm.stack_size());
+    EXPECT_EQ(1UL, fsm.stack_size());
 
     EXPECT_TRUE(fsm.is_in_state< json_parser_fsm::context::object::value >());
     EXPECT_TRUE(done(fsm.process_event(events::end_object{})));

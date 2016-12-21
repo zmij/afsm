@@ -396,7 +396,7 @@ public:
         event_set res = transitions_.current_handled_events();
         auto const& own = this->static_handled_events();
         res.insert(own.begin(), own.end());
-        return own;
+        return res;
     }
 protected:
     template<typename ... Args>

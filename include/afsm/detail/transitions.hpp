@@ -417,6 +417,7 @@ public:
 
     using current_events_table = ::std::array<
             ::std::function< event_set(inner_states_tuple const&) >, size >;
+    using available_transtions_table = ::std::array< event_set, size >;
 
     template < typename CommonBase, typename StatesTuple >
     using cast_table_type = ::std::array< ::std::function<
@@ -696,6 +697,14 @@ private:
         static current_events_table _table{{
             detail::get_current_events_func<Indexes>{} ...
         }};
+
+        return _table;
+    }
+    template < ::std::size_t ... Indexes >
+    static available_transtions_table const&
+    get_available_transitions_table( ::psst::meta::indexes_tuple< Indexes ...> const& )
+    {
+        available_transtions_table _table;
 
         return _table;
     }
