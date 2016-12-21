@@ -711,12 +711,15 @@ private:
     {
         static available_transtions_table _table{{
             ::afsm::detail::make_event_set(
-                typename ::psst::meta::find_if<
-                    def::originates_from<
-                        typename inner_states_def::template type< Indexes >
-                    >:: template type,
-                    transitions_tuple
-                >::type {}
+                typename ::psst::meta::transform<
+                    def::detail::event_type,
+                    typename ::psst::meta::find_if<
+                        def::originates_from<
+                            typename inner_states_def::template type< Indexes >
+                        >:: template type,
+                        transitions_tuple
+                    >::type
+                 > ::type {}
             ) ...
         }};
 

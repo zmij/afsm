@@ -199,7 +199,7 @@ TEST(Vending, HandledEvents)
                                 << "Handles on event";
     
     // TODO Have a look at current available transitions
-    EXPECT_TRUE(vm.current_handled_events().count(&event<events::power_off>::id))
+    EXPECT_FALSE(vm.current_handled_events().count(&event<events::power_off>::id))
                                 << "Handles off event";
 
     EXPECT_TRUE(done(vm.process_event(events::power_on{})))
@@ -208,7 +208,7 @@ TEST(Vending, HandledEvents)
                                 << "Vending machine is on";
     
     EXPECT_TRUE(vm.current_handled_events().count(&event<events::start_maintenance>::id));
-    EXPECT_TRUE(vm.current_handled_events().count(&event<events::end_maintenance>::id));
+    EXPECT_FALSE(vm.current_handled_events().count(&event<events::end_maintenance>::id));
     EXPECT_TRUE(vm.current_handled_events().count(&event<events::money>::id));
 }
 
