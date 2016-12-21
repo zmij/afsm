@@ -643,7 +643,12 @@ public:
     current_handled_events() const
     {
         auto const& table = get_current_events_table(state_indexes{});
-        return table[current_state_](states_);
+        auto res = table[current_state_](states_);
+        auto const& available_transitions
+                            = get_available_transitions_table(state_indexes{});
+        auto const& trans = available_transitions[current_state_];
+        res.insert( trans.begin(), trans.end());
+        return res;
     }
 
     template < typename T >
@@ -704,7 +709,16 @@ private:
     static available_transtions_table const&
     get_available_transitions_table( ::psst::meta::indexes_tuple< Indexes ...> const& )
     {
-        available_transtions_table _table;
+        static available_transtions_table _table{{
+            ::afsm::detail::make_event_set(
+                typename ::psst::meta::find_if<
+                    def::originates_from<
+                        typename inner_states_def::template type< Indexes >
+                    >:: template type,
+                    transitions_tuple
+                >::type {}
+            ) ...
+        }};
 
         return _table;
     }

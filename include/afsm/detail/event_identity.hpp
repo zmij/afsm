@@ -38,7 +38,7 @@ using event_multiset    = ::std::unordered_multiset< event_base::id_type const* 
 
 template < typename ... T >
 event_set
-generate_set( ::psst::meta::type_tuple<T...> const& )
+make_event_set( ::psst::meta::type_tuple<T...> const& )
 {
     return event_set{
         &event_identity<T>::type::id...

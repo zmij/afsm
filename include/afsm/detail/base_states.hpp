@@ -120,7 +120,7 @@ struct state_base_impl : T {
     static event_set const&
     static_handled_events()
     {
-        static event_set evts_ = generate_set(handled_events{});
+        static event_set evts_ = make_event_set(handled_events{});
         return evts_;
     }
 protected:
@@ -393,10 +393,7 @@ public:
     event_set
     current_handled_events() const
     {
-        event_set res = transitions_.current_handled_events();
-        auto const& own = this->static_handled_events();
-        res.insert(own.begin(), own.end());
-        return res;
+        return transitions_.current_handled_events();
     }
 protected:
     template<typename ... Args>
