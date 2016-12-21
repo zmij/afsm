@@ -27,6 +27,11 @@ option(BUILD_TESTS "Build test programs" ON)
 option(BUILD_BENCHMARKS "Build benchmarks" OFF)
 option(BUILD_EXAMPLES "Build example programs" OFF)
 
+# TODO Check for Mac OS X
+if(NOT CMAKE_OSX_DEPLOYMENT_TARGET)
+    set(CMAKE_OSX_DEPLOYMENT_TARGET 10.10)
+endif()
+
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 set( CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules")

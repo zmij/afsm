@@ -72,6 +72,22 @@ static_assert(!detail::has_transitions<void>::value, "");
 static_assert(detail::has_inner_states<transition_table_1>::value, "");
 static_assert(!detail::has_inner_states<empty_transition_table>::value, "");
 
+using events_in_state_a = ::psst::meta::find_if<
+        def::originates_from<stateA>::template type,
+        transition_table_1::transitions
+    >;
+using events_in_state_b = ::psst::meta::find_if<
+        def::originates_from<stateB>::template type,
+        transition_table_1::transitions
+    >;
+using events_in_state_c = ::psst::meta::find_if<
+        def::originates_from<stateC>::template type,
+        transition_table_1::transitions
+    >;
+static_assert(events_in_state_a::type::size == 2, "");
+static_assert(events_in_state_b::type::size == 1, "");
+static_assert(events_in_state_c::type::size == 0, "");
+
 struct my_state : state <my_state> {
     using internal_transitions = transition_table <
         internal_transition< eventAB >,

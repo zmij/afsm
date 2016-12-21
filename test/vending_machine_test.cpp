@@ -11,6 +11,8 @@
 namespace vending {
 
 using result = ::afsm::actions::event_process_result;
+template < typename T >
+using event = afsm::detail::event<T>;
 
 TEST(Vending, OnOff)
 {
@@ -110,13 +112,13 @@ TEST(Vending, Maintenance)
     EXPECT_TRUE(vm.is_in_state< vending_def::on::maintenance::idle >())
                                 << "Vending machine transits back to idle maintenance mode";
     EXPECT_FALSE(vm.is_empty());
-    EXPECT_EQ(10, vm.count());
+    EXPECT_EQ(10UL, vm.count());
     EXPECT_TRUE(done(vm.process_event(events::load_goods{ 1, 100 })))
                                 << "Vending machine consumes goods";
     EXPECT_TRUE(vm.is_in_state< vending_def::on::maintenance::idle >())
                                 << "Vending machine transits back to idle maintenance mode";
     EXPECT_FALSE(vm.is_empty());
-    EXPECT_EQ(110, vm.count());
+    EXPECT_EQ(110UL, vm.count());
     EXPECT_FALSE(vm.prices_correct());
 
     // Try leave maintenance mode without setting prices
@@ -179,5 +181,50 @@ TEST(Vending, BuyItem)
 
 
 }
+
+TEST(Vending, HandledEvents)
+{
+    vending_machine vm{ goods_storage{
+        { 0, { 10, 15.0f } },
+        { 1, { 100, 5.0f } }
+    }};
+
+    EXPECT_TRUE(vm.is_in_state< vending_def::off >())
+                                << "Vending machine is off";
+    EXPECT_TRUE(vm.static_handled_events().count(&event<events::power_on>::id))
+                                << "Handles on event";
+    EXPECT_TRUE(vm.static_handled_events().count(&event<events::power_off>::id))
+                                << "Handles off event";
+    EXPECT_TRUE(vm.current_handled_events().count(&event<events::power_on>::id))
+                                << "Handles on event";
+
+    EXPECT_FALSE(vm.current_handled_events().count(&event<events::power_off>::id))
+                                << "Handles off event";
+
+    // off -> on
+    EXPECT_TRUE(done(vm.process_event(events::power_on{})))
+                                << "Vending machine turns on correctly";
+    EXPECT_TRUE(vm.is_in_state< vending_def::on >())
+                                << "Vending machine is on";
+
+    EXPECT_TRUE(vm.current_handled_events().count(&event<events::start_maintenance>::id));
+    EXPECT_FALSE(vm.current_handled_events().count(&event<events::end_maintenance>::id));
+    EXPECT_TRUE(vm.current_handled_events().count(&event<events::money>::id));
+    EXPECT_FALSE(vm.current_handled_events().count(&event<events::withdraw_money>::id));
+    EXPECT_FALSE(vm.current_handled_events().count(&event<events::set_price>::id));
+
+    // serving -> maintenance
+    EXPECT_TRUE(done(vm.process_event(events::start_maintenance{vending_machine::factory_code})))
+                                << "Vending machine accepts factory code";
+    EXPECT_TRUE(vm.is_in_state< vending_def::on::maintenance >())
+                                << "Vending machine transits to maintenance mode";
+
+    EXPECT_FALSE(vm.current_handled_events().count(&event<events::start_maintenance>::id));
+    EXPECT_TRUE(vm.current_handled_events().count(&event<events::end_maintenance>::id));
+    EXPECT_FALSE(vm.current_handled_events().count(&event<events::money>::id));
+    EXPECT_TRUE(vm.current_handled_events().count(&event<events::withdraw_money>::id));
+    EXPECT_TRUE(vm.current_handled_events().count(&event<events::set_price>::id));
+}
+
 
 }  /* namespace vending */

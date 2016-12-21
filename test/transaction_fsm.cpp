@@ -36,7 +36,7 @@ struct connection_fsm_def : def::state_machine<connection_fsm_def,
                                 def::tags::common_base<state_name>> {
     using connection_fsm =
             ::afsm::state_machine<
-                 connection_fsm_def, ::std::mutex, connection_observer>;
+                 connection_fsm_def, ::std::mutex, test_fsm_observer>;
 
     connection_fsm&
     fsm()
@@ -317,7 +317,7 @@ struct connection_fsm_def : def::state_machine<connection_fsm_def,
     >;
 };
 
-using connection_fsm = state_machine<connection_fsm_def, ::std::mutex, connection_observer>;
+using connection_fsm = state_machine<connection_fsm_def, ::std::mutex, test_fsm_observer>;
 
 static_assert(def::contains_substate<connection_fsm_def, connection_fsm_def::connecting>::value, "");
 static_assert(def::contains_substate<connection_fsm_def, connection_fsm_def::transaction>::value, "");
@@ -381,12 +381,47 @@ commit_transaction(connection_fsm& fsm)
 
 }  /* namespace  */
 
+TEST(TranFSM, StaticHandledEvents)
+{
+    connection_fsm fsm;
+
+    EXPECT_TRUE(
+        fsm.static_handled_events().count( &detail::event<events::connect>::id ))
+            << "Immediately handled event";
+    EXPECT_TRUE(
+        fsm.static_handled_events().count( &detail::event<events::terminate>::id ))
+            << "Immediately handled event";
+    EXPECT_TRUE(
+        fsm.static_handled_events().count( &detail::event<events::complete>::id ))
+            << "Immediately handled event";
+    EXPECT_TRUE(
+        fsm.static_handled_events().count( &detail::event<events::conn_error>::id ))
+            << "Immediately handled event";
+    EXPECT_TRUE(
+        fsm.static_handled_events().count( &detail::event<events::ready_for_query>::id ))
+            << "Immediately handled event";
+    EXPECT_TRUE(
+        fsm.static_handled_events().count( &detail::event<events::begin>::id ))
+            << "Immediately handled event";
+
+
+    EXPECT_FALSE(
+        fsm.static_handled_events().count( &detail::event<events::commit>::id ))
+            << "Event handled by a nested state";
+    EXPECT_FALSE(
+        fsm.static_handled_events().count( &detail::event<events::row_event>::id ))
+            << "Event handled by a nested state";
+    EXPECT_FALSE(
+        fsm.static_handled_events().count( &detail::event<events::command_complete>::id ))
+            << "Event handled by a nested state";
+}
+
 TEST(TranFSM, AllEvents)
 {
     using actions::event_process_result;
     using ::psst::ansi_color;
     connection_fsm fsm;
-    fsm.make_observer();
+    fsm.make_observer("connection_fsm_def");
 
     ::std::cerr << fsm.get_state< connection_fsm_def >().name() << "\n";
     ::std::cerr << fsm.get_state< connection_fsm::transaction >().name() << "\n";
@@ -441,7 +476,7 @@ TEST(TranFSM, RealEventSequence)
     using actions::event_process_result;
     using ::psst::ansi_color;
     connection_fsm fsm;
-    fsm.make_observer();
+    fsm.make_observer("connection_fsm_def");
 
     // Enqueueing commands
     EXPECT_EQ(event_process_result::process, fsm.process_event(events::connect{}));

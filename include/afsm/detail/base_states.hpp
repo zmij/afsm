@@ -12,6 +12,7 @@
 #include <afsm/detail/helpers.hpp>
 #include <afsm/detail/transitions.hpp>
 #include <afsm/detail/orthogonal_regions.hpp>
+#include <afsm/detail/event_identity.hpp>
 
 #include <pushkin/meta/functions.hpp>
 
@@ -111,6 +112,33 @@ struct state_base_impl : T {
     template < typename Event, typename FSM >
     void
     state_exit(Event&&, FSM&) {}
+
+    event_set const&
+    current_handled_events() const
+    { return static_handled_events(); }
+    event_set const&
+    current_deferrable_events() const
+    { return static_deferrable_events(); }
+
+    static event_set const&
+    static_handled_events()
+    {
+        static event_set evts_ = make_event_set(handled_events{});
+        return evts_;
+    }
+    static event_set const&
+    internal_handled_events()
+    {
+        static event_set evts_ = make_event_set(typename def::detail::handled_events< internal_transitions >::type{});
+        return evts_;
+    }
+
+    static event_set const&
+    static_deferrable_events()
+    {
+        static event_set evts_ = make_event_set(deferred_events{});
+        return evts_;
+    }
 protected:
     template< typename ... Args >
     state_base_impl(Args&& ... args)
@@ -158,6 +186,32 @@ struct state_base_impl<T, true> : T {
     template < typename Event, typename FSM >
     void
     state_exit(Event&&, FSM&) {}
+
+    event_set const&
+    current_handled_events() const
+    { return static_handled_events(); }
+    event_set const&
+    current_deferrable_events() const
+    { return static_deferrable_events(); }
+
+    static event_set const&
+    static_handled_events()
+    {
+        static event_set evts_{};
+        return evts_;
+    }
+    static event_set const&
+    internal_handled_events()
+    {
+        static event_set evts_{};
+        return evts_;
+    }
+    static event_set const&
+    static_deferrable_events()
+    {
+        static event_set evts_{};
+        return evts_;
+    }
 protected:
     template< typename ... Args >
     state_base_impl(Args&& ... args)
@@ -378,6 +432,23 @@ public:
         transitions_.exit( ::std::forward<Event>(event) );
     }
 
+    event_set
+    current_handled_events() const
+    {
+        auto const& intl = state_type::internal_handled_events();
+        auto res = transitions_.current_handled_events();
+        res.insert(intl.begin(), intl.end());
+        return res;
+    }
+
+    event_set
+    current_deferrable_events() const
+    {
+        auto const& own = state_type::current_deferrable_events();
+        auto res = transitions_.current_deferrable_events();
+        res.insert(own.begin(), own.end());
+        return res;
+    }
 protected:
     template<typename ... Args>
     explicit
@@ -699,6 +770,22 @@ public:
     state_exit(Event&& event, FSM&)
     {
         regions_.exit(::std::forward<Event>(event));
+    }
+    event_set
+    current_handled_events() const
+    {
+        auto const& intl = state_type::internal_handled_events();
+        event_set res = regions_.current_handled_events();
+        res.insert(intl.begin(), intl.end());
+        return res;
+    }
+    event_set
+    current_deferrable_events() const
+    {
+        auto const& own = state_type::current_deferrable_events();
+        auto res = regions_.current_deferrable_events();
+        res.insert(own.begin(), own.end());
+        return res;
     }
 protected:
     template < typename ... Args >

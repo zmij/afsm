@@ -10,6 +10,7 @@
 
 #include <afsm/detail/actions.hpp>
 #include <afsm/detail/exception_safety_guarantees.hpp>
+#include <afsm/detail/event_identity.hpp>
 
 #include <deque>
 #include <memory>
@@ -358,6 +359,32 @@ struct final_state_exit_func {
     }
 };
 
+template < ::std::size_t StateIndex >
+struct get_current_events_func {
+    static constexpr ::std::size_t state_index = StateIndex;
+
+    template < typename StateTuple >
+    ::afsm::detail::event_set
+    operator()(StateTuple const& states) const
+    {
+        auto const& state = ::std::get<state_index>(states);
+        return state.current_handled_events();
+    }
+};
+
+template < ::std::size_t StateIndex >
+struct get_current_deferred_events_func {
+    static constexpr ::std::size_t state_index = StateIndex;
+
+    template < typename StateTuple >
+    ::afsm::detail::event_set
+    operator()(StateTuple const& states) const
+    {
+        auto const& state = ::std::get<state_index>(states);
+        return state.current_deferrable_events();
+    }
+};
+
 }  /* namespace detail */
 
 template < typename FSM, typename FSM_DEF, typename Size >
@@ -391,6 +418,7 @@ public:
     static constexpr ::std::size_t size = inner_states_def::size;
 
     using state_indexes     = typename ::psst::meta::index_builder<size>::type;
+    using event_set         = ::afsm::detail::event_set;
 
     template < typename Event >
     using transition_table_type = ::std::array<
@@ -398,7 +426,11 @@ public:
 
     template < typename Event >
     using exit_table_type = ::std::array<
-            ::std::function< void(inner_states_tuple&, Event&&, fsm_type&) >, size>;
+            ::std::function< void(inner_states_tuple&, Event&&, fsm_type&) >, size >;
+
+    using current_events_table = ::std::array<
+            ::std::function< event_set(inner_states_tuple const&) >, size >;
+    using available_transtions_table = ::std::array< event_set, size >;
 
     template < typename CommonBase, typename StatesTuple >
     using cast_table_type = ::std::array< ::std::function<
@@ -619,6 +651,26 @@ public:
         swap(target, target_backup);
         return actions::event_process_result::refuse;
     }
+
+    event_set
+    current_handled_events() const
+    {
+        auto const& table = get_current_events_table(state_indexes{});
+        auto res = table[current_state_](states_);
+        auto const& available_transitions
+                            = get_available_transitions_table(state_indexes{});
+        auto const& trans = available_transitions[current_state_];
+        res.insert( trans.begin(), trans.end());
+        return res;
+    }
+
+    event_set
+    current_deferrable_events() const
+    {
+        auto const& table = get_current_deferred_events_table(state_indexes{});
+        return table[current_state_](states_);
+    }
+
     template < typename T >
     T&
     cast_current_state()
@@ -663,6 +715,46 @@ private:
         }};
         return _table;
     }
+    template < ::std::size_t ... Indexes >
+    static current_events_table const&
+    get_current_events_table( ::psst::meta::indexes_tuple< Indexes ... > const& )
+    {
+        static current_events_table _table{{
+            detail::get_current_events_func<Indexes>{} ...
+        }};
+
+        return _table;
+    }
+    template < ::std::size_t ... Indexes >
+    static current_events_table const&
+    get_current_deferred_events_table( ::psst::meta::indexes_tuple< Indexes ... > const& )
+    {
+        static current_events_table _table{{
+            detail::get_current_deferred_events_func<Indexes>{} ...
+        }};
+
+        return _table;
+    }
+    template < ::std::size_t ... Indexes >
+    static available_transtions_table const&
+    get_available_transitions_table( ::psst::meta::indexes_tuple< Indexes ...> const& )
+    {
+        static available_transtions_table _table{{
+            ::afsm::detail::make_event_set(
+                typename ::psst::meta::transform<
+                    def::detail::event_type,
+                    typename ::psst::meta::find_if<
+                        def::originates_from<
+                            typename inner_states_def::template type< Indexes >
+                        >:: template type,
+                        transitions_tuple
+                    >::type
+                 > ::type {}
+            ) ...
+        }};
+
+        return _table;
+    }
     template < typename T, typename StateTuple, ::std::size_t ... Indexes >
     static cast_table_type<T, StateTuple> const&
     get_cast_table( ::psst::meta::indexes_tuple< Indexes... > const& )
@@ -688,6 +780,7 @@ public:
     using state_machine_definition_type = typename state_table_type::state_machine_definition_type;
     using size_type                     = typename state_table_type::size_type;
     using inner_states_tuple            = typename state_table_type::inner_states_tuple;
+    using event_set                     = typename state_table_type::event_set;
 
     using stack_constructor_type        = afsm::detail::stack_constructor<FSM, state_table_type>;
 public:
@@ -791,6 +884,17 @@ public:
     stack_size() const
     {
         return state_stack_.size();
+    }
+
+    event_set
+    current_handled_events() const
+    {
+        return top().current_handled_events();
+    }
+    event_set
+    current_deferrable_events() const
+    {
+        return top().current_deferrable_events();
     }
 
     template < typename T >

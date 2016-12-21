@@ -7,6 +7,7 @@
 
 #include <gtest/gtest.h>
 #include <afsm/fsm.hpp>
+#include "test_observer.hpp"
 
 namespace afsm {
 namespace test {
@@ -50,15 +51,16 @@ struct outer_machine : def::state_machine<outer_machine> {
 
 } /* namespace test */
 // Instantiate it
-template class state_machine<test::outer_machine>;
+template class state_machine<test::outer_machine, none, test::test_fsm_observer>;
 
 namespace test {
 
-using test_sm = state_machine<outer_machine>;
+using test_sm = state_machine<outer_machine, none, test_fsm_observer>;
 
 TEST(FSM, MachineWithInstate)
 {
     test_sm tsm;
+    tsm.make_observer("test");
     // *** INITIAL STATE ***
     // Check current state
     EXPECT_TRUE(tsm.is_in_state< outer_machine::state_a >());
@@ -97,6 +99,7 @@ TEST(FSM, MachineWithInstate)
 TEST(FSM, MachineWithInstateDefers)
 {
     test_sm tsm;
+    tsm.make_observer("test");
     // *** INITIAL STATE ***
     // Check current state
     EXPECT_TRUE(tsm.is_in_state< outer_machine::state_a >());
