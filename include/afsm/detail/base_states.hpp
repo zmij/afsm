@@ -116,6 +116,9 @@ struct state_base_impl : T {
     event_set const&
     current_handled_events() const
     { return static_handled_events(); }
+    event_set const&
+    current_deferrable_events() const
+    { return static_deferrable_events(); }
 
     static event_set const&
     static_handled_events()
@@ -127,6 +130,13 @@ struct state_base_impl : T {
     internal_handled_events()
     {
         static event_set evts_ = make_event_set(typename def::detail::handled_events< internal_transitions >::type{});
+        return evts_;
+    }
+
+    static event_set const&
+    static_deferrable_events()
+    {
+        static event_set evts_ = make_event_set(deferred_events{});
         return evts_;
     }
 protected:
@@ -180,6 +190,9 @@ struct state_base_impl<T, true> : T {
     event_set const&
     current_handled_events() const
     { return static_handled_events(); }
+    event_set const&
+    current_deferrable_events() const
+    { return static_deferrable_events(); }
 
     static event_set const&
     static_handled_events()
@@ -189,6 +202,12 @@ struct state_base_impl<T, true> : T {
     }
     static event_set const&
     internal_handled_events()
+    {
+        static event_set evts_{};
+        return evts_;
+    }
+    static event_set const&
+    static_deferrable_events()
     {
         static event_set evts_{};
         return evts_;
@@ -419,6 +438,15 @@ public:
         auto const& intl = state_type::internal_handled_events();
         auto res = transitions_.current_handled_events();
         res.insert(intl.begin(), intl.end());
+        return res;
+    }
+
+    event_set
+    current_deferrable_events() const
+    {
+        auto const& own = state_type::current_deferrable_events();
+        auto res = transitions_.current_deferrable_events();
+        res.insert(own.begin(), own.end());
         return res;
     }
 protected:
@@ -746,10 +774,18 @@ public:
     event_set
     current_handled_events() const
     {
+        auto const& intl = state_type::internal_handled_events();
         event_set res = regions_.current_handled_events();
-        auto const& own = this->static_handled_events();
+        res.insert(intl.begin(), intl.end());
+        return res;
+    }
+    event_set
+    current_deferrable_events() const
+    {
+        auto const& own = state_type::current_deferrable_events();
+        auto res = regions_.current_deferrable_events();
         res.insert(own.begin(), own.end());
-        return own;
+        return res;
     }
 protected:
     template < typename ... Args >

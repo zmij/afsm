@@ -17,7 +17,7 @@ struct connection_pri_fsm_def : def::state_machine<connection_pri_fsm_def,
                                 def::tags::common_base<state_name>> {
     using connection_fsm =
             ::afsm::priority_state_machine<
-                    connection_pri_fsm_def, ::std::mutex, connection_observer>;
+                    connection_pri_fsm_def, ::std::mutex, test_fsm_observer>;
 
     connection_fsm&
     fsm()
@@ -298,7 +298,7 @@ struct connection_pri_fsm_def : def::state_machine<connection_pri_fsm_def,
     >;
 };
 
-using connection_fsm = priority_state_machine<connection_pri_fsm_def, ::std::mutex, connection_observer>;
+using connection_fsm = priority_state_machine<connection_pri_fsm_def, ::std::mutex, test_fsm_observer>;
 
 static_assert(def::contains_substate<connection_pri_fsm_def, connection_pri_fsm_def::connecting>::value, "");
 static_assert(def::contains_substate<connection_pri_fsm_def, connection_pri_fsm_def::transaction>::value, "");
@@ -366,7 +366,7 @@ TEST(TranPriorityFSM, AllEvents)
     using actions::event_process_result;
     using ::psst::ansi_color;
     connection_fsm fsm;
-    fsm.make_observer();
+    fsm.make_observer("connection_pri_fsm_def");
 
     EXPECT_EQ(event_process_result::process, fsm.process_event(events::connect{}));
     EXPECT_TRUE(fsm.is_in_state<connection_pri_fsm_def::connecting>());
@@ -417,7 +417,7 @@ TEST(TranPriorityFSM, RealEventSequence)
     using actions::event_process_result;
     using ::psst::ansi_color;
     connection_fsm fsm;
-    fsm.make_observer();
+    fsm.make_observer("connection_pri_fsm_def");
 
     // Enqueueing commands
     EXPECT_EQ(event_process_result::process, fsm.process_event(events::connect{}));

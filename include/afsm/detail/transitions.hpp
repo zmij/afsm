@@ -372,6 +372,19 @@ struct get_current_events_func {
     }
 };
 
+template < ::std::size_t StateIndex >
+struct get_current_deferred_events_func {
+    static constexpr ::std::size_t state_index = StateIndex;
+
+    template < typename StateTuple >
+    ::afsm::detail::event_set
+    operator()(StateTuple const& states) const
+    {
+        auto const& state = ::std::get<state_index>(states);
+        return state.current_deferrable_events();
+    }
+};
+
 }  /* namespace detail */
 
 template < typename FSM, typename FSM_DEF, typename Size >
@@ -651,6 +664,13 @@ public:
         return res;
     }
 
+    event_set
+    current_deferrable_events() const
+    {
+        auto const& table = get_current_deferred_events_table(state_indexes{});
+        return table[current_state_](states_);
+    }
+
     template < typename T >
     T&
     cast_current_state()
@@ -701,6 +721,16 @@ private:
     {
         static current_events_table _table{{
             detail::get_current_events_func<Indexes>{} ...
+        }};
+
+        return _table;
+    }
+    template < ::std::size_t ... Indexes >
+    static current_events_table const&
+    get_current_deferred_events_table( ::psst::meta::indexes_tuple< Indexes ... > const& )
+    {
+        static current_events_table _table{{
+            detail::get_current_deferred_events_func<Indexes>{} ...
         }};
 
         return _table;
@@ -860,6 +890,11 @@ public:
     current_handled_events() const
     {
         return top().current_handled_events();
+    }
+    event_set
+    current_deferrable_events() const
+    {
+        return top().current_deferrable_events();
     }
 
     template < typename T >

@@ -63,6 +63,15 @@ struct invoke_nth {
         event_set evts = region.current_handled_events();
         events.insert(evts.begin(), evts.end());
     }
+    template < typename Regions >
+    static void
+    collect_deferred_events( Regions const& regions, event_set& events )
+    {
+        previous::collect_deferred_events(regions, events);
+        auto const& region = ::std::get<index>(regions);
+        event_set evts = region.current_deferrable_events();
+        events.insert(evts.begin(), evts.end());
+    }
 };
 
 template <>
@@ -101,7 +110,14 @@ struct invoke_nth< 0 > {
     collect_events( Regions const& regions, event_set& events )
     {
         auto const& region = ::std::get<index>(regions);
-        events.swap(region.current_handled_events());
+        region.current_handled_events().swap(events);
+    }
+    template < typename Regions >
+    static void
+    collect_deferred_events( Regions const& regions, event_set& events )
+    {
+        auto const& region = ::std::get<index>(regions);
+        region.current_deferrable_events().swap(events);
     }
 };
 
@@ -198,6 +214,13 @@ public:
     {
         event_set evts;
         all_regions::collect_events(regions_, evts);
+        return evts;
+    }
+    event_set
+    current_deferrable_events() const
+    {
+        event_set evts;
+        all_regions::collect_deferred_events(regions_, evts);
         return evts;
     }
 
@@ -298,6 +321,11 @@ public:
     current_handled_events() const
     {
         return top().current_handled_events();
+    }
+    event_set
+    current_deferrable_events() const
+    {
+        return top().current_deferrable_events();
     }
 
     template < typename Event >

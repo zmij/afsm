@@ -61,6 +61,10 @@ struct null_observer {
     void
     end_process_deferred_queue(FSM const&) const noexcept {}
 
+    template < typename FSM >
+    void
+    skip_processing_deferred_queue(FSM const&) const noexcept {}
+
     template < typename FSM, typename Event >
     void
     reject_event(FSM const&, Event const&) const noexcept {}
@@ -181,6 +185,14 @@ protected:
     {
         if (observer_)
             observer_->end_process_deferred_queue(fsm);
+    }
+
+    template < typename FSM >
+    void
+    skip_processing_deferred_queue(FSM const& fsm) const noexcept
+    {
+        if (observer_)
+            observer_->skip_processing_deferred_queue(fsm);
     }
 
     template < typename FSM, typename Event >

@@ -14,6 +14,7 @@
 #include <pushkin/util/demangle.hpp>
 #include <iostream>
 #include <iomanip>
+#include "test_observer.hpp"
 
 namespace afsm {
 namespace test {
@@ -74,12 +75,6 @@ struct command_complete {
 };
 
 }  /* namespace events */
-
-namespace {
-
-int const event_name_width = 17;
-
-}  /* namespace  */
 
 struct transit_action {
     template < typename Event, typename FSM, typename SourceState, typename TargetState >
@@ -156,158 +151,6 @@ struct state_name {
                 << ::std::setw(event_name_width) << ::std::left
                 << "[default]" << ansi_color::clear
                 << ": Exit " << name() << "\n";
-    }
-};
-
-struct connection_observer : ::afsm::detail::null_observer {
-    template < typename FSM, typename Event >
-    void
-    start_process_event(FSM const&, Event const&) const noexcept
-    {
-        using decayed_event = typename ::std::decay<Event>::type;
-        using ::psst::ansi_color;
-        ::std::cerr
-             << (ansi_color::green | ansi_color::dim)
-             << ::std::setw(event_name_width) << ::std::left
-             << decayed_event::name << ansi_color::clear
-             << ": Start processing\n";
-    }
-
-    template < typename FSM >
-    void
-    start_process_event(FSM const&, none const&) const noexcept
-    {
-        using ::psst::ansi_color;
-        ::std::cerr
-             << (ansi_color::green | ansi_color::dim)
-             << ::std::setw(event_name_width) << ::std::left
-             << "[default]" << ansi_color::clear
-             << ": Start processing\n";
-    }
-
-    template < typename FSM, typename State >
-    void
-    state_cleared(FSM const&, State const&) const noexcept
-    {
-        using ::psst::ansi_color;
-        using ::psst::util::demangle;
-        ::std::cerr
-             << (ansi_color::red | ansi_color::bright)
-             << ::std::setw(event_name_width) << ::std::setfill('*')
-             << "*" << ansi_color::clear  << ::std::setfill(' ')
-             << ": State cleared " << demangle< typename State::state_definition_type >() <<"\n";
-    }
-    template < typename FSM, typename SourceState, typename TargetState, typename Event >
-    void
-    state_changed(FSM const&, SourceState const&, TargetState const&, Event const&) const noexcept
-    {
-        using ::psst::ansi_color;
-        using ::psst::util::demangle;
-        ::std::cerr
-             << (ansi_color::blue | ansi_color::bright)
-             << ::std::setw(event_name_width) << ::std::setfill('*')
-             << "*" << ansi_color::clear  << ::std::setfill(' ')
-             << ": State changed " << demangle< typename SourceState::state_definition_type >()
-             << " -> " << demangle< typename TargetState::state_definition_type >()
-             << " (" << demangle<Event>() << ")\n";
-    }
-
-    template < typename FSM, typename Event >
-    void
-    processed_in_state(FSM const&, Event const&) const noexcept
-    {
-        using decayed_event = typename ::std::decay<Event>::type;
-        using ::psst::ansi_color;
-        ::std::cerr
-             << (ansi_color::blue | ansi_color::dim)
-             << ::std::setw(event_name_width) << ::std::left
-             << decayed_event::name << ansi_color::clear
-             << ": Processed in state\n";
-    }
-
-    template < typename FSM, typename Event >
-    void
-    enqueue_event(FSM const&, Event const&) const noexcept
-    {
-        using decayed_event = typename ::std::decay<Event>::type;
-        using ::psst::ansi_color;
-        ::std::cerr
-             << (ansi_color::blue | ansi_color::dim)
-             << ::std::setw(event_name_width) << ::std::left
-             << decayed_event::name << ansi_color::clear
-             << ": Enqueue event\n";
-    }
-
-    template < typename FSM >
-    void
-    start_process_events_queue(FSM const&) const noexcept
-    {
-        using ::psst::ansi_color;
-        ::std::cerr
-             << (ansi_color::blue | ansi_color::bright)
-             << ::std::setw(event_name_width) << ::std::setfill('*')
-             << "*" << ansi_color::clear  << ::std::setfill(' ')
-             << ": Start processing event queue\n";
-    }
-    template < typename FSM >
-    void
-    end_process_events_queue(FSM const&) const noexcept
-    {
-        using ::psst::ansi_color;
-        ::std::cerr
-             << (ansi_color::blue | ansi_color::bright)
-             << ::std::setw(event_name_width) << ::std::setfill('*')
-             << "*" << ansi_color::clear  << ::std::setfill(' ')
-             << ": End processing event queue\n";
-    }
-
-    template < typename FSM, typename Event >
-    void
-    defer_event(FSM const&, Event const&) const noexcept
-    {
-        using decayed_event = typename ::std::decay<Event>::type;
-        using ::psst::ansi_color;
-        ::std::cerr
-             << (ansi_color::red | ansi_color::dim)
-             << ::std::setw(event_name_width) << ::std::left
-             << decayed_event::name << ansi_color::clear
-             << ": Defer event\n";
-    }
-
-    template < typename FSM >
-    void
-    start_process_deferred_queue(FSM const&) const noexcept
-    {
-        using ::psst::ansi_color;
-        ::std::cerr
-             << (ansi_color::blue | ansi_color::bright)
-             << ::std::setw(event_name_width) << ::std::setfill('*')
-             << "*" << ansi_color::clear  << ::std::setfill(' ')
-             << ": Start processing deferred event queue\n";
-    }
-    template < typename FSM >
-    void
-    end_process_deferred_queue(FSM const&) const noexcept
-    {
-        using ::psst::ansi_color;
-        ::std::cerr
-             << (ansi_color::blue | ansi_color::bright)
-             << ::std::setw(event_name_width) << ::std::setfill('*')
-             << "*" << ansi_color::clear  << ::std::setfill(' ')
-             << ": End processing deferred event queue\n";
-    }
-
-    template < typename FSM, typename Event >
-    void
-    reject_event(FSM const& fsm, Event const&) const noexcept
-    {
-        using decayed_event = typename ::std::decay<Event>::type;
-        using ::psst::ansi_color;
-        ::std::cerr
-             << (ansi_color::red | ansi_color::bright)
-             << ::std::setw(event_name_width) << ::std::left
-             << decayed_event::name << ansi_color::clear
-             << ": Reject event. State " << fsm.name() << "\n";
     }
 };
 
