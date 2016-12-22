@@ -219,25 +219,25 @@ struct test_fsm_observer : ::afsm::detail::null_observer {
 
     template < typename FSM >
     void
-    start_process_deferred_queue(FSM const&) const noexcept
+    start_process_deferred_queue(FSM const&, ::std::size_t size) const noexcept
     {
         using ::psst::ansi_color;
         ::std::cerr
              << (ansi_color::blue | ansi_color::bright)
              << ::std::setw(event_name_width) << ::std::setfill('*')
              << "*" << ansi_color::clear  << ::std::setfill(' ')
-             << ": Start processing deferred event queue\n";
+             << ": Start processing deferred event queue size " << size << "\n";
     }
     template < typename FSM >
     void
-    end_process_deferred_queue(FSM const&) const noexcept
+    end_process_deferred_queue(FSM const&, ::std::size_t size) const noexcept
     {
         using ::psst::ansi_color;
         ::std::cerr
              << (ansi_color::blue | ansi_color::bright)
              << ::std::setw(event_name_width) << ::std::setfill('*')
              << "*" << ansi_color::clear  << ::std::setfill(' ')
-             << ": End processing deferred event queue\n";
+             << ": End processing deferred event queue remain " << size << "\n";
     }
     template < typename FSM >
     void
@@ -255,6 +255,28 @@ struct test_fsm_observer : ::afsm::detail::null_observer {
              << deferred.size() << " event types.\n"
          ;
     }
+    template < typename FSM >
+    void
+    postpone_deferred_events(FSM const& fsm, ::std::size_t count) const noexcept
+    {
+        using ::psst::ansi_color;
+        ::std::cerr
+             << (ansi_color::yellow)
+             << ::std::setw(event_name_width) << ::std::setfill('*') << "*"
+             << ansi_color::clear  << ::std::setfill(' ')
+             << ": Postpone " << count << " deferred events\n";
+    }
+    template < typename FSM >
+    void
+    drop_deferred_event(FSM const& fsm) const noexcept
+    {
+        using ::psst::ansi_color;
+        ::std::cerr
+             << (ansi_color::red | ansi_color::bright)
+             << ::std::setw(event_name_width) << ::std::setfill('*') << "*"
+             << ansi_color::clear  << ::std::setfill(' ')
+             << ": Drop " << count << " deferred event\n";
+    };
 
     template < typename FSM, typename Event >
     void

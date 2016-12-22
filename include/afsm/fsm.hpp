@@ -211,6 +211,7 @@ public:
           mutex_{},
           queued_events_{},
           queue_size_{0},
+          deferred_top_{},
           deferred_events_{},
           deferred_event_ids_{}
       {}
@@ -224,6 +225,7 @@ public:
           mutex_{},
           queued_events_{},
           queue_size_{0},
+          deferred_top_{},
           deferred_events_{},
           deferred_event_ids_{}
     {}
@@ -386,56 +388,69 @@ private:
     void
     process_deferred_queue()
     {
-        using actions::event_process_result;
-        deferred_queue deferred;
-        detail::event_set event_ids;
-        if (skip_deferred_queue()) {
-            observer_wrapper::skip_processing_deferred_queue(*this);
-        } else {
-            ::std::swap(deferred_events_, deferred);
-            ::std::swap(deferred_event_ids_, event_ids);
-        }
-        while (!deferred.empty()) {
-            observer_wrapper::start_process_deferred_queue(*this);
-            auto res = event_process_result::refuse;
-            for (auto event = deferred.begin(); event != deferred.end(); ++event) {
-                if (handled_.count(event->second)) {
-                    res = event->first();
-                    deferred.erase(event++);
-                } else if (deferred_.count(event->second)) {
-                    // Move directly to the deferred queue
+        if (!deferred_top_.test_and_set()) {
+            using actions::event_process_result;
+            deferred_queue deferred;
+            detail::event_set event_ids;
+            if (skip_deferred_queue()) {
+                observer_wrapper::skip_processing_deferred_queue(*this);
+            } else {
+                ::std::swap(deferred_events_, deferred);
+                ::std::swap(deferred_event_ids_, event_ids);
+            }
+            while (!deferred.empty()) {
+                observer_wrapper::start_process_deferred_queue(*this, deferred.size());
+                auto res = event_process_result::refuse;
+                for (auto event = deferred.begin(); event != deferred.end(); ++event) {
+                    if (handled_.count(event->second)) {
+                        res = event->first();
+                        deferred.erase(event++);
+                    } else if (deferred_.count(event->second)) {
+                        // Move directly to the deferred queue
+                        ::std::size_t count{0};
+                        auto next = event;
+                        while (next != deferred.end() && next->second == event->second) {
+                            ++next;
+                            ++count;
+                        }
+                        deferred_events_.splice(deferred_events_.end(),
+                            deferred, event, next);
+                        deferred_event_ids_.insert(event->second);
+                        event = next;
+                        observer_wrapper::postpone_deferred_events(*this, count);
+                    } else {
+                        deferred.erase(event++);
+                        observer_wrapper::drop_deferred_event(*this);
+                    }
+                    if (res == event_process_result::process)
+                        break;
+                }
+                for (auto event = deferred.begin(); event != deferred.end(); ++event) {
+                    ::std::size_t count{0};
                     auto next = event;
-                    while (next != deferred.end() && next->second == event->second)
+                    while (next != deferred.end() && next->second == event->second) {
+                        ++count;
                         ++next;
+                    }
                     deferred_events_.splice(deferred_events_.end(),
                         deferred, event, next);
-                    deferred_event_ids_.insert(event->second);
+                    deferred_event_ids_.insert(event->second);f
                     event = next;
-                } else {
-                    deferred.erase(event++);
+                    observer_wrapper::postpone_deferred_events(*this, count);
                 }
-                if (res == event_process_result::process)
-                    break;
-            }
-            for (auto event = deferred.begin(); event != deferred.end(); ++event) {
-                auto next = event;
-                while (next != deferred.end() && next->second == event->second)
-                    ++next;
-                deferred_events_.splice(deferred_events_.end(),
-                    deferred, event, next);
-                deferred_event_ids_.insert(event->second);
-                event = next;
-            }
-            event_ids.clear();
-            observer_wrapper::end_process_deferred_queue(*this);
-            if (res == event_process_result::process) {
-                if (skip_deferred_queue()) {
-                    observer_wrapper::skip_processing_deferred_queue(*this);
-                } else {
-                    ::std::swap(deferred_events_, deferred);
-                    ::std::swap(deferred_event_ids_, event_ids);
+                event_ids.clear();
+                observer_wrapper::end_process_deferred_queue(*this, deferred.size());
+                observer_wrapper::end_process_deferred_queue(*this, deferred_events_.size());
+                if (res == event_process_result::process) {
+                    if (skip_deferred_queue()) {
+                        observer_wrapper::skip_processing_deferred_queue(*this);
+                    } else {
+                        ::std::swap(deferred_events_, deferred);
+                        ::std::swap(deferred_event_ids_, event_ids);
+                    }
                 }
             }
+            deferred_top_.clear();
         }
     }
 
@@ -460,6 +475,7 @@ private:
     event_queue             queued_events_;
     atomic_counter          queue_size_;
 
+    ::std::atomic_flag      deferred_top_;
     deferred_queue          deferred_events_;
     detail::event_set       deferred_event_ids_;
 };

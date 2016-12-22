@@ -56,14 +56,20 @@ struct null_observer {
 
     template < typename FSM >
     void
-    start_process_deferred_queue(FSM const&) const noexcept {}
+    start_process_deferred_queue(FSM const&, ::std::size_t size) const noexcept {}
     template < typename FSM >
     void
-    end_process_deferred_queue(FSM const&) const noexcept {}
+    end_process_deferred_queue(FSM const&, ::std::size_t remain) const noexcept {}
 
     template < typename FSM >
     void
     skip_processing_deferred_queue(FSM const&) const noexcept {}
+    template < typename FSM >
+    void
+    postpone_deferred_events(FSM const&, ::std::size_t count) const noexcept {}
+    template < typename FSM >
+    void
+    drop_deferred_event(FSM const&) const noexcept{};
 
     template < typename FSM, typename Event >
     void
@@ -173,18 +179,18 @@ protected:
 
     template < typename FSM >
     void
-    start_process_deferred_queue(FSM const& fsm) const noexcept
+    start_process_deferred_queue(FSM const& fsm, ::std::size_t size) const noexcept
     {
         if (observer_)
-            observer_->start_process_deferred_queue(fsm);
+            observer_->start_process_deferred_queue(fsm, size);
     }
 
     template < typename FSM >
     void
-    end_process_deferred_queue(FSM const& fsm) const noexcept
+    end_process_deferred_queue(FSM const& fsm, ::std::size_t remain) const noexcept
     {
         if (observer_)
-            observer_->end_process_deferred_queue(fsm);
+            observer_->end_process_deferred_queue(fsm, remain);
     }
 
     template < typename FSM >
@@ -193,6 +199,20 @@ protected:
     {
         if (observer_)
             observer_->skip_processing_deferred_queue(fsm);
+    }
+    template < typename FSM >
+    void
+    postpone_deferred_events(FSM const& fsm, ::std::size_t count) const noexcept
+    {
+        if (observer_)
+            observer_->postpone_deferred_events(fsm, count);
+    }
+    template < typename FSM >
+    void
+    drop_deferred_event(FSM const& fsm) const noexcept
+    {
+        if (observer_)
+            observer_->drop_deferred_event(fsm);
     }
 
     template < typename FSM, typename Event >
