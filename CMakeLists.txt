@@ -54,6 +54,7 @@ include_directories(${METAPUSHKIN_INCLUDE_DIRS})
 
 add_subdirectory(include)
 add_subdirectory(cmake)
+add_subdirectory(lib/ansi-colors)
 
 if (BUILD_TESTS)
     enable_testing()
