@@ -666,7 +666,7 @@ private:
             ::std::swap(deferred_events_, deferred);
         }
         while (!deferred.empty()) {
-            observer_wrapper::start_process_deferred_queue(*this);
+            observer_wrapper::start_process_deferred_queue(*this, deferred.size());
             auto res = event_process_result::refuse;
             while (!deferred.empty()) {
                 res = deferred.top().first();
@@ -681,10 +681,10 @@ private:
                     deferred.pop();
                 }
             }
+            observer_wrapper::end_process_deferred_queue(*this, deferred_events_.size());
             if (res == event_process_result::process) {
                 ::std::swap(deferred_events_, deferred);
             }
-            observer_wrapper::end_process_deferred_queue(*this);
         }
     }
 private:

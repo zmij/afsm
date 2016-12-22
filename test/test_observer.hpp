@@ -257,7 +257,7 @@ struct test_fsm_observer : ::afsm::detail::null_observer {
     }
     template < typename FSM >
     void
-    postpone_deferred_events(FSM const& fsm, ::std::size_t count) const noexcept
+    postpone_deferred_events(FSM const&, ::std::size_t count) const noexcept
     {
         using ::psst::ansi_color;
         ::std::cerr
@@ -268,15 +268,15 @@ struct test_fsm_observer : ::afsm::detail::null_observer {
     }
     template < typename FSM >
     void
-    drop_deferred_event(FSM const& fsm) const noexcept
+    drop_deferred_event(FSM const&) const noexcept
     {
         using ::psst::ansi_color;
         ::std::cerr
              << (ansi_color::red | ansi_color::bright)
              << ::std::setw(event_name_width) << ::std::setfill('*') << "*"
              << ansi_color::clear  << ::std::setfill(' ')
-             << ": Drop " << count << " deferred event\n";
-    };
+             << ": Drop deferred event\n";
+    }
 
     template < typename FSM, typename Event >
     void
