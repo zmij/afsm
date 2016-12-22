@@ -69,7 +69,7 @@ struct null_observer {
     postpone_deferred_events(FSM const&, ::std::size_t count) const noexcept {}
     template < typename FSM >
     void
-    drop_deferred_event(FSM const&) const noexcept{};
+    drop_deferred_event(FSM const&) const noexcept{}
 
     template < typename FSM, typename Event >
     void
