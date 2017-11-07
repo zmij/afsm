@@ -256,6 +256,14 @@ public:
     detail::event_set const&
     current_deferred_events() const
     { return deferred_event_ids_; }
+
+    void
+    clear_deferred_events()
+    {
+        lock_guard lock{mutex_};
+        deferred_queue{}.swap(deferred_events_);
+        detail::event_set{}.swap(deferred_event_ids_);
+    }
 private:
     template < typename Event >
     actions::event_process_result
