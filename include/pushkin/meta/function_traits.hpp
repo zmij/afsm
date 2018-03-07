@@ -211,6 +211,14 @@ invoke(Func func, indexes_tuple< Indexes ... >, ::std::tuple< T ... >& args)
 
 template < typename Func, size_t ... Indexes, typename ... T >
 typename function_traits<Func>::result_type
+invoke(Func func, indexes_tuple< Indexes ... >, ::std::tuple< T ... >&& args)
+{
+    return func(::std::move(::std::get<Indexes>(args)) ...);
+}
+
+
+template < typename Func, size_t ... Indexes, typename ... T >
+typename function_traits<Func>::result_type
 invoke(Func func, indexes_tuple< Indexes ... >, T&& ... args)
 {
     return func(::std::forward<T>(args) ... );
@@ -224,6 +232,14 @@ invoke(Func func, ::std::tuple< T ... >& args)
 {
     using index_type = typename index_builder< sizeof ... (T) >::type;
     return detail::invoke(func, index_type(), args);
+}
+
+template < typename Func, typename ... T >
+typename function_traits<Func>::result_type
+invoke(Func func, ::std::tuple< T ... >&& args)
+{
+    using index_type = typename index_builder< sizeof ... (T) >::type;
+    return detail::invoke(func, index_type(), ::std::move(args));
 }
 
 template < typename Func, typename ... T >
