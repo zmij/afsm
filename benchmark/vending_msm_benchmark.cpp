@@ -5,7 +5,7 @@
  *      Author: zmij
  */
 
-#include <benchmark/benchmark_api.h>
+#include <benchmark/benchmark.h>
 
 #include "vending_machine_msm.hpp"
 
@@ -95,4 +95,4 @@ BENCHMARK(MSM_BuyItem);
 
 }  /* namespace vending_msm */
 
-BENCHMARK_MAIN()
+BENCHMARK_MAIN();

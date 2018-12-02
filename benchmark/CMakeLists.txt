@@ -8,9 +8,8 @@ cmake_minimum_required(VERSION 2.6)
 if (NOT TARGET benchmark-afsm)
 enable_testing()
 
-if (NOT GBENCH_FOUND)
-    find_package(GBenchmark REQUIRED)
-endif()
+find_package(ExternalProjectGBench)
+
 if (NOT CMAKE_THREAD_LIBS_INIT)
     find_package(Threads REQUIRED)
 endif()
@@ -34,11 +33,8 @@ add_test(
 find_package(Boost 1.58)
 if (Boost_FOUND)
     message(STATUS "Making benchmark with boost::msm library")
-    include_directories(${Boost_INCLUDE_DIRS})
+    include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
 
-    if (NOT GTEST_INCLUDE_DIRS)
-        find_package(GTest REQUIRED)
-    endif()
     set(test_msm_SRCS vending_msm_test.cpp)
     add_executable(test-msm ${test_msm_SRCS})
     target_link_libraries(test-msm

@@ -23,31 +23,39 @@ else()
     set(PROJECT_VERSION ${_pversion})
 endif()
 
-option(BUILD_TESTS "Build test programs" ON)
-option(BUILD_BENCHMARKS "Build benchmarks" OFF)
-option(BUILD_EXAMPLES "Build example programs" OFF)
+option(AFSM_BUILD_TESTS "Build test programs" ON)
+option(AFSM_BUILD_BENCHMARKS "Build benchmarks" OFF)
+option(AFSM_BUILD_EXAMPLES "Build example programs" OFF)
 
-# TODO Check for Mac OS X
-if(NOT CMAKE_OSX_DEPLOYMENT_TARGET)
-    set(CMAKE_OSX_DEPLOYMENT_TARGET 10.10)
+option(USE_CCACHE "Use ccache for build" ON)
+if (USE_CCACHE)
+    find_program(CCACHE ccache)
+    if (CCACHE)
+        message(STATUS "ccache found and enabled")
+        set(CMAKE_C_COMPILER_LAUNCHER ${CCACHE})
+        set(CMAKE_CXX_COMPILER_LAUNCHER ${CCACHE})
+    else()
+        message(WARNING "ccache enabled, but not found")
+    endif()
+else()
+    message(STATUS "ccache disabled")
 endif()
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 set( CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules")
 
-add_definitions("-std=c++11")
+if (NOT CMAKE_CXX_STANDARD)
+    set(CMAKE_CXX_STANDARD 11)
+endif()
+message(STATUS "AFSM C++ standard ${CMAKE_CXX_STANDARD}")
 add_definitions(-Wall -Werror -Wextra -pedantic -Weffc++
     -Wno-non-virtual-dtor # I really know what I am exactly doing
 )
 
 set(${LIB_NAME}_LIB ${lib_name})
 
-# Add subdirectories here
-
-if (NOT METAPUSHKIN_FOUND)
-    add_subdirectory(lib/meta)
-endif()
+find_package(ExternalProjectMetapushkin)
 
 message(STATUS "Metapushkin include dir ${METAPUSHKIN_INCLUDE_DIRS}")
 include_directories(${METAPUSHKIN_INCLUDE_DIRS})
@@ -55,15 +63,19 @@ include_directories(${METAPUSHKIN_INCLUDE_DIRS})
 add_subdirectory(include)
 add_subdirectory(cmake)
 
-if (BUILD_TESTS)
+if (AFSM_BUILD_TESTS OR AFSM_BUILD_BENCHMARKS)
+    find_package(ExternalProjectGTest)
+endif()
+
+if (AFSM_BUILD_TESTS)
     enable_testing()
     add_subdirectory(test)
 endif()
-if (BUILD_BENCHMARKS)
+if (AFSM_BUILD_BENCHMARKS)
     add_subdirectory(benchmark)
 endif()
 
-if (BUILD_EXAMPLES)
+if (AFSM_BUILD_EXAMPLES)
     add_subdirectory(examples)
 endif()
 

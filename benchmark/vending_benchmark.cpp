@@ -5,7 +5,7 @@
  *      Author: zmij
  */
 
-#include <benchmark/benchmark_api.h>
+#include <benchmark/benchmark.h>
 #include "vending_machine.hpp"
 
 namespace vending {
@@ -89,4 +89,4 @@ BENCHMARK(AFSM_BuyItem);
 
 }  /* namespace vending */
 
-BENCHMARK_MAIN()
+BENCHMARK_MAIN();
