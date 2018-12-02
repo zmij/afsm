@@ -55,6 +55,7 @@ add_definitions(-Wall -Werror -Wextra -pedantic -Weffc++
 
 set(${LIB_NAME}_LIB ${lib_name})
 
+find_package(ExternalProjectZmijModules)
 find_package(ExternalProjectMetapushkin)
 
 message(STATUS "Metapushkin include dir ${METAPUSHKIN_INCLUDE_DIRS}")
