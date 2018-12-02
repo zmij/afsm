@@ -63,6 +63,9 @@ include_directories(${METAPUSHKIN_INCLUDE_DIRS})
 add_subdirectory(include)
 add_subdirectory(cmake)
 
+add_library(afsm INTERFACE)
+add_dependencies(afsm libmetapushkin)
+
 if (AFSM_BUILD_TESTS OR AFSM_BUILD_BENCHMARKS)
     find_package(ExternalProjectGTest)
 endif()
