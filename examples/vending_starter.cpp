@@ -5,8 +5,9 @@
  *      Author: zmij
  */
 
-#include <iostream>
 #include <afsm/fsm.hpp>
+
+#include <iostream>
 
 namespace vending {
 
@@ -15,38 +16,39 @@ namespace events {
 struct power_on {};
 struct power_off {};
 
-}  /* namespace events */
+} /* namespace events */
 
 struct vending_def : ::afsm::def::state_machine<vending_def> {
     //@{
     /** @name Substates definition */
     struct off : state<off> {};
-    struct on  : state<on> {};
+    struct on : state<on> {};
     //@}
 
     /** Initial state machine state */
     using initial_state = off;
 
     /** State transition table */
+    // clang-format off
     using transitions = transition_table <
         /*  Start   Event               Next    */
         tr< off,    events::power_on,   on      >,
         tr< on,     events::power_off,  off     >
     >;
+    // clang-format on
 };
 
 using vending_sm = ::afsm::state_machine<vending_def>;
 
 ::std::ostream&
-operator << (::std::ostream& os, vending_sm const& val)
+operator<<(::std::ostream& os, vending_sm const& val)
 {
     ::std::ostream::sentry s(os);
     if (s) {
-        os << (val.is_in_state< vending_sm::on >() ? "ON" : "OFF");
+        os << (val.is_in_state<vending_sm::on>() ? "ON" : "OFF");
     }
     return os;
 }
-
 
 void
 use()
@@ -59,7 +61,7 @@ use()
     ::std::cout << "Machine is " << vm << "\n";
 }
 
-}  /* namespace vending */
+} /* namespace vending */
 
 int
 main(int, char*[])

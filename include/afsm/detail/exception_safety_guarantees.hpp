@@ -8,7 +8,6 @@
 #ifndef AFSM_DETAIL_EXCEPTION_SAFETY_GUARANTEES_HPP_
 #define AFSM_DETAIL_EXCEPTION_SAFETY_GUARANTEES_HPP_
 
-
 namespace afsm {
 namespace def {
 namespace tags {
@@ -38,9 +37,8 @@ struct strong_exception_safety {};
  */
 struct nothrow_guarantee {};
 
-}  /* namespace tags */
-}  /* namespace def */
-}  /* namespace afsm */
-
+} /* namespace tags */
+} /* namespace def */
+} /* namespace afsm */
 
 #endif /* AFSM_DETAIL_EXCEPTION_SAFETY_GUARANTEES_HPP_ */

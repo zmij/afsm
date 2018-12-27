@@ -5,8 +5,9 @@
  *      Author: sergey.fedorov
  */
 
-#include <gtest/gtest.h>
 #include <afsm/fsm.hpp>
+
+#include <gtest/gtest.h>
 
 namespace afsm {
 namespace test {
@@ -18,21 +19,21 @@ struct event_b {};
 struct event_c {};
 
 struct dummy_action {
-    template < typename FSM, typename SourceState, typename TargetState >
+    template <typename FSM, typename SourceState, typename TargetState>
     void
     operator()(event_a&&, FSM&, SourceState& source, TargetState&) const
     {
         ::std::cerr << "Dummy action triggered (a)\n";
         source.value = "a";
     }
-    template < typename FSM, typename SourceState, typename TargetState >
+    template <typename FSM, typename SourceState, typename TargetState>
     void
     operator()(event_b&&, FSM&, SourceState& source, TargetState&) const
     {
         ::std::cerr << "Dummy action triggered (b)\n";
         source.value = "b";
     }
-    template < typename FSM, typename SourceState, typename TargetState >
+    template <typename FSM, typename SourceState, typename TargetState>
     void
     operator()(event_c&&, FSM&, SourceState& source, TargetState&) const
     {
@@ -42,7 +43,7 @@ struct dummy_action {
 };
 
 struct dummy_action_a {
-    template < typename FSM, typename SourceState, typename TargetState >
+    template <typename FSM, typename SourceState, typename TargetState>
     void
     operator()(event_a const&, FSM&, SourceState& source, TargetState&) const
     {
@@ -55,12 +56,15 @@ struct a_guard {
     template <typename FSM, typename State, typename Event>
     bool
     operator()(FSM const&, State const&, Event const&) const
-    { return true; }
+    {
+        return true;
+    }
 };
 
-struct internal_transitions_test : def::state< internal_transitions_test > {
+struct internal_transitions_test : def::state<internal_transitions_test> {
     ::std::string value = "none";
 
+    // clang-format off
     using internal_transitions = transition_table <
         in< event_a,    dummy_action,   a_guard >,
         in< event_a,    dummy_action_a, not_< a_guard > >,
@@ -68,6 +72,7 @@ struct internal_transitions_test : def::state< internal_transitions_test > {
         in< event_c,    dummy_action,   none >,
         in< event_c,    dummy_action,   none >
     >;
+    // clang-format on
 };
 
 struct test_state : state<internal_transitions_test, none> {
@@ -78,7 +83,7 @@ struct test_state : state<internal_transitions_test, none> {
 
 TEST(FSM, InnerStateTransitions)
 {
-    none n;
+    none       n;
     test_state ts{n};
     EXPECT_EQ("none", ts.value);
     EXPECT_EQ(actions::event_process_result::process_in_state, ts.process_event(event_a{}));
@@ -89,7 +94,7 @@ TEST(FSM, InnerStateTransitions)
     EXPECT_EQ("c", ts.value);
 }
 
-}  /* namespace a */
+} /* namespace a */
 
 namespace b {
 
@@ -98,7 +103,7 @@ struct event_bca {};
 struct inner_event {};
 
 struct is_none {
-    template < typename FSM, typename State >
+    template <typename FSM, typename State>
     bool
     operator()(FSM const& fsm, State const&)
     {
@@ -106,30 +111,29 @@ struct is_none {
     }
 };
 
-struct dummy_sm : detail::null_observer {
-};
+struct dummy_sm : detail::null_observer {};
 
-struct inner_dispatch_test : def::state_machine< inner_dispatch_test > {
+struct inner_dispatch_test : def::state_machine<inner_dispatch_test> {
     struct state_a;
     struct state_b;
     struct state_c;
 
     struct inner_action {
-        template < typename FSM >
+        template <typename FSM>
         void
         operator()(inner_event const&, FSM& fsm, state_a&, state_a&) const
         {
             ::std::cerr << "Dummy action triggered (inner_event - a)\n";
             fsm.value = "in_a";
         }
-        template < typename FSM >
+        template <typename FSM>
         void
         operator()(inner_event const&, FSM& fsm, state_b&, state_b&) const
         {
             ::std::cerr << "Dummy action triggered (inner_event - b)\n";
             fsm.value = "in_b";
         }
-        template < typename FSM >
+        template <typename FSM>
         void
         operator()(inner_event const&, FSM& fsm, state_c&, state_c&) const
         {
@@ -138,35 +142,31 @@ struct inner_dispatch_test : def::state_machine< inner_dispatch_test > {
         }
     };
 
-    struct state_a : state< state_a > {
-        using internal_transitions = def::transition_table <
-            in< inner_event, inner_action, none >
-        >;
+    struct state_a : state<state_a> {
+        using internal_transitions = def::transition_table<in<inner_event, inner_action, none>>;
     };
 
-    struct state_b : state< state_b > {
-        using internal_transitions = def::transition_table <
-            in< inner_event, inner_action, none >
-        >;
+    struct state_b : state<state_b> {
+        using internal_transitions = def::transition_table<in<inner_event, inner_action, none>>;
     };
 
-    struct state_c : state< state_c > {
-        using internal_transitions = def::transition_table <
-            in< inner_event, inner_action, none >
-        >;
+    struct state_c : state<state_c> {
+        using internal_transitions = def::transition_table<in<inner_event, inner_action, none>>;
     };
 
+    // clang-format off
     using transitions = transition_table <
         tr< state_a,    event_ab,   state_b,    none,   none            >,
         tr< state_b,    event_bca,  state_c,    none,   is_none         >,
         tr< state_b,    event_bca,  state_a,    none,   not_<is_none>   >
     >;
+    // clang-format on
     using initial_state = state_a;
 
     ::std::string value = "none";
 };
 
-struct test_sm : inner_state_machine< inner_dispatch_test, dummy_sm > {
+struct test_sm : inner_state_machine<inner_dispatch_test, dummy_sm> {
     using base_state = inner_state_machine<inner_dispatch_test, dummy_sm>;
     using base_state::process_event;
     test_sm(enclosing_fsm_type& fsm) : base_state{fsm} {}
@@ -187,7 +187,7 @@ root_machine(dummy_sm const& sm)
 TEST(FSM, InnerEventDispatch)
 {
     dummy_sm n;
-    test_sm tsm{n};
+    test_sm  tsm{n};
     EXPECT_EQ("none", tsm.value);
     EXPECT_EQ(test_sm::initial_state_index, tsm.current_state());
     EXPECT_EQ(actions::event_process_result::process_in_state, tsm.process_event(inner_event{}));
@@ -200,7 +200,7 @@ TEST(FSM, InnerEventDispatch)
     EXPECT_EQ(actions::event_process_result::process_in_state, tsm.process_event(inner_event{}));
 }
 
-}  /* namespace b */
+} /* namespace b */
 
-}  /* namespace test */
-}  /* namespace afsm */
+} /* namespace test */
+} /* namespace afsm */

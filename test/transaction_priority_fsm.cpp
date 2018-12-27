@@ -5,19 +5,18 @@
  *      Author: zmij
  */
 
-#include <gtest/gtest.h>
+#include "transaction_common.hpp"
 #include <afsm/fsm.hpp>
 
-#include "transaction_common.hpp"
+#include <gtest/gtest.h>
 
 namespace afsm {
 namespace test {
 
-struct connection_pri_fsm_def : def::state_machine<connection_pri_fsm_def,
-                                def::tags::common_base<state_name>> {
-    using connection_fsm =
-            ::afsm::priority_state_machine<
-                    connection_pri_fsm_def, ::std::mutex, test_fsm_observer>;
+struct connection_pri_fsm_def
+    : def::state_machine<connection_pri_fsm_def, def::tags::common_base<state_name>> {
+    using connection_fsm
+        = ::afsm::priority_state_machine<connection_pri_fsm_def, ::std::mutex, test_fsm_observer>;
 
     connection_fsm&
     fsm()
@@ -77,9 +76,7 @@ struct connection_pri_fsm_def : def::state_machine<connection_pri_fsm_def,
     struct transaction : state_machine<transaction> {
         using transaction_fsm = ::afsm::inner_state_machine<transaction, connection_fsm>;
 
-        transaction()
-        {
-        }
+        transaction() {}
         ::std::string
         name() const override
         {
@@ -87,26 +84,28 @@ struct connection_pri_fsm_def : def::state_machine<connection_pri_fsm_def,
         }
         transaction_fsm&
         fsm()
-        { return static_cast<transaction_fsm&>(*this); }
+        {
+            return static_cast<transaction_fsm&>(*this);
+        }
         transaction_fsm const&
         fsm() const
-        { return static_cast<transaction_fsm const&>(*this); }
+        {
+            return static_cast<transaction_fsm const&>(*this);
+        }
 
         struct starting : state<starting> {
-            using deferred_events = type_tuple<
-                events::execute,
-                events::exec_prepared,
-                events::commit,
-                events::rollback
-            >;
+            using deferred_events = type_tuple<events::execute, events::exec_prepared,
+                                               events::commit, events::rollback>;
             ::std::string
             name() const override
             {
                 return "starting";
             }
+            // clang-format off
             using internal_transitions = transition_table<
                 in< events::command_complete,   transit_action,   none >
             >;
+            // clang-format on
         };
 
         struct idle : state<idle> {
@@ -115,10 +114,12 @@ struct connection_pri_fsm_def : def::state_machine<connection_pri_fsm_def,
             {
                 return "transaction idle";
             }
+            // clang-format off
             using internal_transitions = transition_table<
                 in< events::command_complete,   transit_action,   none >,
                 in< events::ready_for_query,    transit_action,   none >
             >;
+            // clang-format on
         };
 
         struct simple_query : state_machine<simple_query> {
@@ -130,10 +131,14 @@ struct connection_pri_fsm_def : def::state_machine<connection_pri_fsm_def,
             }
             simple_query_fsm&
             fsm()
-            { return static_cast<simple_query_fsm&>(*this); }
+            {
+                return static_cast<simple_query_fsm&>(*this);
+            }
             simple_query_fsm const&
             fsm() const
-            { return static_cast<simple_query_fsm const&>(*this); }
+            {
+                return static_cast<simple_query_fsm const&>(*this);
+            }
 
             struct waiting : state<waiting> {
                 ::std::string
@@ -141,22 +146,24 @@ struct connection_pri_fsm_def : def::state_machine<connection_pri_fsm_def,
                 {
                     return "waiting results";
                 }
+                // clang-format off
                 using internal_transitions = transition_table<
                     in< events::command_complete,   transit_action >
                 >;
+                // clang-format on
             };
-            struct fetch_data : state<fetch_data>{
+            struct fetch_data : state<fetch_data> {
                 ::std::string
                 name() const override
                 {
                     return "fetch data";
                 }
-                using internal_transitions = transition_table<
-                    in< events::row_event, transit_action >
-                >;
+                using internal_transitions
+                    = transition_table<in<events::row_event, transit_action>>;
             };
 
             using initial_state = waiting;
+            // clang-format off
             using transitions = transition_table<
                 tr< waiting,    events::row_description,    fetch_data,     transit_action>,
                 tr< fetch_data, events::command_complete,   waiting,        transit_action>
@@ -167,6 +174,7 @@ struct connection_pri_fsm_def : def::state_machine<connection_pri_fsm_def,
                 events::commit,
                 events::rollback
             >;
+            // clang-format on
         };
 
         struct extended_query : state_machine<extended_query> {
@@ -178,54 +186,64 @@ struct connection_pri_fsm_def : def::state_machine<connection_pri_fsm_def,
             }
             extended_query_fsm&
             fsm()
-            { return static_cast<extended_query_fsm&>(*this); }
+            {
+                return static_cast<extended_query_fsm&>(*this);
+            }
             extended_query_fsm const&
             fsm() const
-            { return static_cast<extended_query_fsm const&>(*this); }
+            {
+                return static_cast<extended_query_fsm const&>(*this);
+            }
 
-            struct prepare  : state<prepare> {
+            struct prepare : state<prepare> {
                 ::std::string
                 name() const override
                 {
                     return "prepare";
                 }
             };
-            struct parse    : state<parse> {
+            struct parse : state<parse> {
                 ::std::string
                 name() const override
                 {
                     return "parse";
                 }
+                // clang-format off
                 using internal_transitions = transition_table<
                     in< events::row_description,    transit_action >,
                     in< events::no_data,            transit_action >
                 >;
+                // clang-format on
             };
-            struct bind     : state<bind> {
+            struct bind : state<bind> {
                 ::std::string
                 name() const override
                 {
                     return "bind";
                 }
             };
-            struct exec     : state<exec> {
+            struct exec : state<exec> {
                 ::std::string
                 name() const override
                 {
                     return "exec";
                 }
+                // clang-format off
                 using internal_transitions = transition_table<
                     in< events::row_event,          transit_action  >,
                     in< events::command_complete,   transit_action  >
                 >;
+                // clang-format on
             };
 
             using initial_state = prepare;
+            // clang-format off
             using transitions = transition_table<
                 tr< prepare,    none,                       parse,      transit_action >,
                 tr< parse,      events::ready_for_query,    bind,       transit_action >,
                 tr< bind,       events::ready_for_query,    exec,       transit_action >
             >;
+            // clang-format on
         };
 
         struct tran_error : state<tran_error> {
@@ -234,10 +252,7 @@ struct connection_pri_fsm_def : def::state_machine<connection_pri_fsm_def,
             {
                 return "tran error";
             }
-            using internal_transitions = transition_table<
-                in< events::commit >,
-                in< events::rollback >
-            >;
+            using internal_transitions = transition_table<in<events::commit>, in<events::rollback>>;
         };
 
         struct exiting : state<exiting> {
@@ -246,6 +261,7 @@ struct connection_pri_fsm_def : def::state_machine<connection_pri_fsm_def,
             {
                 return "exiting";
             }
+            // clang-format off
             using internal_transitions = transition_table<
                 in< events::command_complete,   transit_action >,
                 in< events::commit,             transit_action >,
@@ -253,9 +269,11 @@ struct connection_pri_fsm_def : def::state_machine<connection_pri_fsm_def,
                 in< events::execute,            transit_action >,
                 in< events::exec_prepared,      transit_action >
             >;
+            // clang-format on
         };
 
         using initial_state = starting;
+        // clang-format off
         using transitions = transition_table<
             tr< starting,       events::ready_for_query,    idle,           transit_action>,
 
@@ -276,9 +294,11 @@ struct connection_pri_fsm_def : def::state_machine<connection_pri_fsm_def,
 
             tr< tran_error,     events::ready_for_query,    exiting,        transit_action>
         >;
+        // clang-format on
     };
 
     using initial_state = closed;
+    // clang-format off
     using transitions = transition_table<
         tr< closed,             events::connect,            connecting,     transit_action>,
         tr< closed,             events::terminate,          terminated,     transit_action>,
@@ -296,6 +316,7 @@ struct connection_pri_fsm_def : def::state_machine<connection_pri_fsm_def,
         tr< transaction,        events::ready_for_query,    idle,           transit_action>,
         tr< transaction,        events::conn_error,         terminated,     transit_action>
     >;
+    // clang-format off
 };
 
 using connection_fsm = priority_state_machine<connection_pri_fsm_def, ::std::mutex, test_fsm_observer>;

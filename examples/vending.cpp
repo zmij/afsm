@@ -5,8 +5,9 @@
  *      Author: zmij
  */
 
-#include <iostream>
 #include "vending_machine.hpp"
+
+#include <iostream>
 
 using vending_machine = vending::vending_machine;
 

@@ -5,11 +5,12 @@
  *      Author: sergey.fedorov
  */
 
-#include <gtest/gtest.h>
+#include "test_observer.hpp"
 #include <afsm/fsm.hpp>
 
+#include <gtest/gtest.h>
+
 #include <iostream>
-#include "test_observer.hpp"
 
 namespace afsm {
 namespace test {
@@ -27,20 +28,22 @@ struct human_interface {
     virtual ~human_interface() {}
 
     virtual void
-    work() = 0;
+    work()
+        = 0;
 
     virtual void
-    sleep() = 0;
+    sleep()
+        = 0;
 };
 
 struct dummy_action {
-    template< typename FSM >
+    template <typename FSM>
     void
     operator()(wash const&, FSM&)
     {
         ::std::cerr << "Brrr!\n";
     }
-    template< typename FSM >
+    template <typename FSM>
     void
     operator()(do_work const&, FSM&)
     {
@@ -49,7 +52,7 @@ struct dummy_action {
 };
 
 struct sleep_action {
-    template < typename FSM >
+    template <typename FSM>
     void
     operator()(sleep const&, FSM& fsm) const
     {
@@ -59,7 +62,7 @@ struct sleep_action {
 };
 
 struct work_action {
-    template < typename FSM >
+    template <typename FSM>
     void
     operator()(do_work const&, FSM& fsm) const
     {
@@ -69,33 +72,39 @@ struct work_action {
 
 using common_base_tag = ::afsm::def::tags::common_base<human_interface>;
 
-struct human_def : ::afsm::def::state_machine< human_def, common_base_tag > {
+struct human_def : ::afsm::def::state_machine<human_def, common_base_tag> {
     using fsm_type = ::afsm::state_machine<human_def, none, test_fsm_observer>;
 
     struct sleeping : state<sleeping> {
         void
         work() override
-        { ::std::cerr << "Zzzzzz!\n"; }
+        {
+            ::std::cerr << "Zzzzzz!\n";
+        }
         void
         sleep() override
-        { ::std::cerr << "ZzzZ.Zzzz!\n"; }
+        {
+            ::std::cerr << "ZzzZ.Zzzz!\n";
+        }
 
+        // clang-format off
         using internal_transitions = transition_table <
             in< test::sleep,      sleep_action,     none >
         >;
+        // clang-format on
     };
 
     struct awake : state_machine<awake> {
-        using fsm_type = ::afsm::inner_state_machine< awake, human_def::fsm_type >;
+        using fsm_type = ::afsm::inner_state_machine<awake, human_def::fsm_type>;
 
-        template < typename Event >
+        template <typename Event>
         void
-        on_enter(Event&&, human_def::fsm_type& )
+        on_enter(Event&&, human_def::fsm_type&)
         {
             ::std::cerr << "Woken up!\n";
         }
 
-        template < typename Event >
+        template <typename Event>
         void
         on_exit(Event&&, human_def::fsm_type&)
         {
@@ -103,7 +112,7 @@ struct human_def : ::afsm::def::state_machine< human_def, common_base_tag > {
         }
 
         struct is_tired {
-            template < typename FSM, typename State >
+            template <typename FSM, typename State>
             bool
             operator()(FSM const& fsm, State const&) const
             {
@@ -113,59 +122,69 @@ struct human_def : ::afsm::def::state_machine< human_def, common_base_tag > {
         };
 
         struct woken_up : state<woken_up> {
-            using deferred_events = type_tuple< do_work >;
+            using deferred_events = type_tuple<do_work>;
             void
             work() override
-            { ::std::cerr << "Nay!\n"; }
+            {
+                ::std::cerr << "Nay!\n";
+            }
             void
             sleep() override
-            { ::std::cerr << "Nay!\n"; }
+            {
+                ::std::cerr << "Nay!\n";
+            }
 
-            using internal_transitions = transition_table<
-                in< food, none, none >
-            >;
+            using internal_transitions = transition_table<in<food, none, none>>;
         };
         struct fresh : state<fresh> {
             void
             work() override
-            { ::std::cerr << "OK!\n"; }
+            {
+                ::std::cerr << "OK!\n";
+            }
             void
             sleep() override
-            { ::std::cerr << "Nay!\n"; }
+            {
+                ::std::cerr << "Nay!\n";
+            }
 
-            using internal_transitions = transition_table<
-                in< do_work, work_action, not_<is_tired> >
-            >;
+            using internal_transitions = transition_table<in<do_work, work_action, not_<is_tired>>>;
         };
-        struct tired : state <tired> {
+        struct tired : state<tired> {
             void
             work() override
-            { ::std::cerr << "Noooo!\n"; }
+            {
+                ::std::cerr << "Noooo!\n";
+            }
             void
             sleep() override
-            { ::std::cerr << "Sooner the better!\n"; }
+            {
+                ::std::cerr << "Sooner the better!\n";
+            }
         };
-        struct sleepy : state <sleepy> {
+        struct sleepy : state<sleepy> {
             void
             work() override
-            { ::std::cerr << "Noooo...\n"; }
+            {
+                ::std::cerr << "Noooo...\n";
+            }
             void
             sleep() override
-            { ::std::cerr << "Yaaawn!\n"; }
+            {
+                ::std::cerr << "Yaaawn!\n";
+            }
         };
 
         using initial_state = woken_up;
+        // clang-format off
         using transitions = transition_table<
             tr< woken_up,   wash,       fresh,      dummy_action                >,
             tr< fresh,      do_work,    tired,      dummy_action,   is_tired    >,
             tr< tired,      food,       sleepy,     none                        >
         >;
+        // clang-format on
 
-        awake()
-            : fatigue{0}
-        {
-            ::std::cerr << "Construct awake\n";
-        }
+        awake() : fatigue{0} { ::std::cerr << "Construct awake\n"; }
         fsm_type&
         fsm()
         {
@@ -186,10 +205,12 @@ struct human_def : ::afsm::def::state_machine< human_def, common_base_tag > {
     };
 
     using initial_state = sleeping;
+    // clang-format off
     using transitions = transition_table <
         tr< sleeping,   alarm,      awake    >,
         tr< awake,      pillow,     sleeping >
     >;
+    // clang-format ofn
 
     fsm_type&
     fsm()

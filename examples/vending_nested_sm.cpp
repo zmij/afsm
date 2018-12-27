@@ -5,10 +5,11 @@
  *      Author: zmij
  */
 
-#include <iostream>
 #include <afsm/fsm.hpp>
-#include <map>
+
 #include <algorithm>
+#include <iostream>
+#include <map>
 
 namespace vending {
 
@@ -22,16 +23,16 @@ struct end_maintenance {};
 struct out_of_goods {};
 
 struct set_price {
-    ::std::size_t   p_no;
-    float           price;
+    ::std::size_t p_no;
+    float         price;
 };
 struct withdraw_money {};
 
-}  /* namespace events */
+} /* namespace events */
 
 struct goods_entry {
-    int     amount;
-    float   price;
+    int   amount;
+    float price;
 };
 
 using goods_storage = ::std::map<::std::size_t, goods_entry>;
@@ -40,7 +41,7 @@ struct vending_def : ::afsm::def::state_machine<vending_def> {
     //@{
     /** @name Substates definition */
     struct off : state<off> {};
-    struct on  : state_machine<on> {
+    struct on : state_machine<on> {
         //@{
         /** @name Substates definition */
         struct serving : state<serving> {};
@@ -48,7 +49,7 @@ struct vending_def : ::afsm::def::state_machine<vending_def> {
             //@{
             /** @name Actions */
             struct set_price {
-                template < typename FSM, typename SourceState, typename TargetState >
+                template <typename FSM, typename SourceState, typename TargetState>
                 void
                 operator()(events::set_price&& price, FSM& fsm, SourceState&, TargetState&) const
                 {
@@ -56,7 +57,7 @@ struct vending_def : ::afsm::def::state_machine<vending_def> {
                 }
             };
             struct clear_balance {
-                template < typename FSM, typename SourceState, typename TargetState >
+                template <typename FSM, typename SourceState, typename TargetState>
                 void
                 operator()(events::withdraw_money&&, FSM& fsm, SourceState&, TargetState&) const
                 {
@@ -65,11 +66,13 @@ struct vending_def : ::afsm::def::state_machine<vending_def> {
             };
             //@}
             /** @name In-state transitions */
+            // clang-format off
             using internal_transitions = transition_table<
                 /*  Event                   Action          */
                 in< events::set_price,      set_price       >,
                 in< events::withdraw_money, clear_balance   >
             >;
+            // clang-format on
         };
         struct out_of_service : state<out_of_service> {};
         //@}
@@ -77,6 +80,7 @@ struct vending_def : ::afsm::def::state_machine<vending_def> {
         /** Initial state machine state */
         using initial_state = serving;
         /** State transition table */
+        // clang-format off
         using transitions = transition_table<
             /*  Start           Event                       Next            */
             tr< serving,        events::start_maintenance,  maintenance     >,
@@ -84,6 +88,7 @@ struct vending_def : ::afsm::def::state_machine<vending_def> {
             tr< out_of_service, events::start_maintenance,  maintenance     >,
             tr< maintenance,    events::end_maintenance,    serving         >
         >;
+        // clang-format on
     };
     //@}
 
@@ -91,11 +96,13 @@ struct vending_def : ::afsm::def::state_machine<vending_def> {
     using initial_state = off;
 
     /** State transition table */
+    // clang-format off
     using transitions = transition_table <
         /*  Start   Event               Next    */
         tr< off,    events::power_on,   on      >,
         tr< on,     events::power_off,  off     >
     >;
+    // clang-format on
 
     /** Default constructor */
     vending_def() : goods{}, balance{0} {}
@@ -117,32 +124,30 @@ struct vending_def : ::afsm::def::state_machine<vending_def> {
     }
     void
     clear_balance()
-    { balance = 0; }
+    {
+        balance = 0;
+    }
 
-    goods_storage       goods;
-    float               balance;
+    goods_storage goods;
+    float         balance;
 };
 
 using vending_sm = ::afsm::state_machine<vending_def>;
 
 ::std::ostream&
-operator << (::std::ostream& os, vending_sm const& val)
+operator<<(::std::ostream& os, vending_sm const& val)
 {
     ::std::ostream::sentry s(os);
     if (s) {
-        os << (val.is_in_state< vending_sm::on >() ? "ON" : "OFF");
+        os << (val.is_in_state<vending_sm::on>() ? "ON" : "OFF");
     }
     return os;
 }
 
-
 void
 use()
 {
-    vending_sm vm{ goods_storage{
-        {1, {10, 15.0f}},
-        {5, {100, 5.0f}}
-    }};
+    vending_sm vm{goods_storage{{1, {10, 15.0f}}, {5, {100, 5.0f}}}};
     ::std::cout << "Machine is " << vm << "\n";
     vm.process_event(events::power_on{});
     ::std::cout << "Machine is " << vm << "\n";
@@ -168,7 +173,7 @@ use()
     }
 }
 
-}  /* namespace vending */
+} /* namespace vending */
 
 int
 main(int, char*[])

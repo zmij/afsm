@@ -5,8 +5,9 @@
  *      Author: zmij
  */
 
-#include <iostream>
 #include <afsm/fsm.hpp>
+
+#include <iostream>
 
 namespace minimal {
 
@@ -15,8 +16,8 @@ struct start {};
 struct stop {};
 
 // Actions
-struct do_start{
-    template < typename Event, typename FSM, typename SourceState, typename TargetState >
+struct do_start {
+    template <typename Event, typename FSM, typename SourceState, typename TargetState>
     void
     operator()(Event const&, FSM&, SourceState&, TargetState&) const
     {
@@ -24,7 +25,7 @@ struct do_start{
     }
 };
 struct do_stop {
-    template < typename Event, typename FSM, typename SourceState, typename TargetState >
+    template <typename Event, typename FSM, typename SourceState, typename TargetState>
     void
     operator()(Event const&, FSM&, SourceState&, TargetState&) const
     {
@@ -34,16 +35,18 @@ struct do_stop {
 
 // State machine definition
 struct minimal_def : ::afsm::def::state_machine<minimal_def> {
-    struct initial      : state<initial> {};
-    struct running      : state<running> {};
-    struct terminated   : terminal_state<terminated> {};
+    struct initial : state<initial> {};
+    struct running : state<running> {};
+    struct terminated : terminal_state<terminated> {};
 
     using initial_state = initial;
+    // clang-format off
     using transitions   = transition_table<
         /*  State       Event       Next        Action      */
         tr< initial,    start,      running,    do_start    >,
         tr< running,    stop,       terminated, do_stop     >
     >;
+    // clang-format on
 };
 
 // State machine object
@@ -57,7 +60,7 @@ use()
     fsm.process_event(stop{});
 }
 
-}  /* namespace minimal */
+} /* namespace minimal */
 
 int
 main(int, char*[])

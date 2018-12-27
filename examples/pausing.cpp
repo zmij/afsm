@@ -5,8 +5,9 @@
  *      Author: zmij
  */
 
-#include <iostream>
 #include <afsm/fsm.hpp>
+
+#include <iostream>
 
 namespace pausing {
 
@@ -17,12 +18,13 @@ struct pause {};
 
 // State machine definition
 struct pausing_def : ::afsm::def::state_machine<pausing_def> {
-    struct initial      : state<initial> {};
-    struct running      : state<running> {};
-    struct paused       : state<paused>  {};
-    struct terminated   : terminal_state<terminated> {};
+    struct initial : state<initial> {};
+    struct running : state<running> {};
+    struct paused : state<paused> {};
+    struct terminated : terminal_state<terminated> {};
 
     using initial_state = initial;
+    // clang-format off
     using transitions   = transition_table<
         /*  State       Event       Next        */
         tr< initial,    start,      running     >,
@@ -30,6 +32,7 @@ struct pausing_def : ::afsm::def::state_machine<pausing_def> {
         tr< paused,     stop,       terminated  >,
         tr< running,    stop,       terminated  >
     >;
+    // clang-format on
 };
 
 // State machine object
@@ -45,7 +48,7 @@ use()
     fsm.process_event(stop{});
 }
 
-}  /* namespace pausing */
+} /* namespace pausing */
 
 int
 main(int, char*[])

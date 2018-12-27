@@ -8,13 +8,14 @@
 #ifndef TEST_TRANSACTION_COMMON_HPP_
 #define TEST_TRANSACTION_COMMON_HPP_
 
-#include <string>
+#include "test_observer.hpp"
 #include <afsm/detail/debug_io.hpp>
 #include <pushkin/ansi_colors.hpp>
 #include <pushkin/util/demangle.hpp>
-#include <iostream>
+
 #include <iomanip>
-#include "test_observer.hpp"
+#include <iostream>
+#include <string>
 
 namespace afsm {
 namespace test {
@@ -74,30 +75,26 @@ struct command_complete {
     static ::std::string const name;
 };
 
-}  /* namespace events */
+} /* namespace events */
 
 struct transit_action {
-    template < typename Event, typename FSM, typename SourceState, typename TargetState >
+    template <typename Event, typename FSM, typename SourceState, typename TargetState>
     void
     operator()(Event&&, FSM&, SourceState& src, TargetState& tgt) const
     {
         using ::psst::ansi_color;
-        ::std::cerr
-                << (ansi_color::cyan | ansi_color::bright)
-                << ::std::setw(event_name_width) << ::std::left
-                << Event::name << ansi_color::clear
-                << ": " << src.name() << " -> " << tgt.name() << "\n";
+        ::std::cerr << (ansi_color::cyan | ansi_color::bright) << ::std::setw(event_name_width)
+                    << ::std::left << Event::name << ansi_color::clear << ": " << src.name()
+                    << " -> " << tgt.name() << "\n";
     }
-    template < typename FSM, typename SourceState, typename TargetState >
+    template <typename FSM, typename SourceState, typename TargetState>
     void
     operator()(none&&, FSM&, SourceState& src, TargetState& tgt) const
     {
         using ::psst::ansi_color;
-        ::std::cerr
-                << (ansi_color::red | ansi_color::bright)
-                << ::std::setw(event_name_width) << ::std::left
-                << "[default]" << ansi_color::clear
-                << ": " << src.name() << " -> " << tgt.name() << "\n";
+        ::std::cerr << (ansi_color::red | ansi_color::bright) << ::std::setw(event_name_width)
+                    << ::std::left << "[default]" << ansi_color::clear << ": " << src.name()
+                    << " -> " << tgt.name() << "\n";
     }
 };
 
@@ -106,56 +103,46 @@ struct state_name {
     virtual ::std::string
     name() const = 0;
 
-    template < typename Event, typename FSM >
+    template <typename Event, typename FSM>
     void
     on_enter(Event&&, FSM&)
     {
         using decayed_event = typename ::std::decay<Event>::type;
         using ::psst::ansi_color;
-        ::std::cerr
-             << (ansi_color::blue | ansi_color::bright)
-             << ::std::setw(event_name_width) << ::std::left
-             << decayed_event::name << ansi_color::clear
-             << ": Enter " << name() << "\n";
+        ::std::cerr << (ansi_color::blue | ansi_color::bright) << ::std::setw(event_name_width)
+                    << ::std::left << decayed_event::name << ansi_color::clear << ": Enter "
+                    << name() << "\n";
     }
-    template < typename FSM >
+    template <typename FSM>
     void
     on_enter(none&&, FSM&)
     {
         using ::psst::ansi_color;
-        ::std::cerr
-                << ansi_color::red
-                << ::std::setw(event_name_width) << ::std::left
-                << "[default]" << ansi_color::clear
-                << ": Enter " << name() << "\n";
+        ::std::cerr << ansi_color::red << ::std::setw(event_name_width) << ::std::left
+                    << "[default]" << ansi_color::clear << ": Enter " << name() << "\n";
     }
-    template < typename Event, typename FSM >
+    template <typename Event, typename FSM>
     void
     on_exit(Event&&, FSM&)
     {
         using decayed_event = typename ::std::decay<Event>::type;
         using ::psst::ansi_color;
-        ::std::cerr
-             << (ansi_color::cyan | ansi_color::dim)
-             << ::std::setw(event_name_width) << ::std::left
-             << decayed_event::name << ansi_color::clear
-             << ": Exit " << name() << "\n";
+        ::std::cerr << (ansi_color::cyan | ansi_color::dim) << ::std::setw(event_name_width)
+                    << ::std::left << decayed_event::name << ansi_color::clear << ": Exit "
+                    << name() << "\n";
     }
-    template < typename FSM >
+    template <typename FSM>
     void
     on_exit(none const&, FSM&)
     {
         using ::psst::ansi_color;
-        ::std::cerr
-                << (ansi_color::red | ansi_color::dim)
-                << ::std::setw(event_name_width) << ::std::left
-                << "[default]" << ansi_color::clear
-                << ": Exit " << name() << "\n";
+        ::std::cerr << (ansi_color::red | ansi_color::dim) << ::std::setw(event_name_width)
+                    << ::std::left << "[default]" << ansi_color::clear << ": Exit " << name()
+                    << "\n";
     }
 };
 
-}  /* namespace test */
-}  /* namespace afsm */
-
+} /* namespace test */
+} /* namespace afsm */
 
 #endif /* TEST_TRANSACTION_COMMON_HPP_ */
