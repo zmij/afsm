@@ -46,7 +46,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 set( CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules")
 
 if (NOT CMAKE_CXX_STANDARD)
-    set(CMAKE_CXX_STANDARD 11)
+    set(CMAKE_CXX_STANDARD 17)
 endif()
 message(STATUS "AFSM C++ standard ${CMAKE_CXX_STANDARD}")
 add_definitions(-Wall -Werror -Wextra -pedantic -Weffc++
