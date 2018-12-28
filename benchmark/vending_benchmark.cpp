@@ -5,8 +5,9 @@
  *      Author: zmij
  */
 
-#include <benchmark/benchmark.h>
 #include "vending_machine.hpp"
+
+#include <benchmark/benchmark.h>
 
 namespace vending {
 
@@ -22,20 +23,24 @@ void
 AFSM_ConstructWithData(::benchmark::State& state)
 {
     while (state.KeepRunning()) {
+        // clang-format off
         vending_machine vm{ goods_storage{
             { 0, { 10, 15.0f } },
             { 1, { 100, 5.0f } }
         }};
+        // clang-format on
     }
 }
 
 void
 AFSM_ProcessSingleEvent(::benchmark::State& state)
 {
+    // clang-format off
     vending_machine vm{ goods_storage{
         { 0, { 10, 15.0f } },
         { 1, { 100, 5.0f } }
     }};
+    // clang-format on
     vm.process_event(events::power_on{});
     while (state.KeepRunning()) {
         vm.process_event(events::money{100});
@@ -43,23 +48,25 @@ AFSM_ProcessSingleEvent(::benchmark::State& state)
 }
 
 void
-AFSM_OnOffEmpty(::benchmark::State& state) // With a default transition
+AFSM_OnOffEmpty(::benchmark::State& state)    // With a default transition
 {
     vending_machine vm;
-    while(state.KeepRunning()) {
+    while (state.KeepRunning()) {
         vm.process_event(events::power_on{});
         vm.process_event(events::power_off{});
     }
 }
 
 void
-AFSM_OnOffLoaded(::benchmark::State& state) // Without a default transition
+AFSM_OnOffLoaded(::benchmark::State& state)    // Without a default transition
 {
+    // clang-format off
     vending_machine vm{ goods_storage{
         { 0, { 10, 15.0f } },
         { 1, { 100, 5.0f } }
     }};
-    while(state.KeepRunning()) {
+    // clang-format on
+    while (state.KeepRunning()) {
         vm.process_event(events::power_on{});
         vm.process_event(events::power_off{});
     }
@@ -68,12 +75,14 @@ AFSM_OnOffLoaded(::benchmark::State& state) // Without a default transition
 void
 AFSM_BuyItem(::benchmark::State& state)
 {
+    // clang-format off
     vending_machine vm{ goods_storage{
         { 0, { 1000000000, 15.0f } },
         { 1, { 1000000000, 5.0f } }
     }};
+    // clang-format on
     vm.process_event(events::power_on{});
-    while(state.KeepRunning()) {
+    while (state.KeepRunning()) {
         vm.process_event(events::money{3});
         vm.process_event(events::money{3});
         vm.process_event(events::select_item{1});
@@ -87,6 +96,6 @@ BENCHMARK(AFSM_OnOffEmpty);
 BENCHMARK(AFSM_OnOffLoaded);
 BENCHMARK(AFSM_BuyItem);
 
-}  /* namespace vending */
+} /* namespace vending */
 
 BENCHMARK_MAIN();

@@ -9,12 +9,12 @@
 #define AFSM_DETAIL_HELPERS_HPP_
 
 #include <afsm/definition.hpp>
-#include <type_traits>
 
 #include <algorithm>
 #include <atomic>
 #include <deque>
 #include <mutex>
+#include <type_traits>
 
 namespace afsm {
 namespace detail {

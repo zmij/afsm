@@ -59,7 +59,7 @@ IncludeCategories:
   - Regex:                                      '^<.*\.hpp>'
     Priority:                                   1
   # Standard includes
-  - Regex:                                      '<[[:alnum:].]+>'
+  - Regex:                                      '<[[:alnum:]._]+>'
     Priority:                                   4
   - Regex:                                      '.*'
     Priority:                                   1

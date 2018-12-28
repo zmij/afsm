@@ -5,9 +5,9 @@
  *      Author: zmij
  */
 
-#include <benchmark/benchmark.h>
-
 #include "vending_machine_msm.hpp"
+
+#include <benchmark/benchmark.h>
 
 namespace vending_msm {
 
@@ -23,20 +23,24 @@ void
 MSM_ConstructWithData(::benchmark::State& state)
 {
     while (state.KeepRunning()) {
+        // clang-format off
         vending_machine vm{ goods_storage{
             { 0, { 10, 15.0f } },
             { 1, { 100, 5.0f } }
         }};
+        // clang-format on
     }
 }
 
 void
 MSM_ProcessSingleEvent(::benchmark::State& state)
 {
+    // clang-format off
     vending_machine vm{ goods_storage{
         { 0, { 10, 15.0f } },
         { 1, { 100, 5.0f } }
     }};
+    // clang-format on
     vm.start();
     vm.process_event(events::power_on{});
     while (state.KeepRunning()) {
@@ -45,25 +49,27 @@ MSM_ProcessSingleEvent(::benchmark::State& state)
 }
 
 void
-MSM_OnOffEmpty(::benchmark::State& state) // With a default transition
+MSM_OnOffEmpty(::benchmark::State& state)    // With a default transition
 {
     vending_machine vm;
     vm.start();
-    while(state.KeepRunning()) {
+    while (state.KeepRunning()) {
         vm.process_event(events::power_on{});
         vm.process_event(events::power_off{});
     }
 }
 
 void
-MSM_OnOffLoaded(::benchmark::State& state) // Without a default transition
+MSM_OnOffLoaded(::benchmark::State& state)    // Without a default transition
 {
+    // clang-format off
     vending_machine vm{ goods_storage{
         { 0, { 10, 15.0f } },
         { 1, { 100, 5.0f } }
     }};
+    // clang-format on
     vm.start();
-    while(state.KeepRunning()) {
+    while (state.KeepRunning()) {
         vm.process_event(events::power_on{});
         vm.process_event(events::power_off{});
     }
@@ -72,13 +78,15 @@ MSM_OnOffLoaded(::benchmark::State& state) // Without a default transition
 void
 MSM_BuyItem(::benchmark::State& state)
 {
+    // clang-format off
     vending_machine vm{ goods_storage{
         { 0, { 1000000000, 15.0f } },
         { 1, { 1000000000, 5.0f } }
     }};
+    // clang-format on
     vm.start();
     vm.process_event(events::power_on{});
-    while(state.KeepRunning()) {
+    while (state.KeepRunning()) {
         vm.process_event(events::money{3});
         vm.process_event(events::money{3});
         vm.process_event(events::select_item{1});
@@ -92,7 +100,6 @@ BENCHMARK(MSM_OnOffEmpty);
 BENCHMARK(MSM_OnOffLoaded);
 BENCHMARK(MSM_BuyItem);
 
-
-}  /* namespace vending_msm */
+} /* namespace vending_msm */
 
 BENCHMARK_MAIN();

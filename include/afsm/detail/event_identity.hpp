@@ -9,9 +9,9 @@
 #define AFSM_DETAIL_EVENT_IDENTITY_HPP_
 
 #include <pushkin/meta/type_tuple.hpp>
-#include <type_traits>
 
 #include <set>
+#include <type_traits>
 
 namespace afsm {
 namespace detail {
