@@ -952,14 +952,14 @@ struct state_machine_base
           orthogonal_state_machine<T, Mutex, FrontMachine>,    // TODO Check common base
           ::std::conditional_t<def::traits::has_common_base<T>::value,
                                state_machine_base_with_base<T, Mutex, FrontMachine>,
-                               state_machine_base_impl<T, Mutex, FrontMachine>>::type> {
+                               state_machine_base_impl<T, Mutex, FrontMachine>>>::type {
 public:
     using state_machine_impl_type = typename ::std::conditional<
         def::traits::has_orthogonal_regions<T>::value,
         orthogonal_state_machine<T, Mutex, FrontMachine>,
-        ::std::conditional_t<def::traits::has_common_base<T>::value,
-                             state_machine_base_with_base<T, Mutex, FrontMachine>,
-                             state_machine_base_impl<T, Mutex, FrontMachine>>::type>;
+        std::conditional_t<def::traits::has_common_base<T>::value,
+                           state_machine_base_with_base<T, Mutex, FrontMachine>,
+                           state_machine_base_impl<T, Mutex, FrontMachine>>>::type;
     state_machine_base(FrontMachine* fsm) : state_machine_impl_type{fsm} {}
     state_machine_base(FrontMachine* fsm, state_machine_base const& rhs)
         : state_machine_impl_type{fsm, rhs}

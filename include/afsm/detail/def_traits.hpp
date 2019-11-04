@@ -12,6 +12,8 @@
 #include <afsm/detail/exception_safety_guarantees.hpp>
 #include <afsm/detail/tags.hpp>
 
+#include <type_traits>
+
 namespace afsm {
 namespace def {
 namespace traits {

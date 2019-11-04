@@ -8,6 +8,8 @@
 #ifndef AFSM_DEFINITION_FWD_HPP_
 #define AFSM_DEFINITION_FWD_HPP_
 
+#include <afsm/fsm_fwd.hpp>
+
 namespace afsm {
 namespace def {
 
