@@ -29,23 +29,23 @@ struct not_a_state<T> {
 
 template <typename T, typename FSM>
 struct front_state_type
-    : ::std::conditional<def::traits::is_state_machine<T>::value, inner_state_machine<T, FSM>,
-                         typename ::std::conditional<def::traits::is_state<T>::value, state<T, FSM>,
-                                                     not_a_state<T>>::type> {};
+    : std::conditional<def::traits::is_state_machine<T>::value, inner_state_machine<T, FSM>,
+                       typename std::conditional<def::traits::is_state<T>::value, state<T, FSM>,
+                                                 not_a_state<T>>::type> {};
 
 template <typename T, typename... Y, typename FSM>
-struct front_state_type<::psst::meta::type_tuple<T, Y...>, FSM>
-    : front_state_type<::psst::meta::type_tuple<Y...>, typename front_state_type<T, FSM>::type> {};
+struct front_state_type<psst::meta::type_tuple<T, Y...>, FSM>
+    : front_state_type<psst::meta::type_tuple<Y...>, typename front_state_type<T, FSM>::type> {};
 
 template <typename T, typename FSM>
-struct front_state_type<::psst::meta::type_tuple<T>, FSM> : front_state_type<T, FSM> {};
+struct front_state_type<psst::meta::type_tuple<T>, FSM> : front_state_type<T, FSM> {};
 
 template <typename FSM, typename T>
 struct front_state_tuple;
 
 template <typename FSM>
 struct front_state_tuple<FSM, void> {
-    using type = ::std::tuple<>;
+    using type = std::tuple<>;
 
     static type
     construct(FSM&)
@@ -55,9 +55,9 @@ struct front_state_tuple<FSM, void> {
 };
 
 template <typename FSM, typename... T>
-struct front_state_tuple<FSM, ::psst::meta::type_tuple<T...>> {
-    using type        = ::std::tuple<typename front_state_type<T, FSM>::type...>;
-    using index_tuple = typename ::psst::meta::index_builder<sizeof...(T)>::type;
+struct front_state_tuple<FSM, psst::meta::type_tuple<T...>> {
+    using type        = std::tuple<typename front_state_type<T, FSM>::type...>;
+    using index_tuple = typename psst::meta::index_builder<sizeof...(T)>::type;
 
     static type
     construct(FSM& fsm)
@@ -72,31 +72,31 @@ struct front_state_tuple<FSM, ::psst::meta::type_tuple<T...>> {
     static type
     move_construct(FSM& fsm, type&& rhs)
     {
-        return move_construct(fsm, ::std::forward<type>(rhs), index_tuple{});
+        return move_construct(fsm, std::forward<type>(rhs), index_tuple{});
     }
 
 private:
-    template <::std::size_t... Indexes>
+    template <std::size_t... Indexes>
     static type
-    copy_construct(FSM& fsm, type const& rhs, ::psst::meta::indexes_tuple<Indexes...> const&)
+    copy_construct(FSM& fsm, type const& rhs, psst::meta::indexes_tuple<Indexes...> const&)
     {
-        return type(typename front_state_type<T, FSM>::type{fsm, ::std::get<Indexes>(rhs)}...);
+        return type(typename front_state_type<T, FSM>::type{fsm, std::get<Indexes>(rhs)}...);
     }
-    template <::std::size_t... Indexes>
+    template <std::size_t... Indexes>
     static type
-    move_construct(FSM& fsm, type&& rhs, ::psst::meta::indexes_tuple<Indexes...> const&)
+    move_construct(FSM& fsm, type&& rhs, psst::meta::indexes_tuple<Indexes...> const&)
     {
         return type(
-            typename front_state_type<T, FSM>::type{fsm, ::std::move(::std::get<Indexes>(rhs))}...);
+            typename front_state_type<T, FSM>::type{fsm, std::move(std::get<Indexes>(rhs))}...);
     }
 };
 
 template <typename FSM, typename State, bool Contains>
 struct substate_type_impl {
     using full_path = typename def::state_path<FSM, State>::type;
-    using path      = typename ::psst::meta::pop_front<full_path>::type;
+    using path      = typename psst::meta::pop_front<full_path>::type;
     using type      = typename front_state_type<path, FSM>::type;
-    using front     = typename ::psst::meta::front<path>::type;
+    using front     = typename psst::meta::front<path>::type;
 };
 
 template <typename FSM, typename State, bool IsSelf>
@@ -109,17 +109,17 @@ struct substate_type_self<FSM, State, false> {};
 
 template <typename FSM, typename State>
 struct substate_type_impl<FSM, State, false>
-    : substate_type_self<FSM, State, ::std::is_base_of<State, FSM>::value> {};
+    : substate_type_self<FSM, State, std::is_base_of<State, FSM>::value> {};
 
 template <typename FSM, typename State>
 struct substate_type : substate_type_impl<FSM, State, def::contains_substate<FSM, State>::value> {};
 
 template <typename FSM, typename StateTable>
 struct stack_constructor {
-    using state_table_type              = StateTable;
-    using stack_item                    = state_table_type;
-    using type                          = ::std::deque<stack_item>;
-    static constexpr ::std::size_t size = state_table_type::size;
+    using state_table_type            = StateTable;
+    using stack_item                  = state_table_type;
+    using type                        = std::deque<stack_item>;
+    static constexpr std::size_t size = state_table_type::size;
 
     static type
     construct(FSM& fsm)
@@ -132,20 +132,19 @@ struct stack_constructor {
     copy_construct(FSM& fsm, type const& rhs)
     {
         type res;
-        ::std::transform(rhs.begin(), rhs.end(), ::std::back_inserter(res),
-                         [fsm](stack_item const& item) {
-                             return stack_item{fsm, item};
-                         });
+        std::transform(rhs.begin(), rhs.end(), std::back_inserter(res),
+                       [fsm](stack_item const& item) {
+                           return stack_item{fsm, item};
+                       });
         return res;
     }
     static type
     move_construct(FSM& fsm, type&& rhs)
     {
         type res;
-        ::std::transform(rhs.begin(), rhs.end(), ::std::back_inserter(res),
-                         [fsm](stack_item&& item) {
-                             return stack_item{fsm, ::std::move(item)};
-                         });
+        std::transform(rhs.begin(), rhs.end(), std::back_inserter(res), [fsm](stack_item&& item) {
+            return stack_item{fsm, std::move(item)};
+        });
         return res;
     }
 };
@@ -156,7 +155,7 @@ struct no_lock {
 
 template <typename Mutex>
 struct lock_guard_type {
-    using type = ::std::lock_guard<Mutex>;
+    using type = std::lock_guard<Mutex>;
 };
 
 template <>
@@ -170,16 +169,16 @@ struct lock_guard_type<none&> {
 
 template <typename Mutex>
 struct size_type {
-    using type = ::std::atomic<::std::size_t>;
+    using type = std::atomic<std::size_t>;
 };
 
 template <>
 struct size_type<none> {
-    using type = ::std::size_t;
+    using type = std::size_t;
 };
 template <>
 struct size_type<none&> {
-    using type = ::std::size_t;
+    using type = std::size_t;
 };
 
 } /* namespace detail */

@@ -30,11 +30,11 @@ constexpr event_base::id_type event<T>::id;
 
 template <typename T>
 struct event_identity {
-    using event_type = typename ::std::decay<T>::type;
+    using event_type = typename std::decay<T>::type;
     using type       = event<event_type>;
 };
 
-using event_set = ::std::set<event_base::id_type const*>;
+using event_set = std::set<event_base::id_type const*>;
 
 template <typename... T>
 event_set

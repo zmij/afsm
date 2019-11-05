@@ -16,10 +16,10 @@ main(int, char*[])
 try {
     vending_machine vm;
     return 0;
-} catch (::std::exception const& e) {
-    ::std::cerr << "Exception: " << e.what() << "\n";
+} catch (std::exception const& e) {
+    std::cerr << "Exception: " << e.what() << "\n";
     return 1;
 } catch (...) {
-    ::std::cerr << "Unexpected exception\n";
+    std::cerr << "Unexpected exception\n";
     return 2;
 }

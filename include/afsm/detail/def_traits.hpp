@@ -19,54 +19,52 @@ namespace def {
 namespace traits {
 
 template <typename T>
-struct is_transition : ::std::false_type {};
+struct is_transition : std::false_type {};
 
 template <typename SourceState, typename Event, typename TargetState, typename Action,
           typename Guard>
-struct is_transition<transition<SourceState, Event, TargetState, Action, Guard>>
-    : ::std::true_type {};
+struct is_transition<transition<SourceState, Event, TargetState, Action, Guard>> : std::true_type {
+};
 template <typename Event, typename Action, typename Guard>
-struct is_transition<internal_transition<Event, Action, Guard>> : ::std::true_type {};
+struct is_transition<internal_transition<Event, Action, Guard>> : std::true_type {};
 
 template <typename T>
-struct is_internal_transition : ::std::false_type {};
+struct is_internal_transition : std::false_type {};
 
 template <typename Event, typename Action, typename Guard>
-struct is_internal_transition<internal_transition<Event, Action, Guard>> : ::std::true_type {};
+struct is_internal_transition<internal_transition<Event, Action, Guard>> : std::true_type {};
 
 template <typename T>
-struct is_state : ::std::is_base_of<tags::state, T> {};
+struct is_state : std::is_base_of<tags::state, T> {};
 
 template <typename T>
-struct is_terminal_state : ::std::is_base_of<terminal_state<T>, T> {};
+struct is_terminal_state : std::is_base_of<terminal_state<T>, T> {};
 
 template <typename T>
-struct is_state_machine : ::std::is_base_of<tags::state_machine, T> {};
+struct is_state_machine : std::is_base_of<tags::state_machine, T> {};
 
 template <typename T>
-struct is_pushdown : ::std::is_base_of<tags::pushdown_state, T> {};
+struct is_pushdown : std::is_base_of<tags::pushdown_state, T> {};
 template <typename T>
-struct is_popup : ::std::is_base_of<tags::popup_state, T> {};
+struct is_popup : std::is_base_of<tags::popup_state, T> {};
 
 namespace detail {
 
 template <typename T, typename Machine, bool IsPush>
-struct pushes : ::std::false_type {};
+struct pushes : std::false_type {};
 
 template <typename T, typename Machine>
 struct pushes<T, Machine, true>
-    : ::std::integral_constant<bool,
-                               ::std::is_same<typename T::pushdown_machine_type, Machine>::value> {
-};
+    : std::integral_constant<bool,
+                             std::is_same<typename T::pushdown_machine_type, Machine>::value> {};
 
 template <typename T, typename Machine, bool IsPop>
-struct pops : ::std::false_type {};
+struct pops : std::false_type {};
 
 template <typename T, typename Machine>
 struct pops<T, Machine, true>
-    : ::std::integral_constant<bool,
-                               ::std::is_same<typename T::pushdown_machine_type, Machine>::value> {
-};
+    : std::integral_constant<bool,
+                             std::is_same<typename T::pushdown_machine_type, Machine>::value> {};
 
 } /* namespace detail */
 
@@ -76,26 +74,25 @@ template <typename T, typename Machine>
 struct pops : detail::pops<T, Machine, is_popup<T>::value> {};
 
 template <typename T>
-struct has_common_base : ::std::is_base_of<tags::has_common_base, T> {};
+struct has_common_base : std::is_base_of<tags::has_common_base, T> {};
 
 template <typename T>
-struct has_history : ::std::is_base_of<tags::has_history, T> {};
+struct has_history : std::is_base_of<tags::has_history, T> {};
 
 template <typename T>
-struct allow_empty_transition_functions : ::std::is_base_of<tags::allow_empty_enter_exit, T> {};
+struct allow_empty_transition_functions : std::is_base_of<tags::allow_empty_enter_exit, T> {};
 
 template <typename T>
 struct has_orthogonal_regions
-    : ::std::integral_constant<bool, !::std::is_same<typename T::orthogonal_regions, void>::value> {
-};
+    : std::integral_constant<bool, !std::is_same<typename T::orthogonal_regions, void>::value> {};
 
 template <typename T>
 struct exception_safety {
-    using type = typename ::std::conditional<
-        ::std::is_base_of<tags::nothrow_guarantee, T>::value, tags::nothrow_guarantee,
-        typename ::std::conditional<::std::is_base_of<tags::strong_exception_safety, T>::value,
-                                    tags::strong_exception_safety,
-                                    tags::basic_exception_safety>::type>::type;
+    using type = typename std::conditional<
+        std::is_base_of<tags::nothrow_guarantee, T>::value, tags::nothrow_guarantee,
+        typename std::conditional<std::is_base_of<tags::strong_exception_safety, T>::value,
+                                  tags::strong_exception_safety,
+                                  tags::basic_exception_safety>::type>::type;
 };
 
 namespace detail {

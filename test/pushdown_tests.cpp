@@ -46,20 +46,20 @@ struct json_parser_def : def::state_machine<json_parser_def> {
             void
             on_enter(Event&&, FSM&)
             {
-                using ::psst::ansi_color;
-                using ::psst::util::demangle;
-                ::std::cerr << (ansi_color::cyan | ansi_color::bright)
-                            << "start: " << ansi_color::clear << demangle<Event>() << "\n";
+                using psst::ansi_color;
+                using psst::util::demangle;
+                std::cerr << (ansi_color::cyan | ansi_color::bright)
+                          << "start: " << ansi_color::clear << demangle<Event>() << "\n";
             }
 
             template <typename FSM>
             void
             on_enter(events::start_array&&, FSM& fsm)
             {
-                using ::psst::ansi_color;
-                using ::psst::util::demangle;
-                ::std::cerr << (ansi_color::cyan | ansi_color::bright)
-                            << "start: " << ansi_color::clear << "array context (first element)\n";
+                using psst::ansi_color;
+                using psst::util::demangle;
+                std::cerr << (ansi_color::cyan | ansi_color::bright)
+                          << "start: " << ansi_color::clear << "array context (first element)\n";
 
                 fsm.context_ = value_context::array_first;
             }
@@ -67,20 +67,20 @@ struct json_parser_def : def::state_machine<json_parser_def> {
             void
             on_enter(events::comma&&, FSM& fsm)
             {
-                using ::psst::ansi_color;
-                using ::psst::util::demangle;
-                ::std::cerr << (ansi_color::cyan | ansi_color::bright)
-                            << "start: " << ansi_color::clear << "array context\n";
+                using psst::ansi_color;
+                using psst::util::demangle;
+                std::cerr << (ansi_color::cyan | ansi_color::bright)
+                          << "start: " << ansi_color::clear << "array context\n";
                 fsm.context_ = value_context::array;
             }
             template <typename FSM>
             void
             on_enter(events::colon&&, FSM& fsm)
             {
-                using ::psst::ansi_color;
-                using ::psst::util::demangle;
-                ::std::cerr << (ansi_color::cyan | ansi_color::bright)
-                            << "start: " << ansi_color::clear << "object context\n";
+                using psst::ansi_color;
+                using psst::util::demangle;
+                std::cerr << (ansi_color::cyan | ansi_color::bright)
+                          << "start: " << ansi_color::clear << "object context\n";
                 fsm.context_ = value_context::object;
             }
         };
@@ -114,7 +114,7 @@ struct json_parser_def : def::state_machine<json_parser_def> {
                 tr< value,  events::comma,          name    >
             >;
             // clang-format on
-            ::std::size_t size = 0;
+            std::size_t size = 0;
         };
 
         struct end : pop<end, json_parser_def> {};
@@ -148,7 +148,7 @@ struct json_parser_def : def::state_machine<json_parser_def> {
             void
             operator()(Event&& evt, FSM& fsm)
             {
-                root_machine(fsm).process_event(::std::forward<Event>(evt));
+                root_machine(fsm).process_event(std::forward<Event>(evt));
             }
         };
         //@}
@@ -221,31 +221,30 @@ static_assert(def::has_pushdown_stack<json_parser_def>::value, "");
 static_assert(!def::has_pushdown_stack<json_parser_def::context::array>::value, "");
 static_assert(!def::has_pushdown_stack<json_parser_def::context::object>::value, "");
 
-static_assert(::std::is_same<def::state_path<json_parser_def, json_parser_def>::type,
-                             ::psst::meta::type_tuple<json_parser_def>>::value,
+static_assert(std::is_same<def::state_path<json_parser_def, json_parser_def>::type,
+                           psst::meta::type_tuple<json_parser_def>>::value,
               "");
-static_assert(::std::is_same<def::state_path<json_parser_def::context::start,
-                                             json_parser_def::context::start>::type,
-                             ::psst::meta::type_tuple<json_parser_def::context::start>>::value,
+static_assert(std::is_same<def::state_path<json_parser_def::context::start,
+                                           json_parser_def::context::start>::type,
+                           psst::meta::type_tuple<json_parser_def::context::start>>::value,
               "");
+static_assert(std::is_same<def::state_path<json_parser_def, json_parser_def::context::start>::type,
+                           psst::meta::type_tuple<json_parser_def, json_parser_def::context,
+                                                  json_parser_def::context::start>>::value,
+              "");
+
 static_assert(
-    ::std::is_same<def::state_path<json_parser_def, json_parser_def::context::start>::type,
-                   ::psst::meta::type_tuple<json_parser_def, json_parser_def::context,
-                                            json_parser_def::context::start>>::value,
+    std::is_same<def::state_path<json_parser_def, json_parser_def::context::object::name>::type,
+                 psst::meta::type_tuple<json_parser_def, json_parser_def::context,
+                                        json_parser_def::context::object,
+                                        json_parser_def::context::object::name>>::value,
     "");
 
 static_assert(
-    ::std::is_same<def::state_path<json_parser_def, json_parser_def::context::object::name>::type,
-                   ::psst::meta::type_tuple<json_parser_def, json_parser_def::context,
-                                            json_parser_def::context::object,
-                                            json_parser_def::context::object::name>>::value,
-    "");
-
-static_assert(
-    ::std::is_same<def::state_path<json_parser_fsm, json_parser_def::context::object::name>::type,
-                   ::psst::meta::type_tuple<json_parser_def, json_parser_def::context,
-                                            json_parser_def::context::object,
-                                            json_parser_def::context::object::name>>::value,
+    std::is_same<def::state_path<json_parser_fsm, json_parser_def::context::object::name>::type,
+                 psst::meta::type_tuple<json_parser_def, json_parser_def::context,
+                                        json_parser_def::context::object,
+                                        json_parser_def::context::object::name>>::value,
     "");
 
 TEST(Pushdown, ToTheEnd)

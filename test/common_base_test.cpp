@@ -41,13 +41,13 @@ struct dummy_action {
     void
     operator()(wash const&, FSM&)
     {
-        ::std::cerr << "Brrr!\n";
+        std::cerr << "Brrr!\n";
     }
     template <typename FSM>
     void
     operator()(do_work const&, FSM&)
     {
-        ::std::cerr << "Enough work!\n";
+        std::cerr << "Enough work!\n";
     }
 };
 
@@ -66,7 +66,7 @@ struct work_action {
     void
     operator()(do_work const&, FSM& fsm) const
     {
-        ::std::cerr << "Getting tired! " << ++fsm.fatigue << "\n";
+        std::cerr << "Getting tired! " << ++fsm.fatigue << "\n";
     }
 };
 
@@ -79,12 +79,12 @@ struct human_def : ::afsm::def::state_machine<human_def, common_base_tag> {
         void
         work() override
         {
-            ::std::cerr << "Zzzzzz!\n";
+            std::cerr << "Zzzzzz!\n";
         }
         void
         sleep() override
         {
-            ::std::cerr << "ZzzZ.Zzzz!\n";
+            std::cerr << "ZzzZ.Zzzz!\n";
         }
 
         // clang-format off
@@ -101,14 +101,14 @@ struct human_def : ::afsm::def::state_machine<human_def, common_base_tag> {
         void
         on_enter(Event&&, human_def::fsm_type&)
         {
-            ::std::cerr << "Woken up!\n";
+            std::cerr << "Woken up!\n";
         }
 
         template <typename Event>
         void
         on_exit(Event&&, human_def::fsm_type&)
         {
-            ::std::cerr << "Going to sleep\n";
+            std::cerr << "Going to sleep\n";
         }
 
         struct is_tired {
@@ -116,7 +116,7 @@ struct human_def : ::afsm::def::state_machine<human_def, common_base_tag> {
             bool
             operator()(FSM const& fsm, State const&) const
             {
-                ::std::cerr << "Check tired " << fsm.fatigue << "\n";
+                std::cerr << "Check tired " << fsm.fatigue << "\n";
                 return fsm.fatigue >= 5;
             }
         };
@@ -126,12 +126,12 @@ struct human_def : ::afsm::def::state_machine<human_def, common_base_tag> {
             void
             work() override
             {
-                ::std::cerr << "Nay!\n";
+                std::cerr << "Nay!\n";
             }
             void
             sleep() override
             {
-                ::std::cerr << "Nay!\n";
+                std::cerr << "Nay!\n";
             }
 
             using internal_transitions = transition_table<in<food, none, none>>;
@@ -140,12 +140,12 @@ struct human_def : ::afsm::def::state_machine<human_def, common_base_tag> {
             void
             work() override
             {
-                ::std::cerr << "OK!\n";
+                std::cerr << "OK!\n";
             }
             void
             sleep() override
             {
-                ::std::cerr << "Nay!\n";
+                std::cerr << "Nay!\n";
             }
 
             using internal_transitions = transition_table<in<do_work, work_action, not_<is_tired>>>;
@@ -154,24 +154,24 @@ struct human_def : ::afsm::def::state_machine<human_def, common_base_tag> {
             void
             work() override
             {
-                ::std::cerr << "Noooo!\n";
+                std::cerr << "Noooo!\n";
             }
             void
             sleep() override
             {
-                ::std::cerr << "Sooner the better!\n";
+                std::cerr << "Sooner the better!\n";
             }
         };
         struct sleepy : state<sleepy> {
             void
             work() override
             {
-                ::std::cerr << "Noooo...\n";
+                std::cerr << "Noooo...\n";
             }
             void
             sleep() override
             {
-                ::std::cerr << "Yaaawn!\n";
+                std::cerr << "Yaaawn!\n";
             }
         };
 
@@ -184,7 +184,7 @@ struct human_def : ::afsm::def::state_machine<human_def, common_base_tag> {
         >;
         // clang-format on
 
-        awake() : fatigue{0} { ::std::cerr << "Construct awake\n"; }
+        awake() : fatigue{0} { std::cerr << "Construct awake\n"; }
         fsm_type&
         fsm()
         {

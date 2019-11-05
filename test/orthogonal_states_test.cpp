@@ -61,17 +61,17 @@ static_assert(def::traits::has_orthogonal_regions<ortho_sm_def::on>::value, "");
 static_assert(def::traits::is_state_machine<ortho_sm_def::on>::value, "");
 
 using work_fsm = state_machine<ortho_sm_def::on>;
-static_assert(!::std::is_same<work_fsm::orthogonal_regions, void>::value, "");
-static_assert(!::std::is_same<work_fsm::regions_def, void>::value, "");
-static_assert(::psst::meta::contains<ortho_sm_def::on::work, work_fsm::regions_def>::value, "");
-static_assert(::psst::meta::contains<ortho_sm_def::on::error, work_fsm::regions_def>::value, "");
+static_assert(!std::is_same<work_fsm::orthogonal_regions, void>::value, "");
+static_assert(!std::is_same<work_fsm::regions_def, void>::value, "");
+static_assert(psst::meta::contains<ortho_sm_def::on::work, work_fsm::regions_def>::value, "");
+static_assert(psst::meta::contains<ortho_sm_def::on::error, work_fsm::regions_def>::value, "");
 
 using work_inner_fsm = inner_state_machine<ortho_sm_def::on, state_machine<ortho_sm_def>>;
-static_assert(!::std::is_same<work_inner_fsm::orthogonal_regions, void>::value, "");
-static_assert(!::std::is_same<work_inner_fsm::regions_def, void>::value, "");
-static_assert(::psst::meta::contains<work_inner_fsm::on::work, work_inner_fsm::regions_def>::value,
+static_assert(!std::is_same<work_inner_fsm::orthogonal_regions, void>::value, "");
+static_assert(!std::is_same<work_inner_fsm::regions_def, void>::value, "");
+static_assert(psst::meta::contains<work_inner_fsm::on::work, work_inner_fsm::regions_def>::value,
               "");
-static_assert(::psst::meta::contains<work_inner_fsm::on::error, work_inner_fsm::regions_def>::value,
+static_assert(psst::meta::contains<work_inner_fsm::on::error, work_inner_fsm::regions_def>::value,
               "");
 
 using ortho_fsm = state_machine<ortho_sm_def>;

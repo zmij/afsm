@@ -67,11 +67,11 @@ struct null_observer {
 
     template <typename FSM>
     void
-    start_process_deferred_queue(FSM const&, ::std::size_t /*size*/) const noexcept
+    start_process_deferred_queue(FSM const&, std::size_t /*size*/) const noexcept
     {}
     template <typename FSM>
     void
-    end_process_deferred_queue(FSM const&, ::std::size_t /*remain*/) const noexcept
+    end_process_deferred_queue(FSM const&, std::size_t /*remain*/) const noexcept
     {}
 
     template <typename FSM>
@@ -80,7 +80,7 @@ struct null_observer {
     {}
     template <typename FSM>
     void
-    postpone_deferred_events(FSM const&, ::std::size_t /*count*/) const noexcept
+    postpone_deferred_events(FSM const&, std::size_t /*count*/) const noexcept
     {}
     template <typename FSM>
     void
@@ -96,7 +96,7 @@ struct null_observer {
 template <typename T>
 class observer_wrapper {
 public:
-    using observer_ptr = ::std::shared_ptr<T>;
+    using observer_ptr = std::shared_ptr<T>;
 
 public:
     observer_wrapper() : observer_{} {}
@@ -110,7 +110,7 @@ public:
     void
     make_observer(Args&&... args)
     {
-        observer_ = ::std::make_shared<T>(::std::forward<Args>(args)...);
+        observer_ = std::make_shared<T>(std::forward<Args>(args)...);
     }
 
 protected:
@@ -197,7 +197,7 @@ protected:
 
     template <typename FSM>
     void
-    start_process_deferred_queue(FSM const& fsm, ::std::size_t size) const noexcept
+    start_process_deferred_queue(FSM const& fsm, std::size_t size) const noexcept
     {
         if (observer_)
             observer_->start_process_deferred_queue(fsm, size);
@@ -205,7 +205,7 @@ protected:
 
     template <typename FSM>
     void
-    end_process_deferred_queue(FSM const& fsm, ::std::size_t remain) const noexcept
+    end_process_deferred_queue(FSM const& fsm, std::size_t remain) const noexcept
     {
         if (observer_)
             observer_->end_process_deferred_queue(fsm, remain);
@@ -220,7 +220,7 @@ protected:
     }
     template <typename FSM>
     void
-    postpone_deferred_events(FSM const& fsm, ::std::size_t count) const noexcept
+    postpone_deferred_events(FSM const& fsm, std::size_t count) const noexcept
     {
         if (observer_)
             observer_->postpone_deferred_events(fsm, count);

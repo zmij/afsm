@@ -74,7 +74,7 @@ public:
     }
 
 protected:    // For tests
-    template <::std::size_t StateIndex>
+    template <std::size_t StateIndex>
     friend struct actions::detail::process_event_handler;
 
     template <typename Event>
@@ -82,7 +82,7 @@ protected:    // For tests
     process_event(Event&& evt)
     {
         return process_event_impl(
-            ::std::forward<Event>(evt),
+            std::forward<Event>(evt),
             detail::event_process_selector<Event, typename state::internal_events,
                                            typename state::deferred_events>{});
     }
@@ -93,7 +93,7 @@ private:
     process_event_impl(Event&& evt,
                        detail::process_type<actions::event_process_result::process> const&)
     {
-        return actions::handle_in_state_event(::std::forward<Event>(evt), *fsm_, *this);
+        return actions::handle_in_state_event(std::forward<Event>(evt), *fsm_, *this);
     }
     template <typename Event>
     constexpr actions::event_process_result
@@ -131,7 +131,7 @@ public:
         : base_machine_type{this, rhs}, fsm_{rhs.fsm_}
     {}
     inner_state_machine(inner_state_machine&& rhs)
-        : base_machine_type{this, ::std::move(rhs)}, fsm_{rhs.fsm_}
+        : base_machine_type{this, std::move(rhs)}, fsm_{rhs.fsm_}
     {}
 
     inner_state_machine(enclosing_fsm_type& fsm, inner_state_machine const& rhs)
@@ -144,7 +144,7 @@ public:
     void
     swap(inner_state_machine& rhs) noexcept
     {
-        using ::std::swap;
+        using std::swap;
         static_cast<base_machine_type&>(*this).swap(rhs);
         swap(fsm_, rhs.fsm_);
     }
@@ -179,7 +179,7 @@ public:
     }
 
 protected:    // For tests
-    template <::std::size_t StateIndex>
+    template <std::size_t StateIndex>
     friend struct actions::detail::process_event_handler;
 
     template <typename Event>
@@ -187,7 +187,7 @@ protected:    // For tests
     process_event(Event&& event)
     {
         return process_event_impl(
-            *fsm_, ::std::forward<Event>(event),
+            *fsm_, std::forward<Event>(event),
             detail::event_process_selector<Event, typename inner_state_machine::handled_events,
                                            typename inner_state_machine::deferred_events>{});
     }
@@ -208,17 +208,17 @@ class state_machine
                                         state_machine<T, Mutex, Observer, ObserverWrapper>>,
       public ObserverWrapper<Observer> {
 public:
-    static_assert(::psst::meta::is_empty<typename T::deferred_events>::value,
+    static_assert(psst::meta::is_empty<typename T::deferred_events>::value,
                   "Outer state machine cannot defer events");
     using this_type         = state_machine<T, Mutex, Observer, ObserverWrapper>;
     using base_machine_type = detail::state_machine_base<T, Mutex, this_type>;
     using mutex_type        = Mutex;
     using lock_guard        = typename detail::lock_guard_type<mutex_type>::type;
     using observer_wrapper  = ObserverWrapper<Observer>;
-    using event_invokation  = ::std::function<actions::event_process_result()>;
-    using event_queue_item  = ::std::pair<event_invokation, detail::event_base::id_type const*>;
-    using event_queue       = ::std::deque<event_queue_item>;
-    using deferred_queue    = ::std::list<event_queue_item>;
+    using event_invokation  = std::function<actions::event_process_result()>;
+    using event_queue_item  = std::pair<event_invokation, detail::event_base::id_type const*>;
+    using event_queue       = std::deque<event_queue_item>;
+    using deferred_queue    = std::list<event_queue_item>;
 
 public:
     state_machine()
@@ -235,7 +235,7 @@ public:
     {}
     template <typename... Args>
     explicit state_machine(Args&&... args)
-        : base_machine_type(this, ::std::forward<Args>(args)...),
+        : base_machine_type(this, std::forward<Args>(args)...),
           is_top_{},
           handled_{base_machine_type::current_handled_events()},
           deferred_{base_machine_type::current_deferrable_events()},
@@ -252,14 +252,14 @@ public:
     process_event(Event&& event)
     {
         if (!queue_size_ && !is_top_.test_and_set()) {
-            auto res = process_event_dispatch(::std::forward<Event>(event));
+            auto res = process_event_dispatch(std::forward<Event>(event));
             is_top_.clear();
             // Process enqueued events
             process_event_queue();
             return res;
         } else {
             // Enqueue event
-            enqueue_event(::std::forward<Event>(event));
+            enqueue_event(std::forward<Event>(event));
             return actions::event_process_result::defer;
         }
     }
@@ -294,7 +294,7 @@ private:
     process_event_dispatch(Event&& event)
     {
         return process_event_impl(
-            ::std::forward<Event>(event),
+            std::forward<Event>(event),
             detail::event_process_selector<Event, typename state_machine::handled_events>{});
     }
 
@@ -304,8 +304,8 @@ private:
                        detail::process_type<actions::event_process_result::process> const& sel)
     {
         using actions::event_process_result;
-        observer_wrapper::start_process_event(*this, ::std::forward<Event>(event));
-        auto res = base_machine_type::process_event_impl(*this, ::std::forward<Event>(event), sel);
+        observer_wrapper::start_process_event(*this, std::forward<Event>(event));
+        auto res = base_machine_type::process_event_impl(*this, std::forward<Event>(event), sel);
         switch (res) {
         case event_process_result::process:
             // Changed state. Process deferred events
@@ -314,18 +314,18 @@ private:
             process_deferred_queue();
             break;
         case event_process_result::process_in_state:
-            observer_wrapper::processed_in_state(*this, ::std::forward<Event>(event));
+            observer_wrapper::processed_in_state(*this, std::forward<Event>(event));
             break;
         case event_process_result::defer:
             // Add event to deferred queue
-            defer_event(::std::forward<Event>(event));
+            defer_event(std::forward<Event>(event));
             break;
         case event_process_result::refuse:
             // The event cannot be processed in current state
-            observer_wrapper::reject_event(*this, ::std::forward<Event>(event));
+            observer_wrapper::reject_event(*this, std::forward<Event>(event));
             return reject_event_impl(
-                ::std::forward<Event>(event),
-                ::std::integral_constant<bool, actions::detail::handles_reject<T, Event>::value>{});
+                std::forward<Event>(event),
+                std::integral_constant<bool, actions::detail::handles_reject<T, Event>::value>{});
         default:
             break;
         }
@@ -344,14 +344,14 @@ private:
 
     template <typename Event>
     actions::event_process_result
-    reject_event_impl(Event&& event, ::std::true_type const&)
+    reject_event_impl(Event&& event, std::true_type const&)
     {
-        return this->T::reject_event(::std::forward<Event>(event), *this);
+        return this->T::reject_event(std::forward<Event>(event), *this);
     }
 
     template <typename Event>
     actions::event_process_result
-    reject_event_impl(Event&&, ::std::false_type const&)
+    reject_event_impl(Event&&, std::false_type const&)
     {
         return actions::event_process_result::refuse;
     }
@@ -364,10 +364,10 @@ private:
         {
             lock_guard lock{mutex_};
             ++queue_size_;
-            observer_wrapper::enqueue_event(*this, ::std::forward<Event>(event));
-            Event evt{::std::forward<Event>(event)};
+            observer_wrapper::enqueue_event(*this, std::forward<Event>(event));
+            Event evt{std::forward<Event>(event)};
             queued_events_.emplace_back(
-                [&, evt]() mutable { return process_event_dispatch(::std::move(evt)); },
+                [&, evt]() mutable { return process_event_dispatch(std::move(evt)); },
                 &evt_identity::id);
         }
         // Process enqueued events in case we've been waiting for queue
@@ -379,7 +379,7 @@ private:
     lock_and_swap_queue(event_queue& queue)
     {
         lock_guard lock{mutex_};
-        ::std::swap(queued_events_, queue);
+        std::swap(queued_events_, queue);
         queue_size_ -= queue.size();
     }
 
@@ -406,10 +406,10 @@ private:
     {
         using evt_identity = typename detail::event_identity<Event>::type;
 
-        observer_wrapper::defer_event(*this, ::std::forward<Event>(event));
-        Event evt{::std::forward<Event>(event)};
+        observer_wrapper::defer_event(*this, std::forward<Event>(event));
+        Event evt{std::forward<Event>(event)};
         deferred_events_.emplace_back(
-            [&, evt]() mutable { return process_event_dispatch(::std::move(evt)); },
+            [&, evt]() mutable { return process_event_dispatch(std::move(evt)); },
             &evt_identity::id);
         deferred_event_ids_.insert(&evt_identity::id);
     }
@@ -423,8 +423,8 @@ private:
             if (skip_deferred_queue()) {
                 observer_wrapper::skip_processing_deferred_queue(*this);
             } else {
-                ::std::swap(deferred_events_, deferred);
-                ::std::swap(deferred_event_ids_, event_ids);
+                std::swap(deferred_events_, deferred);
+                std::swap(deferred_event_ids_, event_ids);
             }
             while (!deferred.empty()) {
                 observer_wrapper::start_process_deferred_queue(*this, deferred.size());
@@ -435,8 +435,8 @@ private:
                         deferred.erase(event++);
                     } else if (deferred_.count(event->second)) {
                         // Move directly to the deferred queue
-                        ::std::size_t count{0};
-                        auto          next = event;
+                        std::size_t count{0};
+                        auto        next = event;
                         while (next != deferred.end() && next->second == event->second) {
                             ++next;
                             ++count;
@@ -453,8 +453,8 @@ private:
                         break;
                 }
                 for (auto event = deferred.begin(); event != deferred.end();) {
-                    ::std::size_t count{0};
-                    auto          next = event;
+                    std::size_t count{0};
+                    auto        next = event;
                     while (next != deferred.end() && next->second == event->second) {
                         ++count;
                         ++next;
@@ -470,8 +470,8 @@ private:
                     if (skip_deferred_queue()) {
                         observer_wrapper::skip_processing_deferred_queue(*this);
                     } else {
-                        ::std::swap(deferred_events_, deferred);
-                        ::std::swap(deferred_event_ids_, event_ids);
+                        std::swap(deferred_events_, deferred);
+                        std::swap(deferred_event_ids_, event_ids);
                     }
                 }
             }
@@ -483,15 +483,15 @@ private:
     skip_deferred_queue() const
     {
         detail::event_set st;
-        ::std::set_intersection(handled_.begin(), handled_.end(), deferred_event_ids_.begin(),
-                                deferred_event_ids_.end(), ::std::inserter(st, st.end()));
+        std::set_intersection(handled_.begin(), handled_.end(), deferred_event_ids_.begin(),
+                              deferred_event_ids_.end(), std::inserter(st, st.end()));
         return st.empty();
     }
 
 private:
-    using atomic_counter = ::std::atomic<::std::size_t>;
+    using atomic_counter = std::atomic<std::size_t>;
 
-    ::std::atomic_flag is_top_;
+    std::atomic_flag is_top_;
 
     detail::event_set handled_;
     detail::event_set deferred_;
@@ -500,17 +500,17 @@ private:
     event_queue    queued_events_;
     atomic_counter queue_size_;
 
-    ::std::atomic_flag deferred_top_;
-    deferred_queue     deferred_events_;
-    detail::event_set  deferred_event_ids_;
+    std::atomic_flag  deferred_top_;
+    deferred_queue    deferred_events_;
+    detail::event_set deferred_event_ids_;
 };
 
 //----------------------------------------------------------------------------
 //  Priority State machine
 //----------------------------------------------------------------------------
-using event_priority_type = ::std::int32_t;
+using event_priority_type = std::int32_t;
 template <typename T>
-struct event_priority_traits : ::std::integral_constant<event_priority_type, 0> {};
+struct event_priority_traits : std::integral_constant<event_priority_type, 0> {};
 
 template <typename T, typename Mutex, typename Observer, template <typename> class ObserverWrapper>
 class priority_state_machine
@@ -518,15 +518,15 @@ class priority_state_machine
           T, Mutex, priority_state_machine<T, Mutex, Observer, ObserverWrapper>>,
       public ObserverWrapper<Observer> {
 public:
-    static_assert(::psst::meta::is_empty<typename T::deferred_events>::value,
+    static_assert(psst::meta::is_empty<typename T::deferred_events>::value,
                   "Outer state machine cannot defer events");
     using this_type         = priority_state_machine<T, Mutex, Observer, ObserverWrapper>;
     using base_machine_type = detail::state_machine_base<T, Mutex, this_type>;
     using mutex_type        = Mutex;
     using lock_guard        = typename detail::lock_guard_type<mutex_type>::type;
     using observer_wrapper  = ObserverWrapper<Observer>;
-    using event_invokation  = ::std::function<actions::event_process_result()>;
-    using prioritized_event = ::std::pair<event_invokation, event_priority_type>;
+    using event_invokation  = std::function<actions::event_process_result()>;
+    using prioritized_event = std::pair<event_invokation, event_priority_type>;
     struct event_comparison {
         bool
         operator()(prioritized_event const& lhs, prioritized_event const& rhs) const
@@ -534,8 +534,8 @@ public:
             return lhs.second < rhs.second;
         }
     };
-    using event_queue = ::std::priority_queue<prioritized_event, ::std::vector<prioritized_event>,
-                                              event_comparison>;
+    using event_queue
+        = std::priority_queue<prioritized_event, std::vector<prioritized_event>, event_comparison>;
 
 public:
     priority_state_machine()
@@ -549,7 +549,7 @@ public:
     {}
     template <typename... Args>
     explicit priority_state_machine(Args&&... args)
-        : base_machine_type(this, ::std::forward<Args>(args)...),
+        : base_machine_type(this, std::forward<Args>(args)...),
           is_top_{},
           mutex_{},
           queued_events_{},
@@ -561,17 +561,17 @@ public:
     template <typename Event>
     actions::event_process_result
     process_event(Event&& event, event_priority_type priority
-                                 = event_priority_traits<typename ::std::decay<Event>::type>::value)
+                                 = event_priority_traits<typename std::decay<Event>::type>::value)
     {
         if (!queue_size_ && !is_top_.test_and_set()) {
-            auto res = process_event_dispatch(::std::forward<Event>(event), priority);
+            auto res = process_event_dispatch(std::forward<Event>(event), priority);
             is_top_.clear();
             // Process enqueued events
             process_event_queue();
             return res;
         } else {
             // Enqueue event
-            enqueue_event(::std::forward<Event>(event), priority);
+            enqueue_event(std::forward<Event>(event), priority);
             return actions::event_process_result::defer;
         }
     }
@@ -582,7 +582,7 @@ private:
     process_event_dispatch(Event&& event, event_priority_type priority)
     {
         return process_event_impl(
-            ::std::forward<Event>(event), priority,
+            std::forward<Event>(event), priority,
             detail::event_process_selector<Event,
                                            typename priority_state_machine::handled_events>{});
     }
@@ -593,23 +593,23 @@ private:
                        detail::process_type<actions::event_process_result::process> const& sel)
     {
         using actions::event_process_result;
-        observer_wrapper::start_process_event(*this, ::std::forward<Event>(event));
-        auto res = base_machine_type::process_event_impl(*this, ::std::forward<Event>(event), sel);
+        observer_wrapper::start_process_event(*this, std::forward<Event>(event));
+        auto res = base_machine_type::process_event_impl(*this, std::forward<Event>(event), sel);
         switch (res) {
         case event_process_result::process:
             // Changed state. Process deferred events
             process_deferred_queue();
             break;
         case event_process_result::process_in_state:
-            observer_wrapper::processed_in_state(*this, ::std::forward<Event>(event));
+            observer_wrapper::processed_in_state(*this, std::forward<Event>(event));
             break;
         case event_process_result::defer:
             // Add event to deferred queue
-            defer_event(::std::forward<Event>(event), priority);
+            defer_event(std::forward<Event>(event), priority);
             break;
         case event_process_result::refuse:
             // The event cannot be processed in current state
-            observer_wrapper::reject_event(*this, ::std::forward<Event>(event));
+            observer_wrapper::reject_event(*this, std::forward<Event>(event));
             break;
         default:
             break;
@@ -636,11 +636,11 @@ private:
         {
             lock_guard lock{mutex_};
             ++queue_size_;
-            observer_wrapper::enqueue_event(*this, ::std::forward<Event>(event));
-            Event evt{::std::forward<Event>(event)};
+            observer_wrapper::enqueue_event(*this, std::forward<Event>(event));
+            Event evt{std::forward<Event>(event)};
             queued_events_.emplace(
                 [&, evt, priority]() mutable {
-                    return process_event_dispatch(::std::move(evt), priority);
+                    return process_event_dispatch(std::move(evt), priority);
                 },
                 priority);
         }
@@ -653,7 +653,7 @@ private:
     lock_and_swap_queue(event_queue& queue)
     {
         lock_guard lock{mutex_};
-        ::std::swap(queued_events_, queue);
+        std::swap(queued_events_, queue);
         queue_size_ -= queue.size();
     }
 
@@ -680,11 +680,11 @@ private:
     defer_event(Event&& event, event_priority_type priority)
     {
         lock_guard lock{deferred_mutex_};
-        observer_wrapper::defer_event(*this, ::std::forward<Event>(event));
-        Event evt{::std::forward<Event>(event)};
+        observer_wrapper::defer_event(*this, std::forward<Event>(event));
+        Event evt{std::forward<Event>(event)};
         deferred_events_.emplace(
             [&, evt, priority]() mutable {
-                return process_event_dispatch(::std::move(evt), priority);
+                return process_event_dispatch(std::move(evt), priority);
             },
             priority);
     }
@@ -695,7 +695,7 @@ private:
         event_queue deferred;
         {
             lock_guard lock{deferred_mutex_};
-            ::std::swap(deferred_events_, deferred);
+            std::swap(deferred_events_, deferred);
         }
         while (!deferred.empty()) {
             observer_wrapper::start_process_deferred_queue(*this, deferred.size());
@@ -715,15 +715,15 @@ private:
             }
             observer_wrapper::end_process_deferred_queue(*this, deferred_events_.size());
             if (res == event_process_result::process) {
-                ::std::swap(deferred_events_, deferred);
+                std::swap(deferred_events_, deferred);
             }
         }
     }
 
 private:
-    using atomic_counter = ::std::atomic<::std::size_t>;
+    using atomic_counter = std::atomic<std::size_t>;
 
-    ::std::atomic_flag is_top_;
+    std::atomic_flag is_top_;
 
     mutex_type     mutex_;
     event_queue    queued_events_;

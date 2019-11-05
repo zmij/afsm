@@ -23,21 +23,21 @@ struct dummy_action {
     void
     operator()(event_a&&, FSM&, SourceState& source, TargetState&) const
     {
-        ::std::cerr << "Dummy action triggered (a)\n";
+        std::cerr << "Dummy action triggered (a)\n";
         source.value = "a";
     }
     template <typename FSM, typename SourceState, typename TargetState>
     void
     operator()(event_b&&, FSM&, SourceState& source, TargetState&) const
     {
-        ::std::cerr << "Dummy action triggered (b)\n";
+        std::cerr << "Dummy action triggered (b)\n";
         source.value = "b";
     }
     template <typename FSM, typename SourceState, typename TargetState>
     void
     operator()(event_c&&, FSM&, SourceState& source, TargetState&) const
     {
-        ::std::cerr << "Dummy action triggered (c)\n";
+        std::cerr << "Dummy action triggered (c)\n";
         source.value = "c";
     }
 };
@@ -47,7 +47,7 @@ struct dummy_action_a {
     void
     operator()(event_a const&, FSM&, SourceState& source, TargetState&) const
     {
-        ::std::cerr << "Dummy action 2 triggered (a)\n";
+        std::cerr << "Dummy action 2 triggered (a)\n";
         source.value = "dummy";
     }
 };
@@ -62,7 +62,7 @@ struct a_guard {
 };
 
 struct internal_transitions_test : def::state<internal_transitions_test> {
-    ::std::string value = "none";
+    std::string value = "none";
 
     // clang-format off
     using internal_transitions = transition_table <
@@ -123,21 +123,21 @@ struct inner_dispatch_test : def::state_machine<inner_dispatch_test> {
         void
         operator()(inner_event const&, FSM& fsm, state_a&, state_a&) const
         {
-            ::std::cerr << "Dummy action triggered (inner_event - a)\n";
+            std::cerr << "Dummy action triggered (inner_event - a)\n";
             fsm.value = "in_a";
         }
         template <typename FSM>
         void
         operator()(inner_event const&, FSM& fsm, state_b&, state_b&) const
         {
-            ::std::cerr << "Dummy action triggered (inner_event - b)\n";
+            std::cerr << "Dummy action triggered (inner_event - b)\n";
             fsm.value = "in_b";
         }
         template <typename FSM>
         void
         operator()(inner_event const&, FSM& fsm, state_c&, state_c&) const
         {
-            ::std::cerr << "Dummy action triggered (inner_event - c)\n";
+            std::cerr << "Dummy action triggered (inner_event - c)\n";
             fsm.value = "in_c";
         }
     };
@@ -163,7 +163,7 @@ struct inner_dispatch_test : def::state_machine<inner_dispatch_test> {
     // clang-format on
     using initial_state = state_a;
 
-    ::std::string value = "none";
+    std::string value = "none";
 };
 
 struct test_sm : inner_state_machine<inner_dispatch_test, dummy_sm> {

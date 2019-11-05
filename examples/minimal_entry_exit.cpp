@@ -22,7 +22,7 @@ struct minimal_def : ::afsm::def::state_machine<minimal_def> {
         void
         on_exit(Event const&, FSM&)
         {
-            ::std::cout << "exit initial\n";
+            std::cout << "exit initial\n";
         }
     };
     struct running : state<running> {
@@ -30,13 +30,13 @@ struct minimal_def : ::afsm::def::state_machine<minimal_def> {
         void
         on_enter(Event const&, FSM&)
         {
-            ::std::cout << "enter running\n";
+            std::cout << "enter running\n";
         }
         template <typename Event, typename FSM>
         void
         on_exit(Event const&, FSM&)
         {
-            ::std::cout << "exit running\n";
+            std::cout << "exit running\n";
         }
     };
     struct terminated : terminal_state<terminated> {
@@ -44,7 +44,7 @@ struct minimal_def : ::afsm::def::state_machine<minimal_def> {
         void
         on_enter(Event const&, FSM&)
         {
-            ::std::cout << "enter terminated\n";
+            std::cout << "enter terminated\n";
         }
     };
 
@@ -76,10 +76,10 @@ main(int, char*[])
 try {
     minimal::use();
     return 0;
-} catch (::std::exception const& e) {
-    ::std::cerr << "Exception: " << e.what() << "\n";
+} catch (std::exception const& e) {
+    std::cerr << "Exception: " << e.what() << "\n";
     return 1;
 } catch (...) {
-    ::std::cerr << "Unexpected exception\n";
+    std::cerr << "Unexpected exception\n";
     return 2;
 }

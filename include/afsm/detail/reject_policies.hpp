@@ -31,8 +31,8 @@ struct reject_throw {
     actions::event_process_result
     reject_event(Event&&, FSM&)
     {
-        using ::psst::util::demangle;
-        throw ::std::runtime_error{"An instance of " + demangle<Event>() + " event was rejected"};
+        using psst::util::demangle;
+        throw std::runtime_error{"An instance of " + demangle<Event>() + " event was rejected"};
     }
 };
 

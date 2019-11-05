@@ -27,20 +27,20 @@ struct start_maintenance {
 struct end_maintenance {};
 struct withdraw_money {};
 struct load_goods {
-    ::std::size_t p_no;
-    int           amount;
+    std::size_t p_no;
+    int         amount;
 };
 struct load_done {};
 struct set_price {
-    ::std::size_t p_no;
-    float         price;
+    std::size_t p_no;
+    float       price;
 };
 
 struct money {
     float amount;
 };
 struct select_item {
-    ::std::size_t p_no;
+    std::size_t p_no;
 };
 
 } /* namespace events */
@@ -50,7 +50,7 @@ struct goods_entry {
     float price;
 };
 
-using goods_storage = ::std::map<::std::size_t, goods_entry>;
+using goods_storage = std::map<std::size_t, goods_entry>;
 
 struct vending_def : ::afsm::def::state_machine<vending_def> {
     using vending_fsm = ::afsm::state_machine<vending_def>;
@@ -150,7 +150,7 @@ struct vending_def : ::afsm::def::state_machine<vending_def> {
                 void
                 on_enter(events::load_goods&& goods, FSM& fsm) const
                 {
-                    root_machine(fsm).add_goods(::std::move(goods));
+                    root_machine(fsm).add_goods(std::move(goods));
                 }
             };
 
@@ -256,10 +256,9 @@ struct vending_def : ::afsm::def::state_machine<vending_def> {
 
     vending_def() : secret{factory_code}, goods{}, balance{0} {}
     vending_def(int code) : secret{code}, goods{}, balance{0} {}
-    vending_def(goods_storage&& goods) : secret{factory_code}, goods{::std::move(goods)}, balance{0}
+    vending_def(goods_storage&& goods) : secret{factory_code}, goods{std::move(goods)}, balance{0}
     {}
-    vending_def(int code, goods_storage&& goods)
-        : secret{code}, goods{::std::move(goods)}, balance{0}
+    vending_def(int code, goods_storage&& goods) : secret{code}, goods{std::move(goods)}, balance{0}
     {}
 
     bool
@@ -268,13 +267,13 @@ struct vending_def : ::afsm::def::state_machine<vending_def> {
         return count() == 0;
     }
 
-    ::std::size_t
+    std::size_t
     count() const
     {
-        return ::std::accumulate(goods.begin(), goods.end(), 0ul,
-                                 [](::std::size_t cnt, goods_storage::value_type const& i) {
-                                     return cnt + i.second.amount;
-                                 });
+        return std::accumulate(goods.begin(), goods.end(), 0ul,
+                               [](std::size_t cnt, goods_storage::value_type const& i) {
+                                   return cnt + i.second.amount;
+                               });
     }
 
     void
@@ -292,21 +291,21 @@ struct vending_def : ::afsm::def::state_machine<vending_def> {
     bool
     prices_correct() const
     {
-        auto f = ::std::find_if(goods.begin(), goods.end(), [](goods_storage::value_type const& i) {
+        auto f = std::find_if(goods.begin(), goods.end(), [](goods_storage::value_type const& i) {
             return i.second.price <= 0;
         });
         return f == goods.end();
     }
 
     bool
-    goods_exist(::std::size_t p_no) const
+    goods_exist(std::size_t p_no) const
     {
         auto f = goods.find(p_no);
         return f != goods.end();
     }
 
     void
-    set_price(::std::size_t p_no, float price)
+    set_price(std::size_t p_no, float price)
     {
         auto f = goods.find(p_no);
         if (f != goods.end()) {
@@ -314,7 +313,7 @@ struct vending_def : ::afsm::def::state_machine<vending_def> {
         }
     }
     float
-    get_price(::std::size_t p_no) const
+    get_price(std::size_t p_no) const
     {
         auto f = goods.find(p_no);
         if (f != goods.end()) {
@@ -323,7 +322,7 @@ struct vending_def : ::afsm::def::state_machine<vending_def> {
         return 0;
     }
     void
-    dispense_product(::std::size_t p_no)
+    dispense_product(std::size_t p_no)
     {
         auto f = goods.find(p_no);
         if (f != goods.end() && f->second.amount > 0) {

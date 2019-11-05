@@ -14,28 +14,27 @@ namespace afsm {
 namespace test {
 
 namespace events {
-::std::string const connect::name{"connect"};
-::std::string const complete::name{"complete"};
-::std::string const ready_for_query::name{"ready_for_query"};
-::std::string const begin::name{"begin"};
-::std::string const terminate::name{"terminate"};
-::std::string const execute::name{"execute"};
-::std::string const exec_prepared::name{"exec_prepared"};
-::std::string const commit::name{"commit"};
-::std::string const rollback::name{"rollback"};
-::std::string const conn_error::name{"conn_error"};
-::std::string const query_error::name{"query_error"};
-::std::string const client_error::name{"client_error"};
-::std::string const row_description::name{"row_description"};
-::std::string const no_data::name{"no_data"};
-::std::string const row_event::name{"row_event"};
-::std::string const command_complete::name{"command_complete"};
+std::string const connect::name{"connect"};
+std::string const complete::name{"complete"};
+std::string const ready_for_query::name{"ready_for_query"};
+std::string const begin::name{"begin"};
+std::string const terminate::name{"terminate"};
+std::string const execute::name{"execute"};
+std::string const exec_prepared::name{"exec_prepared"};
+std::string const commit::name{"commit"};
+std::string const rollback::name{"rollback"};
+std::string const conn_error::name{"conn_error"};
+std::string const query_error::name{"query_error"};
+std::string const client_error::name{"client_error"};
+std::string const row_description::name{"row_description"};
+std::string const no_data::name{"no_data"};
+std::string const row_event::name{"row_event"};
+std::string const command_complete::name{"command_complete"};
 } /* namespace events */
 
 struct connection_fsm_def
     : def::state_machine<connection_fsm_def, def::tags::common_base<state_name>> {
-    using connection_fsm
-        = ::afsm::state_machine<connection_fsm_def, ::std::mutex, test_fsm_observer>;
+    using connection_fsm = ::afsm::state_machine<connection_fsm_def, std::mutex, test_fsm_observer>;
 
     connection_fsm&
     fsm()
@@ -47,13 +46,13 @@ struct connection_fsm_def
     {
         return static_cast<connection_fsm const&>(*this);
     }
-    ::std::string
+    std::string
     name() const override
     {
         return fsm().current_state_base().name();
     }
     struct closed : state<closed> {
-        ::std::string
+        std::string
         name() const override
         {
             return "closed";
@@ -61,7 +60,7 @@ struct connection_fsm_def
     };
 
     struct connecting : state<connecting> {
-        ::std::string
+        std::string
         name() const override
         {
             return "connecting";
@@ -69,7 +68,7 @@ struct connection_fsm_def
     };
 
     struct authorizing : state<authorizing> {
-        ::std::string
+        std::string
         name() const override
         {
             return "authorizing";
@@ -77,7 +76,7 @@ struct connection_fsm_def
     };
 
     struct idle : state<idle> {
-        ::std::string
+        std::string
         name() const override
         {
             return "idle";
@@ -85,7 +84,7 @@ struct connection_fsm_def
     };
 
     struct terminated : terminal_state<terminated> {
-        ::std::string
+        std::string
         name() const override
         {
             return "teminated";
@@ -96,7 +95,7 @@ struct connection_fsm_def
         using transaction_fsm = ::afsm::inner_state_machine<transaction, connection_fsm>;
 
         transaction() {}
-        ::std::string
+        std::string
         name() const override
         {
             return "transaction " + fsm().current_state_base().name();
@@ -115,7 +114,7 @@ struct connection_fsm_def
         struct starting : state<starting> {
             using deferred_events = type_tuple<events::execute, events::exec_prepared,
                                                events::commit, events::rollback>;
-            ::std::string
+            std::string
             name() const override
             {
                 return "starting";
@@ -128,7 +127,7 @@ struct connection_fsm_def
         };
 
         struct idle : state<idle> {
-            ::std::string
+            std::string
             name() const override
             {
                 return "transaction idle";
@@ -143,7 +142,7 @@ struct connection_fsm_def
 
         struct simple_query : state_machine<simple_query> {
             using simple_query_fsm = ::afsm::inner_state_machine<simple_query, transaction_fsm>;
-            ::std::string
+            std::string
             name() const override
             {
                 return "simple query " + fsm().current_state_base().name();
@@ -156,7 +155,7 @@ struct connection_fsm_def
             { return static_cast<simple_query_fsm const&>(*this); }
 
             struct waiting : state<waiting> {
-                ::std::string
+                std::string
                 name() const override
                 {
                     return "waiting results";
@@ -168,7 +167,7 @@ struct connection_fsm_def
                 // clang-format on
             };
             struct fetch_data : state<fetch_data> {
-                ::std::string
+                std::string
                 name() const override
                 {
                     return "fetch data";
@@ -190,7 +189,7 @@ struct connection_fsm_def
 
         struct extended_query : state_machine<extended_query> {
             using extended_query_fsm = ::afsm::inner_state_machine<extended_query, transaction_fsm>;
-            ::std::string
+            std::string
             name() const override
             {
                 return "extended query " + fsm().current_state_base().name();
@@ -207,14 +206,14 @@ struct connection_fsm_def
             }
 
             struct prepare : state<prepare> {
-                ::std::string
+                std::string
                 name() const override
                 {
                     return "prepare";
                 }
             };
             struct parse : state<parse> {
-                ::std::string
+                std::string
                 name() const override
                 {
                     return "parse";
@@ -227,14 +226,14 @@ struct connection_fsm_def
                 // clang-format on
             };
             struct bind : state<bind> {
-                ::std::string
+                std::string
                 name() const override
                 {
                     return "bind";
                 }
             };
             struct exec : state<exec> {
-                ::std::string
+                std::string
                 name() const override
                 {
                     return "exec";
@@ -258,7 +257,7 @@ struct connection_fsm_def
         };
 
         struct tran_error : state<tran_error> {
-            ::std::string
+            std::string
             name() const override
             {
                 return "tran error";
@@ -267,7 +266,7 @@ struct connection_fsm_def
         };
 
         struct exiting : state<exiting> {
-            ::std::string
+            std::string
             name() const override
             {
                 return "exiting";
@@ -330,7 +329,7 @@ struct connection_fsm_def
     // clang-format on
 };
 
-using connection_fsm = state_machine<connection_fsm_def, ::std::mutex, test_fsm_observer>;
+using connection_fsm = state_machine<connection_fsm_def, std::mutex, test_fsm_observer>;
 
 static_assert(def::contains_substate<connection_fsm_def, connection_fsm_def::connecting>::value,
               "");
@@ -345,7 +344,7 @@ static_assert(
 static_assert(
     def::contains_substate<connection_fsm_def, connection_fsm_def::transaction::idle>::value, "");
 
-static_assert(::std::is_base_of<
+static_assert(std::is_base_of<
                   detail::containment_type<detail::state_containment::immediate>,
                   detail::state_containment_type<connection_fsm_def::connecting, connection_fsm_def,
                                                  connection_fsm::inner_states_def>>::value,
@@ -370,8 +369,8 @@ void
 begin_transaction(connection_fsm& fsm)
 {
     using actions::event_process_result;
-    using ::psst::ansi_color;
-    ::std::cout << ansi_color::yellow << ::std::setw(80) << ::std::setfill('=') << '=' << "\n";
+    using psst::ansi_color;
+    std::cout << ansi_color::yellow << std::setw(80) << std::setfill('=') << '=' << "\n";
     // Start transaction sequence
     EXPECT_EQ(event_process_result::process, fsm.process_event(events::begin{}));
     EXPECT_EQ(event_process_result::process, fsm.process_event(events::ready_for_query{}));
@@ -384,13 +383,13 @@ void
 commit_transaction(connection_fsm& fsm)
 {
     using actions::event_process_result;
-    using ::psst::ansi_color;
+    using psst::ansi_color;
     // Commit transaction sequence
     EXPECT_EQ(event_process_result::process, fsm.process_event(events::commit{}));
     EXPECT_EQ(event_process_result::process_in_state,
               fsm.process_event(events::command_complete{}));
     EXPECT_EQ(event_process_result::process, fsm.process_event(events::ready_for_query{}));
-    ::std::cout << ansi_color::yellow << ::std::setw(80) << ::std::setfill('=') << '=' << "\n";
+    std::cout << ansi_color::yellow << std::setw(80) << std::setfill('=') << '=' << "\n";
     EXPECT_FALSE(fsm.is_in_state<connection_fsm_def::transaction>());
     EXPECT_FALSE(fsm.is_in_state<connection_fsm_def::transaction::idle>());
 }
@@ -425,13 +424,13 @@ TEST(TranFSM, StaticHandledEvents)
 TEST(TranFSM, AllEvents)
 {
     using actions::event_process_result;
-    using ::psst::ansi_color;
+    using psst::ansi_color;
     connection_fsm fsm;
     fsm.make_observer("connection_fsm_def");
 
-    ::std::cerr << fsm.get_state<connection_fsm_def>().name() << "\n";
-    ::std::cerr << fsm.get_state<connection_fsm::transaction>().name() << "\n";
-    ::std::cerr << fsm.get_state<connection_fsm::transaction::simple_query>().name() << "\n";
+    std::cerr << fsm.get_state<connection_fsm_def>().name() << "\n";
+    std::cerr << fsm.get_state<connection_fsm::transaction>().name() << "\n";
+    std::cerr << fsm.get_state<connection_fsm::transaction::simple_query>().name() << "\n";
 
     EXPECT_EQ(event_process_result::process, fsm.process_event(events::connect{}));
     EXPECT_TRUE(fsm.is_in_state<connection_fsm_def::connecting>());
@@ -480,7 +479,7 @@ TEST(TranFSM, AllEvents)
 TEST(TranFSM, RealEventSequence)
 {
     using actions::event_process_result;
-    using ::psst::ansi_color;
+    using psst::ansi_color;
     connection_fsm fsm;
     fsm.make_observer("connection_fsm_def");
 

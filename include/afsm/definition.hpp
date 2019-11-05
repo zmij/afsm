@@ -97,48 +97,47 @@ struct internal_transition {
         using action_type = internal_transition::action_type;
     };
 
-    static_assert(!::std::is_same<Event, none>::value, "Internal transition must have a trigger");
+    static_assert(!std::is_same<Event, none>::value, "Internal transition must have a trigger");
 };
 
 template <typename Event>
 struct handles_event {
     template <typename Transition>
-    struct type : ::std::conditional<::std::is_same<typename Transition::event_type, Event>::value,
-                                     ::std::true_type, ::std::false_type>::type {};
+    struct type : std::conditional<std::is_same<typename Transition::event_type, Event>::value,
+                                   std::true_type, std::false_type>::type {};
 };
 
 template <typename State>
 struct originates_from {
     template <typename Transition>
     struct type
-        : ::std::conditional<::std::is_same<typename Transition::source_state_type, State>::value,
-                             ::std::true_type, ::std::false_type>::type {};
+        : std::conditional<std::is_same<typename Transition::source_state_type, State>::value,
+                           std::true_type, std::false_type>::type {};
 };
 
 template <typename... T>
 struct transition_table {
     static_assert(
-        ::std::conditional<(sizeof...(T) > 0), ::psst::meta::all_match<traits::is_transition, T...>,
-                           ::std::true_type>::type::value,
+        std::conditional<(sizeof...(T) > 0), psst::meta::all_match<traits::is_transition, T...>,
+                         std::true_type>::type::value,
         "Transition table can contain only transition or internal_transition template "
         "instantiations");
-    using transitions = ::psst::meta::type_tuple<T...>;
-    using transition_map
-        = ::psst::meta::type_map<::psst::meta::type_tuple<typename T::key_type...>,
-                                 ::psst::meta::type_tuple<typename T::value_type...>>;
+    using transitions    = psst::meta::type_tuple<T...>;
+    using transition_map = psst::meta::type_map<psst::meta::type_tuple<typename T::key_type...>,
+                                                psst::meta::type_tuple<typename T::value_type...>>;
     using inner_states =
-        typename ::psst::meta::unique<typename detail::source_state<T>::type...,
-                                      typename detail::target_state<T>::type...>::type;
-    using handled_events = typename ::psst::meta::unique<typename T::event_type...>::type;
+        typename psst::meta::unique<typename detail::source_state<T>::type...,
+                                    typename detail::target_state<T>::type...>::type;
+    using handled_events = typename psst::meta::unique<typename T::event_type...>::type;
 
-    static constexpr ::std::size_t size              = transition_map::size;
-    static constexpr ::std::size_t transition_count  = transition_map::size;
-    static constexpr ::std::size_t inner_state_count = inner_states::size;
-    static constexpr ::std::size_t event_count       = handled_events::size;
+    static constexpr std::size_t size              = transition_map::size;
+    static constexpr std::size_t transition_count  = transition_map::size;
+    static constexpr std::size_t inner_state_count = inner_states::size;
+    static constexpr std::size_t event_count       = handled_events::size;
 
-    static_assert(::std::conditional<(inner_state_count > 0),
-                                     ::psst::meta::all_match<traits::is_state, inner_states>,
-                                     ::std::true_type>::type::value,
+    static_assert(std::conditional<(inner_state_count > 0),
+                                   psst::meta::all_match<traits::is_state, inner_states>,
+                                   std::true_type>::type::value,
                   "State types must derive from afsm::def::state");
     static_assert(transitions::size == transition_count, "Duplicate transition");
     // TODO Check for different guards for transitions from one state on one event
@@ -160,13 +159,13 @@ struct state_def : tags::state, Tags... {
 
     using none = afsm::none;
     template <typename Predicate>
-    using not_ = ::psst::meta::not_<Predicate>;
+    using not_ = psst::meta::not_<Predicate>;
     template <typename... Predicates>
-    using and_ = ::psst::meta::and_<Predicates...>;
+    using and_ = psst::meta::and_<Predicates...>;
     template <typename... Predicates>
-    using or_ = ::psst::meta::or_<Predicates...>;
+    using or_ = psst::meta::or_<Predicates...>;
     template <typename... T>
-    using type_tuple = ::psst::meta::type_tuple<T...>;
+    using type_tuple = psst::meta::type_tuple<T...>;
 };
 
 template <typename StateType, typename... Tags>
@@ -229,26 +228,26 @@ struct state_machine_def : state_def<StateMachine, Tags...>, tags::state_machine
 
     using none = afsm::none;
     template <typename Predicate>
-    using not_ = ::psst::meta::not_<Predicate>;
+    using not_ = psst::meta::not_<Predicate>;
     template <typename... Predicates>
-    using and_ = ::psst::meta::and_<Predicates...>;
+    using and_ = psst::meta::and_<Predicates...>;
     template <typename... Predicates>
-    using or_ = ::psst::meta::or_<Predicates...>;
+    using or_ = psst::meta::or_<Predicates...>;
     template <typename... T>
-    using type_tuple = ::psst::meta::type_tuple<T...>;
+    using type_tuple = psst::meta::type_tuple<T...>;
 };
 
 namespace detail {
 
 template <typename T>
-struct has_inner_states : ::std::false_type {};
+struct has_inner_states : std::false_type {};
 template <typename... T>
 struct has_inner_states<transition_table<T...>>
-    : ::std::integral_constant<bool, (transition_table<T...>::inner_state_count > 0)> {};
+    : std::integral_constant<bool, (transition_table<T...>::inner_state_count > 0)> {};
 
 template <typename T>
 struct inner_states {
-    using type = ::psst::meta::type_tuple<>;
+    using type = psst::meta::type_tuple<>;
 };
 
 template <typename... T>
@@ -257,16 +256,16 @@ struct inner_states<transition_table<T...>> {
 };
 
 template <typename... T>
-struct inner_states<::psst::meta::type_tuple<T...>> {
-    using type = ::psst::meta::type_tuple<T...>;
+struct inner_states<psst::meta::type_tuple<T...>> {
+    using type = psst::meta::type_tuple<T...>;
 };
 
 template <typename T>
-struct has_transitions : ::std::false_type {};
+struct has_transitions : std::false_type {};
 template <typename... T>
 struct has_transitions<transition_table<T...>>
-    : ::std::conditional<(transition_table<T...>::transition_count > 0), ::std::true_type,
-                         ::std::false_type>::type {};
+    : std::conditional<(transition_table<T...>::transition_count > 0), std::true_type,
+                       std::false_type>::type {};
 
 template <typename T>
 struct handled_events
@@ -280,7 +279,7 @@ struct handled_events<transition_table<T...>> {
 
 template <>
 struct handled_events<void> {
-    using type = ::psst::meta::type_tuple<>;
+    using type = psst::meta::type_tuple<>;
 };
 
 template <typename T>
@@ -290,82 +289,81 @@ struct handled_events<state<T>> {
 
 template <typename T>
 struct handled_events<state_machine<T>> {
-    using type = typename ::psst::meta::unique<
-        typename handled_events<typename T::internal_transitions>::type,
-        typename handled_events<typename T::transitions>::type>::type;
+    using type =
+        typename psst::meta::unique<typename handled_events<typename T::internal_transitions>::type,
+                                    typename handled_events<typename T::transitions>::type>::type;
 };
 
 /**
  * Events handled by a set of states
  */
 template <typename... T>
-struct handled_events<::psst::meta::type_tuple<T...>> {
-    using type = typename ::psst::meta::unique<typename handled_events<T>::type...>::type;
+struct handled_events<psst::meta::type_tuple<T...>> {
+    using type = typename psst::meta::unique<typename handled_events<T>::type...>::type;
 };
 
 template <typename T>
-struct recursive_handled_events : ::std::conditional<traits::is_state_machine<T>::value,
-                                                     recursive_handled_events<state_machine<T>>,
-                                                     handled_events<state<T>>>::type {};
+struct recursive_handled_events
+    : std::conditional<traits::is_state_machine<T>::value,
+                       recursive_handled_events<state_machine<T>>, handled_events<state<T>>>::type {
+};
 
 template <typename... T>
 struct recursive_handled_events<transition_table<T...>> {
     using type =
-        typename ::psst::meta::unique<typename transition_table<T...>::handled_events,
-                                      typename recursive_handled_events<typename transition_table<
-                                          T...>::inner_states>::type>::type;
+        typename psst::meta::unique<typename transition_table<T...>::handled_events,
+                                    typename recursive_handled_events<
+                                        typename transition_table<T...>::inner_states>::type>::type;
 };
 
 template <>
 struct recursive_handled_events<void> {
-    using type = ::psst::meta::type_tuple<>;
+    using type = psst::meta::type_tuple<>;
 };
 
 template <typename T>
 struct recursive_handled_events<state_machine<T>> {
-    using type = typename ::psst::meta::unique<
-        typename ::psst::meta::unique<
+    using type = typename psst::meta::unique<
+        typename psst::meta::unique<
             typename handled_events<typename T::internal_transitions>::type,
             typename recursive_handled_events<typename T::transitions>::type>::type,
         typename recursive_handled_events<typename T::orthogonal_regions>::type>::type;
 };
 
 template <typename T, typename... Y>
-struct recursive_handled_events<::psst::meta::type_tuple<T, Y...>> {
-    using type = typename ::psst::meta::unique<
+struct recursive_handled_events<psst::meta::type_tuple<T, Y...>> {
+    using type = typename psst::meta::unique<
         typename recursive_handled_events<T>::type,
-        typename recursive_handled_events<::psst::meta::type_tuple<Y...>>::type>::type;
+        typename recursive_handled_events<psst::meta::type_tuple<Y...>>::type>::type;
 };
 
 template <typename T>
-struct recursive_handled_events<::psst::meta::type_tuple<T>> : recursive_handled_events<T> {};
+struct recursive_handled_events<psst::meta::type_tuple<T>> : recursive_handled_events<T> {};
 
 template <>
-struct recursive_handled_events<::psst::meta::type_tuple<>> {
-    using type = ::psst::meta::type_tuple<>;
+struct recursive_handled_events<psst::meta::type_tuple<>> {
+    using type = psst::meta::type_tuple<>;
 };
 
 template <typename T>
 struct has_default_transitions;
 
 template <typename... T>
-struct has_default_transitions<::psst::meta::type_tuple<T...>>
-    : ::psst::meta::contains<none, ::psst::meta::type_tuple<T...>> {};
+struct has_default_transitions<psst::meta::type_tuple<T...>>
+    : psst::meta::contains<none, psst::meta::type_tuple<T...>> {};
 
 template <typename T>
-struct is_default_transition
-    : ::std::conditional<::std::is_same<typename T::event_type, none>::value, ::std::true_type,
-                         ::std::false_type>::type {};
+struct is_default_transition : std::conditional<std::is_same<typename T::event_type, none>::value,
+                                                std::true_type, std::false_type>::type {};
 
 template <typename T>
-struct is_unguarded_transition
-    : ::std::conditional<::std::is_same<typename T::guard_type, none>::value, ::std::true_type,
-                         ::std::false_type>::type {};
+struct is_unguarded_transition : std::conditional<std::is_same<typename T::guard_type, none>::value,
+                                                  std::true_type, std::false_type>::type {};
 
 template <typename T>
 struct is_default_unguarded_transition
-    : ::std::conditional<is_default_transition<T>::value && is_unguarded_transition<T>::value,
-                         ::std::true_type, ::std::false_type>::type {};
+    : std::conditional<is_default_transition<T>::value && is_unguarded_transition<T>::value,
+                       std::true_type, std::false_type>::type {};
 
 } /* namespace detail */
 
@@ -379,8 +377,8 @@ namespace detail {
 
 template <typename T, typename SubState>
 struct contains_recursively
-    : ::std::conditional<::std::is_same<T, SubState>::value, ::std::true_type,
-                         typename def::contains_substate<T, SubState>::type>::type {};
+    : std::conditional<std::is_same<T, SubState>::value, std::true_type,
+                       typename def::contains_substate<T, SubState>::type>::type {};
 
 template <typename SubState>
 struct contains_predicate {
@@ -389,17 +387,17 @@ struct contains_predicate {
 };
 
 template <typename T, typename SubState, bool IsMachine>
-struct contains_substate : ::std::false_type {};
+struct contains_substate : std::false_type {};
 
 template <typename T, typename SubState>
 struct contains_substate<T, SubState, true>
-    : ::std::conditional<
-          ::psst::meta::any_match<
+    : std::conditional<
+          psst::meta::any_match<
               contains_predicate<SubState>::template type,
-              typename ::psst::meta::unique<
+              typename psst::meta::unique<
                   typename inner_states<typename T::transitions>::type,
                   typename inner_states<typename T::orthogonal_regions>::type>::type>::value,
-          ::std::true_type, ::std::false_type>::type {};
+          std::true_type, std::false_type>::type {};
 
 } /* namespace detail */
 
@@ -423,12 +421,12 @@ namespace detail {
 
 template <typename T, typename U>
 struct state_state_path {
-    using type = ::psst::meta::type_tuple<>;
+    using type = psst::meta::type_tuple<>;
 };
 
 template <typename T>
 struct state_state_path<T, T> {
-    using type = ::psst::meta::type_tuple<T>;
+    using type = psst::meta::type_tuple<T>;
 };
 
 template <typename Machine, typename State, bool IsMachine>
@@ -436,27 +434,27 @@ struct state_path : state_state_path<Machine, State> {};
 
 template <typename Machine, typename State, bool Contains>
 struct machine_state_path {
-    using type = ::psst::meta::type_tuple<>;
+    using type = psst::meta::type_tuple<>;
 };
 
 template <typename Machine, typename State>
 struct machine_state_path<Machine, State, true> {
-    using type = typename ::psst::meta::combine<
+    using type = typename psst::meta::combine<
         typename Machine::state_machine_type,
         typename def::state_path<
-            typename ::psst::meta::front<typename ::psst::meta::find_if<
+            typename psst::meta::front<typename psst::meta::find_if<
                 contains_predicate<State>::template type,
-                typename ::psst::meta::unique<
+                typename psst::meta::unique<
                     typename inner_states<typename Machine::transitions>::type,
                     typename inner_states<typename Machine::orthogonal_regions>::type>::type>::
-                                             type>::type,
+                                           type>::type,
             State>::type>::type;
 };
 
 template <typename Machine, typename State>
 struct state_path<Machine, State, true>
-    : ::std::conditional<
-          ::std::is_same<Machine, State>::value, state_state_path<Machine, State>,
+    : std::conditional<
+          std::is_same<Machine, State>::value, state_state_path<Machine, State>,
           machine_state_path<Machine, State, def::contains_substate<Machine, State>::value>>::type {
 };
 
@@ -475,21 +473,21 @@ namespace detail {
 
 template <typename T>
 struct contains_pushdowns_recursively
-    : ::std::conditional<traits::is_pushdown<T>::value, ::std::true_type,
-                         typename def::contains_pushdowns<T>::type>::type {};
+    : std::conditional<traits::is_pushdown<T>::value, std::true_type,
+                       typename def::contains_pushdowns<T>::type>::type {};
 
 template <typename T, bool IsMachine>
-struct containts_pushdowns : ::std::false_type {};
+struct containts_pushdowns : std::false_type {};
 
 template <typename T>
 struct containts_pushdowns<T, true>
-    : ::std::conditional<
-          ::psst::meta::any_match<
+    : std::conditional<
+          psst::meta::any_match<
               contains_pushdowns_recursively,
-              typename ::psst::meta::unique<
+              typename psst::meta::unique<
                   typename inner_states<typename T::transitions>::type,
                   typename inner_states<typename T::orthogonal_regions>::type>::type>::value,
-          ::std::true_type, ::std::false_type>::type {};
+          std::true_type, std::false_type>::type {};
 
 } /* namespace detail */
 
@@ -506,21 +504,21 @@ namespace detail {
 
 template <typename T>
 struct contains_popups_recursively
-    : ::std::conditional<traits::is_popup<T>::value, ::std::true_type,
-                         typename def::contains_popups<T>::type>::type {};
+    : std::conditional<traits::is_popup<T>::value, std::true_type,
+                       typename def::contains_popups<T>::type>::type {};
 
 template <typename T, bool IsMachine>
-struct containts_popups : ::std::false_type {};
+struct containts_popups : std::false_type {};
 
 template <typename T>
 struct containts_popups<T, true>
-    : ::std::conditional<
-          ::psst::meta::any_match<
+    : std::conditional<
+          psst::meta::any_match<
               contains_popups_recursively,
-              typename ::psst::meta::unique<
+              typename psst::meta::unique<
                   typename inner_states<typename T::transitions>::type,
                   typename inner_states<typename T::orthogonal_regions>::type>::type>::value,
-          ::std::true_type, ::std::false_type>::type {};
+          std::true_type, std::false_type>::type {};
 
 } /* namespace detail */
 
@@ -544,26 +542,26 @@ struct pushes_predicate {
 };
 
 template <typename T, typename Machine, bool IsMachine>
-struct state_pushes : ::std::integral_constant<bool, traits::pushes<T, Machine>::value> {};
+struct state_pushes : std::integral_constant<bool, traits::pushes<T, Machine>::value> {};
 template <typename T, typename Machine>
 struct state_pushes<T, Machine, true>
-    : ::std::integral_constant<
+    : std::integral_constant<
           bool,
-          ::psst::meta::any_match<
+          psst::meta::any_match<
               pushes_predicate<Machine>::template type,
-              typename ::psst::meta::unique<
+              typename psst::meta::unique<
                   typename inner_states<typename T::transitions>::type,
                   typename inner_states<typename T::orthogonal_regions>::type>::type>::value> {};
 
 template <typename Machine, bool IsMachine>
-struct is_pushed : ::std::false_type {};
+struct is_pushed : std::false_type {};
 
 template <typename Machine>
 struct is_pushed<Machine, true>
-    : ::std::integral_constant<
-          bool, ::psst::meta::any_match<
+    : std::integral_constant<
+          bool, psst::meta::any_match<
                     pushes_predicate<Machine>::template type,
-                    typename ::psst::meta::unique<
+                    typename psst::meta::unique<
                         typename inner_states<typename Machine::transitions>::type,
                         typename inner_states<typename Machine::orthogonal_regions>::type>::type>::
                     value> {};
@@ -592,26 +590,26 @@ struct pops_predicate {
 };
 
 template <typename T, typename Machine, bool IsMachine>
-struct state_pops : ::std::integral_constant<bool, traits::pops<T, Machine>::value> {};
+struct state_pops : std::integral_constant<bool, traits::pops<T, Machine>::value> {};
 template <typename T, typename Machine>
 struct state_pops<T, Machine, true>
-    : ::std::integral_constant<
+    : std::integral_constant<
           bool,
-          ::psst::meta::any_match<
+          psst::meta::any_match<
               pops_predicate<Machine>::template type,
-              typename ::psst::meta::unique<
+              typename psst::meta::unique<
                   typename inner_states<typename T::transitions>::type,
                   typename inner_states<typename T::orthogonal_regions>::type>::type>::value> {};
 
 template <typename Machine, bool IsMachine>
-struct is_popped : ::std::false_type {};
+struct is_popped : std::false_type {};
 
 template <typename Machine>
 struct is_popped<Machine, true>
-    : ::std::integral_constant<
-          bool, ::psst::meta::any_match<
+    : std::integral_constant<
+          bool, psst::meta::any_match<
                     pops_predicate<Machine>::template type,
-                    typename ::psst::meta::unique<
+                    typename psst::meta::unique<
                         typename inner_states<typename Machine::transitions>::type,
                         typename inner_states<typename Machine::orthogonal_regions>::type>::type>::
                     value> {};
@@ -625,7 +623,7 @@ struct state_pops : detail::state_pops<T, Machine, traits::is_state_machine<T>::
 
 template <typename T>
 struct has_pushdown_stack
-    : ::std::integral_constant<bool, is_pushed<T>::value && is_popped<T>::value> {};
+    : std::integral_constant<bool, is_pushed<T>::value && is_popped<T>::value> {};
 
 } /* namespace def */
 } /* namespace afsm */

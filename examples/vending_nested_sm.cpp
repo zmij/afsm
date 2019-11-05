@@ -23,8 +23,8 @@ struct end_maintenance {};
 struct out_of_goods {};
 
 struct set_price {
-    ::std::size_t p_no;
-    float         price;
+    std::size_t p_no;
+    float       price;
 };
 struct withdraw_money {};
 
@@ -35,7 +35,7 @@ struct goods_entry {
     float price;
 };
 
-using goods_storage = ::std::map<::std::size_t, goods_entry>;
+using goods_storage = std::map<std::size_t, goods_entry>;
 
 struct vending_def : ::afsm::def::state_machine<vending_def> {
     //@{
@@ -107,7 +107,7 @@ struct vending_def : ::afsm::def::state_machine<vending_def> {
     /** Default constructor */
     vending_def() : goods{}, balance{0} {}
     /** Constructor, moving goods container to data member */
-    vending_def(goods_storage&& g) : goods{::std::move(g)}, balance{0} {}
+    vending_def(goods_storage&& g) : goods{std::move(g)}, balance{0} {}
 
     /**
      * Set price for an item
@@ -115,7 +115,7 @@ struct vending_def : ::afsm::def::state_machine<vending_def> {
      * @param price
      */
     void
-    set_price(::std::size_t p_no, float price)
+    set_price(std::size_t p_no, float price)
     {
         auto f = goods.find(p_no);
         if (f != goods.end()) {
@@ -134,10 +134,10 @@ struct vending_def : ::afsm::def::state_machine<vending_def> {
 
 using vending_sm = ::afsm::state_machine<vending_def>;
 
-::std::ostream&
-operator<<(::std::ostream& os, vending_sm const& val)
+std::ostream&
+operator<<(std::ostream& os, vending_sm const& val)
 {
-    ::std::ostream::sentry s(os);
+    std::ostream::sentry s(os);
     if (s) {
         os << (val.is_in_state<vending_sm::on>() ? "ON" : "OFF");
     }
@@ -148,28 +148,28 @@ void
 use()
 {
     vending_sm vm{goods_storage{{1, {10, 15.0f}}, {5, {100, 5.0f}}}};
-    ::std::cout << "Machine is " << vm << "\n";
+    std::cout << "Machine is " << vm << "\n";
     vm.process_event(events::power_on{});
-    ::std::cout << "Machine is " << vm << "\n";
+    std::cout << "Machine is " << vm << "\n";
     vm.process_event(events::power_off{});
-    ::std::cout << "Machine is " << vm << "\n";
+    std::cout << "Machine is " << vm << "\n";
 
     vm.process_event(events::power_on{});
-    ::std::cout << "Machine is " << vm << "\n";
+    std::cout << "Machine is " << vm << "\n";
     vm.process_event(events::start_maintenance{});
     if (vm.is_in_state<vending_sm::on::maintenance>()) {
-        ::std::cout << "Machine is being maintained\n";
+        std::cout << "Machine is being maintained\n";
     } else {
-        ::std::cout << "Something went wrong\n";
+        std::cout << "Something went wrong\n";
     }
     vm.process_event(events::power_off{});
-    ::std::cout << "Machine is " << vm << "\n";
+    std::cout << "Machine is " << vm << "\n";
     vm.process_event(events::power_on{});
-    ::std::cout << "Machine is " << vm << "\n";
+    std::cout << "Machine is " << vm << "\n";
     if (vm.is_in_state<vending_sm::on::maintenance>()) {
-        ::std::cout << "Something went wrong\n";
+        std::cout << "Something went wrong\n";
     } else {
-        ::std::cout << "Machine is not being maintained\n";
+        std::cout << "Machine is not being maintained\n";
     }
 }
 
@@ -180,10 +180,10 @@ main(int, char*[])
 try {
     vending::use();
     return 0;
-} catch (::std::exception const& e) {
-    ::std::cerr << "Exception: " << e.what() << "\n";
+} catch (std::exception const& e) {
+    std::cerr << "Exception: " << e.what() << "\n";
     return 1;
 } catch (...) {
-    ::std::cerr << "Unexpected exception\n";
+    std::cerr << "Unexpected exception\n";
     return 2;
 }

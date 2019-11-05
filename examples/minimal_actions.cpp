@@ -21,7 +21,7 @@ struct do_start {
     void
     operator()(Event const&, FSM&, SourceState&, TargetState&) const
     {
-        ::std::cout << "do start\n";
+        std::cout << "do start\n";
     }
 };
 struct do_stop {
@@ -29,7 +29,7 @@ struct do_stop {
     void
     operator()(Event const&, FSM&, SourceState&, TargetState&) const
     {
-        ::std::cout << "do stop\n";
+        std::cout << "do stop\n";
     }
 };
 
@@ -67,10 +67,10 @@ main(int, char*[])
 try {
     minimal::use();
     return 0;
-} catch (::std::exception const& e) {
-    ::std::cerr << "Exception: " << e.what() << "\n";
+} catch (std::exception const& e) {
+    std::cerr << "Exception: " << e.what() << "\n";
     return 1;
 } catch (...) {
-    ::std::cerr << "Unexpected exception\n";
+    std::cerr << "Unexpected exception\n";
     return 2;
 }

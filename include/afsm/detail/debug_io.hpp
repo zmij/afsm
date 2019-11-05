@@ -15,10 +15,10 @@
 namespace afsm {
 namespace actions {
 
-inline ::std::ostream&
-operator<<(::std::ostream& os, event_process_result const& val)
+inline std::ostream&
+operator<<(std::ostream& os, event_process_result const& val)
 {
-    ::std::ostream::sentry s(os);
+    std::ostream::sentry s(os);
     if (s) {
         switch (val) {
         case event_process_result::refuse:
