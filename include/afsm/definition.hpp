@@ -11,7 +11,7 @@
 #include <afsm/definition_fwd.hpp>
 #include <afsm/detail/def_traits.hpp>
 #include <afsm/fsm_fwd.hpp>
-#include <pushkin/meta.hpp>
+#include <psst/meta.hpp>
 
 namespace afsm {
 namespace def {

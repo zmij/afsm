@@ -13,7 +13,7 @@
 #include <afsm/detail/helpers.hpp>
 #include <afsm/detail/orthogonal_regions.hpp>
 #include <afsm/detail/transitions.hpp>
-#include <pushkin/meta/functions.hpp>
+#include <psst/meta/functions.hpp>
 
 namespace afsm {
 namespace detail {

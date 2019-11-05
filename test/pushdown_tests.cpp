@@ -6,8 +6,8 @@
  */
 
 #include <afsm/fsm.hpp>
+#include <psst/util/demangle.hpp>
 #include <pushkin/ansi_colors.hpp>
-#include <pushkin/util/demangle.hpp>
 
 #include <gtest/gtest.h>
 

@@ -9,7 +9,7 @@
 #define AFSM_DETAIL_REJECT_POLICIES_HPP_
 
 #include <afsm/detail/actions.hpp>
-#include <pushkin/util/demangle.hpp>
+#include <psst/util/demangle.hpp>
 
 #include <exception>
 

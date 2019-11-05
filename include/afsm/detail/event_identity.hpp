@@ -8,7 +8,7 @@
 #ifndef AFSM_DETAIL_EVENT_IDENTITY_HPP_
 #define AFSM_DETAIL_EVENT_IDENTITY_HPP_
 
-#include <pushkin/meta/type_tuple.hpp>
+#include <psst/meta/type_tuple.hpp>
 
 #include <set>
 #include <type_traits>

@@ -10,8 +10,8 @@
 
 #include "test_observer.hpp"
 #include <afsm/detail/debug_io.hpp>
+#include <psst/util/demangle.hpp>
 #include <pushkin/ansi_colors.hpp>
-#include <pushkin/util/demangle.hpp>
 
 #include <iomanip>
 #include <iostream>
