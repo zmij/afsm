@@ -198,6 +198,19 @@ struct popup : tags::state, tags::popup<Machine>, Tags... {
     using activity             = void;
 };
 
+/**
+ * A guard for checking that a state machine is in a certain state
+ */
+template <typename State>
+struct in_state {
+    template <typename FSM, typename CurrentState>
+    bool
+    operator()(FSM const& fsm, CurrentState const&) const
+    {
+        return root_machine(fsm).template is_in_state<State>();
+    }
+};
+
 template <typename StateMachine, typename... Tags>
 struct state_machine_def : state_def<StateMachine, Tags...>, tags::state_machine {
     using state_machine_type   = StateMachine;
@@ -235,6 +248,9 @@ struct state_machine_def : state_def<StateMachine, Tags...>, tags::state_machine
     using or_ = psst::meta::or_<Predicates...>;
     template <typename... T>
     using type_tuple = psst::meta::type_tuple<T...>;
+
+    template <typename State>
+    using in_state = def::in_state<State>;
 };
 
 namespace detail {
