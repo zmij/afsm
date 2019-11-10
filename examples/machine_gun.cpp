@@ -30,7 +30,7 @@ main(int, char*[])
     mg.process_event(guns::events::safety_lever_down{});
     mg.process_event(guns::events::reload{});
     mg.process_event(guns::events::trigger_pull{});
-    for (auto i = 0; i < 15; ++i) {
+    while (!mg.empty()) {
         mg.process_event(guns::events::tick{});
     }
     mg.process_event(guns::events::trigger_release{});

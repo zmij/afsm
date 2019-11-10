@@ -13,9 +13,7 @@
 #include <functional>
 #include <type_traits>
 
-namespace guns {
-
-namespace events {
+namespace guns::events {
 
 struct trigger_pull {};
 struct trigger_release {};
@@ -25,13 +23,18 @@ struct reload {};
 struct safety_lever_up {};
 struct safety_lever_down {};
 
-struct tick {};
+struct tick {
+    std::uint64_t frame = 0;
+};
 
-}    // namespace events
+}    // namespace guns::events
+
+namespace guns {
 
 // Guards fwd
 struct depleted;
 struct firing;
+struct want_this_frame;
 
 // Actions fwd
 struct emit_bullet;
@@ -46,6 +49,8 @@ struct machine_gun_def : afsm::def::state_machine<machine_gun_def> {
     //@{
     /** @name States */
     struct selector : state_machine<selector> {
+        //@{
+        /** @name Selector substates */
         struct safe : state<safe> {
             static constexpr safety_lever lever = safety_lever::safe;
         };
@@ -55,9 +60,11 @@ struct machine_gun_def : afsm::def::state_machine<machine_gun_def> {
         struct automatic : state<automatic> {
             static constexpr safety_lever lever = safety_lever::automatic;
         };
+        //@}
 
         using initial_state = safe;
 
+        // Type aliases to shorten the transition table
         using down = events::safety_lever_down;
         using up   = events::safety_lever_up;
 
@@ -74,13 +81,9 @@ struct machine_gun_def : afsm::def::state_machine<machine_gun_def> {
     };
 
     struct trigger : state_machine<trigger> {
-        // To shorten the transition table
-        using pull    = events::trigger_pull;
-        using release = events::trigger_release;
-        using reload  = events::reload;
-        using tick    = events::tick;
-
-        struct init : state<init> {};
+        //@{
+        /** @name Trigger substates */
+        struct initial_state : state<initial_state> {};
         struct ready : state<ready> {};
         struct empty : state<empty> {
             template <typename FSM>
@@ -89,10 +92,23 @@ struct machine_gun_def : afsm::def::state_machine<machine_gun_def> {
             {
                 root_machine(fsm).ammo_depleted();
             }
+            template <typename FSM>
+            void
+            on_exit(events::reload const&, FSM& fsm)
+            {
+                root_machine(fsm).ammo_replentished();
+            }
         };
         struct fire : state<fire> {};
+        //@}
 
-        using initial_state = init;
+        // Type aliases to shorten the transition table
+        using init    = initial_state;
+        using pull    = events::trigger_pull;
+        using release = events::trigger_release;
+        using reload  = events::reload;
+        using tick    = events::tick;
+
         // clang-format off
         // trigger transition table
         using transitions = transition_table<
@@ -103,8 +119,9 @@ struct machine_gun_def : afsm::def::state_machine<machine_gun_def> {
         tr< ready   , pull      , fire      , emit_bullet       , not_<in_state<selector::safe>>    >,
         tr< ready   , reload    , ready     , change_magazine   , none                              >,
         tr< fire    , release   , ready     , none              , none                              >,
-        tr< fire    , tick      , fire      , emit_bullet       , and_<in_state<selector::automatic>>,
-                                                                       not_<depleted>>,
+        tr< fire    , tick      , fire      , emit_bullet       , and_<in_state<selector::automatic>,
+                                                                       want_this_frame,
+                                                                       not_<depleted>>              >,
         tr< fire    , none      , empty     , none              , depleted                          >
         >;
         // clang-format on
@@ -182,6 +199,12 @@ struct machine_gun_def : afsm::def::state_machine<machine_gun_def> {
         }
     }
 
+    void
+    ammo_replentished()
+    {
+        // Effectively do nothing here, it's just for demo purposes
+    }
+
 private:
     int ammo_ = 0;
 
@@ -205,10 +228,20 @@ struct depleted {
     }
 };
 
+struct want_this_frame {
+    template <typename FSM, typename State>
+    bool
+    operator()(FSM const&, State const&, events::tick const& t) const
+    {
+        return t.frame % 10 == 0;
+    }
+};
+
 struct firing : machine_gun_def::in_state<machine_gun_def::trigger::fire> {};
 //@}
 
 //@{
+/** @name Actions */
 struct emit_bullet {
     template <typename Event, typename FSM>
     void
