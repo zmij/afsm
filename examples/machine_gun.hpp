@@ -47,7 +47,7 @@ struct machine_gun_def : afsm::def::state_machine<machine_gun_def> {
     using fsm_type = afsm::state_machine<machine_gun_def>;
 
     //@{
-    /** @name States */
+    /** @name Sub-machines */
     struct selector : state_machine<selector> {
         //@{
         /** @name Selector substates */

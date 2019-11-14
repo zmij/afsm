@@ -118,8 +118,8 @@ struct originates_from {
 template <typename... T>
 struct transition_table {
     static_assert(
-        std::conditional<(sizeof...(T) > 0), psst::meta::all_match<traits::is_transition, T...>,
-                         std::true_type>::type::value,
+        (std::conditional<(sizeof...(T) > 0), psst::meta::all_match<traits::is_transition, T...>,
+                          std::true_type>::type::value),
         "Transition table can contain only transition or internal_transition template "
         "instantiations");
     using transitions    = psst::meta::type_tuple<T...>;
@@ -135,9 +135,9 @@ struct transition_table {
     static constexpr std::size_t inner_state_count = inner_states::size;
     static constexpr std::size_t event_count       = handled_events::size;
 
-    static_assert(std::conditional<(inner_state_count > 0),
-                                   psst::meta::all_match<traits::is_state, inner_states>,
-                                   std::true_type>::type::value,
+    static_assert((std::conditional<(inner_state_count > 0),
+                                    psst::meta::all_match<traits::is_state, inner_states>,
+                                    std::true_type>::type::value),
                   "State types must derive from afsm::def::state");
     static_assert(transitions::size == transition_count, "Duplicate transition");
     // TODO Check for different guards for transitions from one state on one event
