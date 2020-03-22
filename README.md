@@ -1,6 +1,6 @@
 # Another Finite State Machine
 
-`afsm` is a finite state machine C++11 library designed for usage in multithreaded asynchronous environment.
+`afsm` is a finite state machine C++14 library designed for usage in multithreaded asynchronous environment.
 
 ## Inspiration and Motivation
 
