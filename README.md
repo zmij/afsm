@@ -66,7 +66,7 @@ using minimal = ::afsm::state_machine<minimal_def>;
 
 void use()
 {
-    mimimal fsm;
+    minimal fsm;
     fsm.process_event(start{});
     fsm.process_event(stop{});
 }
